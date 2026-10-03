@@ -169,6 +169,8 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		// gets hit if the punch locks onto it. Charge for half a second (50%) and let go.
 		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 0");
 		command(singleplayer, "execute at @p run summon minecraft:iron_golem ~3 ~ ~3");
+		// It still gets knocked back, but can't wander out of reach before the punch.
+		command(singleplayer, "effect give @e[type=minecraft:iron_golem] minecraft:slowness 30 255 true");
 		camera(context, CameraType.THIRD_PERSON_BACK);
 		context.waitTicks(5);
 		Vec3 golemStart = singleplayer.getServer().computeOnServer(server -> golem(server).position());
