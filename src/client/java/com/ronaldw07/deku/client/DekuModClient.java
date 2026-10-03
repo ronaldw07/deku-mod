@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
@@ -22,6 +23,7 @@ public class DekuModClient implements ClientModInitializer {
 		DekuSettings.load();
 		ClientTickEvents.END_CLIENT_TICK.register(DekuModClient::tick);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("power"), PowerHud::extract);
+		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingLightning::render);
 	}
 
 	private static KeyMapping register(String name, int key) {
