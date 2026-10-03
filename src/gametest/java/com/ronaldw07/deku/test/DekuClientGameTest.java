@@ -101,9 +101,17 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(hasSpeedBoost(singleplayer), "server should apply the speed boost while cowling is on");
 		context.takeScreenshot("cowling-on");
 
+		// Hair and eye wisps, seen from the front in daylight.
+		camera(context, CameraType.THIRD_PERSON_FRONT);
+		context.waitTicks(5);
+		context.takeScreenshot("cowling-hair-day");
+		context.runOnClient(client -> client.options.fov().set(30));
+		context.waitTicks(2);
+		context.takeScreenshot("cowling-hair-closeup");
+		context.runOnClient(client -> client.options.fov().set(70));
+
 		// Lightning, viewed from the front at night so the glow is easy to judge.
 		command(singleplayer, "time set midnight");
-		camera(context, CameraType.THIRD_PERSON_FRONT);
 		context.waitTicks(5);
 		context.takeScreenshot("lightning-100");
 
