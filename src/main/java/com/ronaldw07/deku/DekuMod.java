@@ -1,6 +1,9 @@
 package com.ronaldw07.deku;
 
+import com.ronaldw07.deku.network.CowlingPayload;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 import net.minecraft.resources.Identifier;
 
@@ -13,6 +16,10 @@ public class DekuMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		PayloadTypeRegistry.serverboundPlay().register(CowlingPayload.TYPE, CowlingPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(CowlingPayload.TYPE,
+			(payload, context) -> FullCowling.apply(context.player(), payload.percent()));
+
 		LOGGER.info("One For All loaded");
 	}
 
