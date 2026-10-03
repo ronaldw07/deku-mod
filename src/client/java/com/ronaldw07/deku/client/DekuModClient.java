@@ -89,7 +89,7 @@ public class DekuModClient implements ClientModInitializer {
 		}
 
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
-			SMASH_KEY.isDown(), cowlingClicks > 0);
+			SMASH_KEY.isDown(), COWLING_KEY.isDown());
 
 		DangerSenseClient.tick(player, countClicks(DANGER_SENSE_KEY) % 2 == 1);
 	}

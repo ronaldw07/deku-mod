@@ -224,10 +224,13 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		camera(context, CameraType.THIRD_PERSON_FRONT);
 		context.waitTicks(2);
 		context.takeScreenshot("float");
+		float healthBeforeDrop = singleplayer.getServer().computeOnServer(server -> player(server).getHealth());
 		context.getInput().releaseKey(DekuModClient.FLOAT_KEY);
 		context.waitTicks(30);
 		double dropped = startY - context.computeOnClient(client -> client.player.getY());
 		check(dropped > 3, "releasing float should drop the player, dropped " + dropped);
+		float healthAfterDrop = singleplayer.getServer().computeOnServer(server -> player(server).getHealth());
+		check(healthAfterDrop >= healthBeforeDrop, "the player shouldn't take fall damage, health went " + healthBeforeDrop + " -> " + healthAfterDrop);
 		camera(context, CameraType.FIRST_PERSON);
 	}
 
@@ -314,27 +317,37 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 0");
 		context.waitTicks(3);
 		Vec3 howitzerStart = context.computeOnClient(client -> client.player.position());
+		command(singleplayer, "execute at @p run summon minecraft:pig ~60 ~ ~");
 		context.getInput().holdKey(DekuModClient.SMASH_KEY);
 		context.waitTicks(20);
 		check(context.computeOnClient(client -> ExplosionClient.spinning()), "holding V with Explosion should start Howitzer Impact");
 		context.takeScreenshot("howitzer-spin");
 		double spiralled = context.computeOnClient(client -> client.player.position().distanceTo(howitzerStart));
 		check(spiralled > 5, "Howitzer Impact should carry the player forward, moved " + spiralled);
+		Vec3 pigStart = singleplayer.getServer().computeOnServer(server ->
+			server.overworld().getEntities(EntityTypes.PIG, pig -> true).getFirst().position());
 		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
 		context.waitTicks(2);
 		context.takeScreenshot("howitzer-impact");
-		context.waitTicks(40);
+		context.waitTicks(10);
+		context.takeScreenshot("howitzer-shockwave");
+		double pigThrown = singleplayer.getServer().computeOnServer(server ->
+			server.overworld().getEntities(EntityTypes.PIG, pig -> true).getFirst().position().distanceTo(pigStart));
+		check(pigThrown > 3, "the Howitzer shockwave should throw a pig 60 blocks away, it moved " + pigThrown);
+		command(singleplayer, "kill @e[type=minecraft:pig]");
+		context.waitTicks(30);
 
-		// C: arms up in a cross, then the ground ahead erupts and takes out a husk.
+		// Hold C: arms up in a cross, charging; let go and the ground ahead erupts and takes out a husk.
 		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 0");
 		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~6 {NoAI:1b}");
 		camera(context, CameraType.THIRD_PERSON_FRONT);
 		context.waitTicks(3);
-		context.getInput().pressKey(DekuModClient.COWLING_KEY);
-		context.waitTicks(4);
-		check(context.computeOnClient(client -> ExplosionClient.armsCrossed()), "the ground blast should start with arms crossed");
+		context.getInput().holdKey(DekuModClient.COWLING_KEY);
+		context.waitTicks(30);
+		check(context.computeOnClient(client -> ExplosionClient.armsCrossed()), "holding C should cross the arms and charge");
 		context.takeScreenshot("ground-blast-windup");
 		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.getInput().releaseKey(DekuModClient.COWLING_KEY);
 		context.waitTicks(8);
 		context.takeScreenshot("ground-blast");
 		boolean huskDown = singleplayer.getServer().computeOnServer(server -> server.overworld()
@@ -347,6 +360,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		// A 100% Smash, released instantly, blasts through a stone wall 5 blocks ahead.
 		command(singleplayer, "execute as @p at @p run tp @s ~-40 ~ ~ 0 0");
 		command(singleplayer, "execute at @p run fill ~-2 ~ ~5 ~2 ~4 ~5 minecraft:stone");
+		command(singleplayer, "execute at @p run fill ~-2 ~ ~40 ~2 ~4 ~40 minecraft:stone");
 		selectSlot(context, 0);
 		DekuSettings.set(DekuSettings.get().withPunchPower(100).withPunchChargeSeconds(0));
 		context.waitTicks(3);
@@ -358,6 +372,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("smash-tunnel");
 		boolean holed = singleplayer.getServer().computeOnServer(server -> server.overworld().getBlockState(wallCenter).isAir());
 		check(holed, "a 100% Smash should blast through the wall at " + wallCenter);
+		context.waitTicks(10);
+		boolean farHoled = singleplayer.getServer().computeOnServer(server -> server.overworld().getBlockState(wallCenter.south(35)).isAir());
+		check(farHoled, "a 100% Smash should tunnel through a wall 40 blocks away too");
 		camera(context, CameraType.FIRST_PERSON);
 	}
 

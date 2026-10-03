@@ -28,6 +28,15 @@ final class ExplosionFx {
 	private static final int RING_SEGMENTS = 40;
 	private static final double RING_GROWTH = 1.8;
 	private static final int MAX_FLAMES = 160;
+	// Howitzer Impact is in a league of its own: it lasts longer, and its shockwave races
+	// out to the edge of its 200-block reach, with a second ring chasing the first.
+	private static final int HOWITZER_LIFETIME_TICKS = 40;
+	private static final double HOWITZER_SHOCKWAVE_RADIUS = 200.0;
+	private static final double SECOND_RING_FRACTION = 0.55;
+	private static final double HOWITZER_RAY_REACH = 1.8;
+	private static final int HOWITZER_SPARKS = 150;
+	private static final int HOWITZER_SMOKE_COLUMN = 50;
+	private static final double HOWITZER_COLUMN_HEIGHT = 18.0;
 
 	private record Blast(Vec3 center, float radius, Style style, Vec3 from, long startTick) {
 	}
@@ -63,6 +72,21 @@ final class ExplosionFx {
 			Vec3 v = LightningDraw.randomDirection(random).scale(0.08 * spread);
 			level.addParticle(ParticleTypes.LARGE_SMOKE, c.x, c.y, c.z, v.x, v.y + 0.02, v.z);
 		}
+		if (blast.style() == Style.HOWITZER) {
+			level.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y, c.z, 0, 0, 0);
+			for (int i = 0; i < HOWITZER_SPARKS; i++) {
+				Vec3 v = LightningDraw.randomDirection(random).scale(0.6 + random.nextDouble() * 0.8);
+				level.addAlwaysVisibleParticle(ParticleTypes.FIREWORK, true, c.x, c.y, c.z, v.x, Math.abs(v.y), v.z);
+			}
+			// A mushroom of smoke rising from ground zero.
+			for (int i = 0; i < HOWITZER_SMOKE_COLUMN; i++) {
+				double height = random.nextDouble() * HOWITZER_COLUMN_HEIGHT;
+				double spreadAtHeight = 1.5 + height * 0.3;
+				level.addAlwaysVisibleParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, true,
+					c.x + (random.nextDouble() - 0.5) * spreadAtHeight, c.y + height, c.z + (random.nextDouble() - 0.5) * spreadAtHeight,
+					0, 0.05 + random.nextDouble() * 0.1, 0);
+			}
+		}
 		if (blast.radius() >= 3) {
 			for (int i = 0; i < blast.radius() * 2; i++) {
 				Vec3 offset = LightningDraw.randomDirection(random).scale(random.nextDouble() * blast.radius() * 0.6);
@@ -79,17 +103,25 @@ final class ExplosionFx {
 		}
 
 		long now = minecraft.level.getGameTime();
-		blasts = blasts.stream().filter(blast -> now - blast.startTick() < LIFETIME_TICKS).toList();
+		blasts = blasts.stream().filter(blast -> now - blast.startTick() < lifetime(blast)).toList();
 		double age0 = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		Vec3 camera = context.levelState().cameraRenderState.pos;
 
 		for (Blast blast : blasts) {
 			double age = now - blast.startTick() + age0;
-			float fade = age < GROW_TICKS ? 1f : (float) Math.max(0, 1 - (age - GROW_TICKS) / (LIFETIME_TICKS - GROW_TICKS));
+			int lifetime = lifetime(blast);
+			float fade = age < GROW_TICKS ? 1f : (float) Math.max(0, 1 - (age - GROW_TICKS) / (lifetime - GROW_TICKS));
 			Layer[] palette = blast.style() == Style.GROUND ? LightningDraw.RED : LightningDraw.FIRE;
 			Vec3 center = blast.center().subtract(camera);
-			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS));
-			List<Segment> ring = ring(center, blast.radius() * RING_GROWTH * Math.min(1, age / LIFETIME_TICKS * 1.5));
+			boolean howitzer = blast.style() == Style.HOWITZER;
+			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS) * (howitzer ? HOWITZER_RAY_REACH : 1));
+			double progress = Math.min(1, age / lifetime * 1.5);
+			List<Segment> ring = new ArrayList<>(ring(center, howitzer
+				? HOWITZER_SHOCKWAVE_RADIUS * (1 - Math.pow(1 - Math.min(1, age / lifetime), 3))
+				: blast.radius() * RING_GROWTH * progress));
+			if (howitzer) {
+				ring.addAll(ring(center, HOWITZER_SHOCKWAVE_RADIUS * SECOND_RING_FRACTION * (1 - Math.pow(1 - Math.min(1, age / lifetime), 2))));
+			}
 			List<Segment> tracer = isShot(blast) && age < TRACER_TICKS
 				? List.of(new Segment(blast.from().subtract(camera), center)) : List.of();
 			float width = blast.radius() / 2;
@@ -100,6 +132,10 @@ final class ExplosionFx {
 				LightningDraw.draw(pose.pose(), buffer, tracer, 0.5f, palette, 1f);
 			});
 		}
+	}
+
+	private static int lifetime(Blast blast) {
+		return blast.style() == Style.HOWITZER ? HOWITZER_LIFETIME_TICKS : LIFETIME_TICKS;
 	}
 
 	private static boolean isShot(Blast blast) {

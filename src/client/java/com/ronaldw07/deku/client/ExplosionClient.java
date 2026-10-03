@@ -18,7 +18,8 @@ public final class ExplosionClient {
 	private static final int RAPID_FIRE_INTERVAL = 2;
 	private static final int BIG_SHOT_LOAD_TICKS = 8;
 	private static final int DOUBLE_TAP_TICKS = 7;
-	private static final int CROSS_ARMS_TICKS = 10;
+	private static final int FULL_GROUND_CHARGE_TICKS = 60;
+	private static final int GROUND_CHARGE_SOUND_INTERVAL = 10;
 	private static final double FLIGHT_SPEED = 0.9;
 	private static final double HOWITZER_FORWARD_SPEED = 0.55;
 	private static final double HOWITZER_CIRCLE_SPEED = 0.55;
@@ -32,13 +33,18 @@ public final class ExplosionClient {
 	private static boolean flying;
 	private static boolean spinning;
 	private static double spinAngle;
-	private static int crossArms;
+	private static int groundCharge;
 
 	private ExplosionClient() {
 	}
 
 	public static boolean armsCrossed() {
-		return crossArms > 0;
+		return groundCharge > 0;
+	}
+
+	/** How far the ground blast is wound up, 0-100. */
+	public static int groundBlastCharge() {
+		return groundCharge * 100 / FULL_GROUND_CHARGE_TICKS;
 	}
 
 	public static boolean flying() {
@@ -50,13 +56,13 @@ public final class ExplosionClient {
 	}
 
 	static void tick(LocalPlayer player, boolean holding, boolean useDown, boolean jumpDown, boolean howitzerDown,
-			boolean groundBlastPressed) {
+			boolean groundBlastDown) {
 		if (player == null) {
 			useHeldTicks = 0;
 			bigShotLoad = 0;
 			flying = false;
 			spinning = false;
-			crossArms = 0;
+			groundCharge = 0;
 			return;
 		}
 
@@ -64,18 +70,18 @@ public final class ExplosionClient {
 		apShot(player, able && useDown);
 		flight(player, able, jumpDown);
 		howitzer(player, able && howitzerDown);
-		groundBlast(player, able && groundBlastPressed);
+		groundBlast(player, able && groundBlastDown);
 	}
 
 	private static void apShot(LocalPlayer player, boolean down) {
 		if (bigShotLoad > 0 && --bigShotLoad == 0) {
-			send(Move.AP_SHOT_BIG, true);
+			send(Move.AP_SHOT_BIG, true, 0);
 		}
 
 		if (down) {
 			useHeldTicks++;
 			if (useHeldTicks >= TAP_TICKS && (useHeldTicks - TAP_TICKS) % RAPID_FIRE_INTERVAL == 0) {
-				send(Move.AP_SHOT, true);
+				send(Move.AP_SHOT, true, 0);
 			}
 			return;
 		}
@@ -95,14 +101,14 @@ public final class ExplosionClient {
 		if (pressedNow) {
 			if (able && ticksSinceJumpPress <= DOUBLE_TAP_TICKS && !flying) {
 				flying = true;
-				send(Move.FLIGHT, true);
+				send(Move.FLIGHT, true, 0);
 			}
 			ticksSinceJumpPress = 0;
 		}
 
 		if (flying && (!jumpDown || !able)) {
 			flying = false;
-			send(Move.FLIGHT, false);
+			send(Move.FLIGHT, false, 0);
 		}
 		if (flying) {
 			player.setDeltaMovement(player.getLookAngle().scale(FLIGHT_SPEED));
@@ -114,10 +120,10 @@ public final class ExplosionClient {
 		if (down && !spinning) {
 			spinning = true;
 			spinAngle = 0;
-			send(Move.HOWITZER, true);
+			send(Move.HOWITZER, true, 0);
 		} else if (!down && spinning) {
 			spinning = false;
-			send(Move.HOWITZER, false);
+			send(Move.HOWITZER, false, 0);
 		}
 		if (!spinning) {
 			return;
@@ -133,20 +139,25 @@ public final class ExplosionClient {
 		player.setYBodyRot(player.yBodyRot + HOWITZER_BODY_SPIN);
 	}
 
-	/** Arms go up in a cross for a moment, then the ground in front erupts. */
-	private static void groundBlast(LocalPlayer player, boolean pressed) {
-		if (crossArms > 0 && --crossArms == 0) {
-			send(Move.GROUND_BLAST, true);
+	/** Arms stay up in a cross while C is held, charging; letting go makes the ground in front erupt. */
+	private static void groundBlast(LocalPlayer player, boolean down) {
+		if (down) {
+			if (groundCharge % GROUND_CHARGE_SOUND_INTERVAL == 0) {
+				player.level().playLocalSound(player, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 1.0f,
+					0.6f + 0.8f * groundBlastCharge() / 100f);
+			}
+			groundCharge = Math.min(FULL_GROUND_CHARGE_TICKS, groundCharge + 1);
+			return;
 		}
-		if (pressed && crossArms == 0) {
-			crossArms = CROSS_ARMS_TICKS;
-			player.level().playLocalSound(player, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 1.0f, 0.7f);
+		if (groundCharge > 0) {
+			send(Move.GROUND_BLAST, true, groundBlastCharge());
+			groundCharge = 0;
 		}
 	}
 
-	private static void send(Move move, boolean active) {
+	private static void send(Move move, boolean active, int charge) {
 		if (ClientPlayNetworking.canSend(ExplosionPayload.TYPE)) {
-			ClientPlayNetworking.send(new ExplosionPayload(move, active));
+			ClientPlayNetworking.send(new ExplosionPayload(move, active, charge));
 		}
 	}
 }

@@ -14,10 +14,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Explosion;
-import net.minecraft.world.level.ExplosionDamageCalculator;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -30,12 +28,30 @@ public final class Bakugo {
 	private static final double SHOT_REACH = 48.0;
 	private static final float SHOT_RADIUS = 1.3f;
 	private static final float BIG_SHOT_RADIUS = 3.0f;
-	private static final float HOWITZER_RADIUS = 6.0f;
 	private static final double HOWITZER_REACH = 1.5;
-	// The ground blast: rows of explosions fanning out in front of the player.
-	private static final double[] GROUND_BLAST_DISTANCES = {3, 6, 9, 12};
+	// Howitzer Impact: a huge core blast, two rings of blasts rolling outward from it, and a
+	// shockwave that throws everything within SHOCKWAVE_RANGE and badly hurts anything close.
+	private static final float HOWITZER_CORE_RADIUS = 10.0f;
+	private static final int HOWITZER_CORE_DEBRIS = 120;
+	private static final double[] HOWITZER_RING_DISTANCES = {14, 26};
+	private static final int[] HOWITZER_RING_BLASTS = {8, 10};
+	private static final float[] HOWITZER_RING_RADII = {7.0f, 5.0f};
+	private static final int HOWITZER_RING_DEBRIS = 8;
+	private static final int TICKS_PER_RING = 3;
+	private static final double SHOCKWAVE_RANGE = 200.0;
+	private static final double SHOCKWAVE_MAX_PUSH = 3.5;
+	private static final double SHOCKWAVE_DAMAGE_RANGE = 40.0;
+	private static final float SHOCKWAVE_MAX_DAMAGE = 40.0f;
+	// The ground blast: rows of explosions fanning out in front of the player, one row a tick.
+	// Holding C longer adds rows, widens the fan and grows each blast.
+	private static final int MIN_GROUND_ROWS = 3;
+	private static final int EXTRA_GROUND_ROWS = 9;
+	private static final double GROUND_FIRST_ROW = 4.0;
+	private static final double GROUND_ROW_SPACING = 5.0;
 	private static final double GROUND_BLAST_SPREAD = 0.45; // sideways offset per block of distance
-	private static final float GROUND_BLAST_RADIUS = 3.5f;
+	private static final float MIN_GROUND_RADIUS = 3.5f;
+	private static final float EXTRA_GROUND_RADIUS = 2.5f;
+	private static final int GROUND_DEBRIS = 4;
 	private static final double HAND_HEIGHT = 1.1;
 	private static final double HAND_SIDE = 0.35;
 	private static final int POP_INTERVAL = 4;
@@ -51,7 +67,7 @@ public final class Bakugo {
 	private Bakugo() {
 	}
 
-	public static void handle(ServerPlayer player, Move move, boolean active) {
+	public static void handle(ServerPlayer player, Move move, boolean active, int charge) {
 		boolean starting = active || move == Move.AP_SHOT || move == Move.AP_SHOT_BIG || move == Move.GROUND_BLAST;
 		if (starting && !DekuItems.isHolding(player, DekuItems.EXPLOSION)) {
 			return;
@@ -68,13 +84,13 @@ public final class Bakugo {
 					releaseHowitzer(player);
 				}
 			}
-			case GROUND_BLAST -> groundBlast(player);
+			case GROUND_BLAST -> groundBlast(player, Math.clamp(charge, 0, 100) / 100.0);
 		}
 	}
 
 	private static void apShot(ServerPlayer player, float radius, Style style) {
 		Vec3 target = Aim.trace(player, SHOT_REACH).getLocation();
-		blast(player, target, radius, style, hand(player, 1));
+		blast(player, target, radius, 0, style, hand(player, 1));
 	}
 
 	private static void setFlying(ServerPlayer player, boolean on) {
@@ -96,23 +112,67 @@ public final class Bakugo {
 			return;
 		}
 		NoGravity.set(player, HOWITZER_ID, false);
+		ServerLevel level = player.level();
 		Vec3 center = player.position().add(0, 1, 0).add(player.getLookAngle().scale(HOWITZER_REACH));
-		blast(player, center, HOWITZER_RADIUS, Style.HOWITZER, center);
-		player.level().playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 1.5f, 0.7f);
+		blast(player, center, HOWITZER_CORE_RADIUS, HOWITZER_CORE_DEBRIS, Style.HOWITZER, center);
+		shockwave(player, center);
+		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 4.0f, 0.5f);
+
+		for (int ring = 0; ring < HOWITZER_RING_DISTANCES.length; ring++) {
+			double distance = HOWITZER_RING_DISTANCES[ring];
+			int blasts = HOWITZER_RING_BLASTS[ring];
+			float radius = HOWITZER_RING_RADII[ring];
+			Blasts.later(level.getServer(), (ring + 1) * TICKS_PER_RING, () -> {
+				for (int i = 0; i < blasts; i++) {
+					double angle = i * Math.PI * 2 / blasts;
+					Vec3 spot = center.add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
+					blast(player, spot, radius, HOWITZER_RING_DEBRIS, Style.BIG_SHOT, spot);
+				}
+			});
+		}
 	}
 
-	private static void groundBlast(ServerPlayer player) {
+	/** Throws everything within range away from the center, and badly hurts anything close. */
+	private static void shockwave(ServerPlayer player, Vec3 center) {
+		ServerLevel level = player.level();
+		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(SHOCKWAVE_RANGE),
+				entity -> entity != player && entity.isAlive())) {
+			Vec3 offset = entity.position().subtract(center);
+			double distance = offset.length();
+			if (distance > SHOCKWAVE_RANGE) {
+				continue;
+			}
+			double strength = 1 - distance / SHOCKWAVE_RANGE;
+			Vec3 away = distance < 1.0E-3 ? new Vec3(0, 1, 0) : offset.scale(1 / distance);
+			entity.push(away.scale(SHOCKWAVE_MAX_PUSH * strength).add(0, strength, 0));
+			entity.hurtMarked = true;
+			if (distance < SHOCKWAVE_DAMAGE_RANGE) {
+				entity.hurtServer(level, player.damageSources().explosion(player, player),
+					SHOCKWAVE_MAX_DAMAGE * (float) (1 - distance / SHOCKWAVE_DAMAGE_RANGE));
+			}
+		}
+	}
+
+	private static void groundBlast(ServerPlayer player, double charge) {
 		Vec3 look = player.getLookAngle();
 		Vec3 forward = new Vec3(look.x, 0, look.z).normalize();
 		Vec3 right = new Vec3(-forward.z, 0, forward.x);
 		Vec3 feet = player.position().add(0, 0.5, 0);
-		for (double distance : GROUND_BLAST_DISTANCES) {
-			for (int side = -1; side <= 1; side++) {
-				Vec3 center = feet.add(forward.scale(distance)).add(right.scale(side * distance * GROUND_BLAST_SPREAD));
-				blast(player, center, GROUND_BLAST_RADIUS, Style.GROUND, center);
-			}
+		int rows = MIN_GROUND_ROWS + (int) Math.round(EXTRA_GROUND_ROWS * charge);
+		int lanesEachSide = 1 + (int) Math.round(2 * charge);
+		float radius = MIN_GROUND_RADIUS + EXTRA_GROUND_RADIUS * (float) charge;
+
+		for (int row = 0; row < rows; row++) {
+			double distance = GROUND_FIRST_ROW + row * GROUND_ROW_SPACING;
+			Blasts.later(player.level().getServer(), row, () -> {
+				for (int lane = -lanesEachSide; lane <= lanesEachSide; lane++) {
+					Vec3 center = feet.add(forward.scale(distance)).add(right.scale(lane * distance * GROUND_BLAST_SPREAD / lanesEachSide));
+					blast(player, center, radius, GROUND_DEBRIS, Style.GROUND, center);
+				}
+			});
 		}
-		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 2.0f, 0.6f);
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS,
+			2.0f + 2.0f * (float) charge, 0.6f);
 	}
 
 	public static void tick(MinecraftServer server) {
@@ -175,34 +235,14 @@ public final class Bakugo {
 	}
 
 	/** A real, terrain-breaking explosion that spares its owner, plus the custom fireball effect. */
-	static void blast(ServerPlayer owner, Vec3 center, float radius, Style style, Vec3 from) {
+	private static void blast(ServerPlayer owner, Vec3 center, float radius, int debris, Style style, Vec3 from) {
 		ServerLevel level = owner.level();
-		level.explode(owner, owner.damageSources().explosion(owner, owner), new SparesOwner(owner), center, radius, false,
-			Level.ExplosionInteraction.TNT);
+		Blasts.blast(owner, center, radius, Blasts.sparing(owner), debris);
 		ExplosionFxPayload fx = new ExplosionFxPayload(center, radius, style, from);
 		for (ServerPlayer viewer : PlayerLookup.around(level, center, FX_VIEW_DISTANCE)) {
 			if (ServerPlayNetworking.canSend(viewer, ExplosionFxPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);
 			}
-		}
-	}
-
-	/** Explosion rules that hurt and push everything except the player who caused it. */
-	private static final class SparesOwner extends ExplosionDamageCalculator {
-		private final Entity owner;
-
-		SparesOwner(Entity owner) {
-			this.owner = owner;
-		}
-
-		@Override
-		public boolean shouldDamageEntity(Explosion explosion, Entity entity) {
-			return entity != owner;
-		}
-
-		@Override
-		public float getKnockbackMultiplier(Entity entity) {
-			return entity == owner ? 0 : 1;
 		}
 	}
 }

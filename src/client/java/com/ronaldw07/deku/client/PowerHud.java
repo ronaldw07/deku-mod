@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 final class PowerHud {
 	private static final int COWLING_COLOR = 0xFF55FF55;
 	private static final int SMASH_COLOR = 0xFFFFAA00;
+	private static final int GROUND_BLAST_COLOR = 0xFFFF4030;
 	private static final int OFFSET_BELOW_CROSSHAIR = 12;
 	private static final int LINE_HEIGHT = 10;
 
@@ -27,6 +28,12 @@ final class PowerHud {
 		int smash = (int) Math.round(SmashClient.charge());
 		if (smash > 0) {
 			graphics.centeredText(Minecraft.getInstance().font, "Smash " + smash + "%", x, y, SMASH_COLOR);
+			y += LINE_HEIGHT;
+		}
+
+		if (ExplosionClient.armsCrossed()) {
+			graphics.centeredText(Minecraft.getInstance().font, "Ground Blast " + ExplosionClient.groundBlastCharge() + "%", x, y,
+				GROUND_BLAST_COLOR);
 		}
 	}
 }

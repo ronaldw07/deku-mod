@@ -11,11 +11,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.Explosion;
-import net.minecraft.world.level.ExplosionDamageCalculator;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -24,9 +22,13 @@ import net.minecraft.world.phys.Vec3;
  * whatever is nearest your crosshair, then hits and launches everything around it.
  */
 public final class Smash {
-	// Each stat scales linearly from its MIN at 1% to its MAX at 100%.
+	// Each stat scales linearly from its MIN at 1% to its MAX at 100%, then the FULL_POWER
+	// extras kick in steeply near the top: barely noticeable at 50%, everything at 100%.
 	private static final double MIN_RANGE = 3.0;
 	private static final double MAX_RANGE = 12.0;
+	private static final double FULL_POWER_EXTRA_RANGE = 138.0; // 150 blocks at 100%
+	private static final double FULL_POWER_EXTRA_KNOCKBACK = 4.0;
+	private static final double FULL_POWER_CURVE = 8.0;
 	private static final float MIN_DAMAGE = 2.0f;
 	private static final float MAX_DAMAGE = 20.0f;
 	private static final double MIN_KNOCKBACK = 0.5;
@@ -42,53 +44,51 @@ public final class Smash {
 	private static final double TRAIL_SPACING = 0.75;
 	private static final int GUST_EVERY = 3;
 	private static final double HEAVY_THRESHOLD = 0.5; // adds an explosion and thunder
-	private static final double FX_VIEW_DISTANCE = 64;
-	// A full-power punch blasts a tunnel through terrain along its path.
+	private static final double FX_VIEW_DISTANCE = 192;
+	// A full-power punch tears a tunnel along its whole path, rolling outward a few blocks a
+	// tick, and ends in a huge impact.
 	private static final int TUNNEL_PERCENT = 100;
 	private static final double TUNNEL_START = 2.0;
-	private static final double TUNNEL_SPACING = 2.5;
-	private static final float TUNNEL_RADIUS = 2.5f;
-	private static final ExplosionDamageCalculator TERRAIN_ONLY = new ExplosionDamageCalculator() {
-		@Override
-		public boolean shouldDamageEntity(Explosion explosion, Entity entity) {
-			return false;
-		}
-
-		@Override
-		public float getKnockbackMultiplier(Entity entity) {
-			return 0;
-		}
-	};
+	private static final double TUNNEL_SPACING = 3.0;
+	private static final float TUNNEL_RADIUS = 3.5f;
+	private static final int TUNNEL_DEBRIS = 3;
+	private static final double TUNNEL_BLOCKS_PER_TICK = 6.0;
+	private static final float IMPACT_RADIUS = 7.0f;
+	private static final int IMPACT_DEBRIS = 60;
+	private static final int IMPACT_BOLTS = 8;
+	private static final double IMPACT_BOLT_LENGTH = 6.0;
+	private static final int HIT_BOLTS = 3;
+	private static final double HIT_BOLT_LENGTH = 2.5;
 
 	private Smash() {
 	}
 
 	public static void perform(ServerPlayer player, int percent) {
 		double power = Mth.clamp(percent, 1, 100) / 100.0;
-		double range = Mth.lerp(power, MIN_RANGE, MAX_RANGE);
+		double fullPower = Math.pow(power, FULL_POWER_CURVE);
+		double range = Mth.lerp(power, MIN_RANGE, MAX_RANGE) + FULL_POWER_EXTRA_RANGE * fullPower;
 		float damage = (float) Mth.lerp(power, MIN_DAMAGE, MAX_DAMAGE);
 		ServerLevel level = player.level();
 		Vec3 eye = player.getEyePosition();
 
 		Optional<LivingEntity> locked = lockOn(level, player, eye, player.getLookAngle(), range);
 		Vec3 aim = locked.map(target -> directionTo(eye, target)).orElse(player.getLookAngle());
-		Vec3 push = aim.scale(Mth.lerp(power, MIN_KNOCKBACK, MAX_KNOCKBACK)).add(0, MAX_LIFT * power, 0);
+		double knockback = Mth.lerp(power, MIN_KNOCKBACK, MAX_KNOCKBACK) + FULL_POWER_EXTRA_KNOCKBACK * fullPower;
+		Vec3 push = aim.scale(knockback).add(0, MAX_LIFT * power, 0);
 
 		for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, new AABB(eye, eye).inflate(range),
 				target -> target != player && target.isAlive() && inCone(eye, aim, target, range))) {
 			target.hurtServer(level, player.damageSources().playerAttack(player), damage);
 			target.push(push);
 			target.hurtMarked = true;
-		}
-
-		if (percent >= TUNNEL_PERCENT) {
-			for (double distance = TUNNEL_START; distance <= range; distance += TUNNEL_SPACING) {
-				level.explode(player, player.damageSources().explosion(player, player), TERRAIN_ONLY, eye.add(aim.scale(distance)),
-					TUNNEL_RADIUS, false, Level.ExplosionInteraction.TNT);
-			}
+			lightningBurst(level, target.getBoundingBox().getCenter(), HIT_BOLTS, HIT_BOLT_LENGTH, power);
 		}
 
 		Vec3 end = locked.map(target -> target.getBoundingBox().getCenter()).orElse(eye.add(aim.scale(range)));
+		if (percent >= TUNNEL_PERCENT) {
+			tunnel(player, eye, aim, eye.distanceTo(end));
+		}
+
 		sendLightning(level, eye.add(aim.scale(LIGHTNING_START)), end, power);
 		showBlast(level, player, eye, aim, range, power);
 	}
@@ -111,6 +111,31 @@ public final class Smash {
 		Vec3 toTarget = target.getBoundingBox().getCenter().subtract(eye);
 		double distance = toTarget.length();
 		return distance <= range && (distance < POINT_BLANK || toTarget.normalize().dot(aim) >= CONE_COS);
+	}
+
+	/** Blasts a tunnel from the fist to the end of the punch's reach, a few blocks a tick, then a huge impact. */
+	private static void tunnel(ServerPlayer player, Vec3 eye, Vec3 aim, double length) {
+		MinecraftServer server = player.level().getServer();
+		for (double distance = TUNNEL_START; distance <= length; distance += TUNNEL_SPACING) {
+			Vec3 center = eye.add(aim.scale(distance));
+			Blasts.later(server, (int) (distance / TUNNEL_BLOCKS_PER_TICK),
+				() -> Blasts.blast(player, center, TUNNEL_RADIUS, Blasts.TERRAIN_ONLY, TUNNEL_DEBRIS));
+		}
+
+		Vec3 impact = eye.add(aim.scale(length));
+		Blasts.later(server, (int) (length / TUNNEL_BLOCKS_PER_TICK), () -> {
+			Blasts.blast(player, impact, IMPACT_RADIUS, Blasts.sparing(player), IMPACT_DEBRIS);
+			lightningBurst(player.level(), impact, IMPACT_BOLTS, IMPACT_BOLT_LENGTH, 1.0);
+		});
+	}
+
+	/** Green bolts crackling out in every direction from a point the punch hit. */
+	private static void lightningBurst(ServerLevel level, Vec3 center, int bolts, double length, double power) {
+		RandomSource random = level.getRandom();
+		for (int i = 0; i < bolts; i++) {
+			Vec3 direction = new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1).normalize();
+			sendLightning(level, center, center.add(direction.scale(length * (0.5 + random.nextDouble() * 0.5))), power);
+		}
 	}
 
 	private static void sendLightning(ServerLevel level, Vec3 from, Vec3 to, double power) {

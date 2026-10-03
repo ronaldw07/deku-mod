@@ -12,12 +12,15 @@ import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.entity.player.Player;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,9 +68,14 @@ public class DekuMod implements ModInitializer {
 
 		PayloadTypeRegistry.serverboundPlay().register(ExplosionPayload.TYPE, ExplosionPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(ExplosionPayload.TYPE,
-			(payload, context) -> Bakugo.handle(context.player(), payload.move(), payload.active()));
+			(payload, context) -> Bakugo.handle(context.player(), payload.move(), payload.active(), payload.charge()));
 		PayloadTypeRegistry.clientboundPlay().register(ExplosionFxPayload.TYPE, ExplosionFxPayload.CODEC);
 		ServerTickEvents.END_SERVER_TICK.register(Bakugo::tick);
+		ServerTickEvents.END_SERVER_TICK.register(Blasts::tick);
+
+		// Quirk users land on their feet: no fall damage for players, ever.
+		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
+			!(entity instanceof Player && source.is(DamageTypeTags.IS_FALL)));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Bakugo.forget(handler.player));
 
 		LOGGER.info("One For All loaded");
