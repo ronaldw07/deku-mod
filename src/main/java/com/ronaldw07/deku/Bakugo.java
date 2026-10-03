@@ -16,7 +16,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -61,14 +60,16 @@ public final class Bakugo {
 	private static final float MIN_GROUND_RADIUS = 6.0f;
 	private static final float EXTRA_GROUND_RADIUS = 5.0f;
 	private static final int GROUND_DEBRIS = 4;
-	// Cluster bomb: an 8x8 grid of bombs laid out jaggedly ahead, going off a row at a time.
-	private static final int CLUSTER_GRID = 8;
-	private static final double CLUSTER_FIRST_ROW = 5.0;
-	private static final double CLUSTER_SPACING = 4.5;
-	private static final double CLUSTER_JITTER = 1.6;
-	private static final float CLUSTER_RADIUS = 3.5f;
-	private static final int CLUSTER_TICKS_PER_ROW = 3;
-	private static final int CLUSTER_DEBRIS = 2;
+	// Cluster bomb: a long, lumpy line of round bombs down the crosshair, going off one after
+	// another from the hand outward.
+	private static final double CLUSTER_START = 4.0;
+	private static final double CLUSTER_LENGTH = 100.0;
+	private static final double CLUSTER_SPACING = 3.0;
+	private static final double CLUSTER_JITTER = 0.9;
+	private static final float MIN_CLUSTER_RADIUS = 3.5f;
+	private static final float EXTRA_CLUSTER_RADIUS = 1.5f;
+	private static final double CLUSTER_BOMBS_PER_TICK = 2.0;
+	private static final int CLUSTER_DEBRIS = 3;
 	// Fires left in a crater: one for every few blocks of radius; smaller blasts only sometimes leave one.
 	private static final float RADIUS_PER_FIRE = 4.0f;
 	private static final double SMALL_BLAST_FIRE_CHANCE = 0.3;
@@ -226,37 +227,21 @@ public final class Bakugo {
 			2.0f + 2.0f * (float) charge, 0.6f);
 	}
 
-	/**
-	 * Bombs on the ground in a jagged 8x8 grid ahead, each row going off a moment after the
-	 * last and each bomb in a row a beat apart, so they boom one after another.
-	 */
+	/** Bombs strung out along the aim, each a little off the line and a different size, booming in sequence. */
 	private static void cluster(ServerPlayer player) {
 		ServerLevel level = player.level();
 		RandomSource random = level.getRandom();
-		Vec3 look = player.getLookAngle();
-		Vec3 forward = new Vec3(look.x, 0, look.z).lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : new Vec3(look.x, 0, look.z).normalize();
-		Vec3 right = new Vec3(-forward.z, 0, forward.x);
-		Vec3 feet = player.position();
-		double half = (CLUSTER_GRID - 1) / 2.0;
-		for (int row = 0; row < CLUSTER_GRID; row++) {
-			for (int column = 0; column < CLUSTER_GRID; column++) {
-				Vec3 spot = feet.add(forward.scale(CLUSTER_FIRST_ROW + row * CLUSTER_SPACING))
-					.add(right.scale((column - half) * CLUSTER_SPACING))
-					.add((random.nextDouble() * 2 - 1) * CLUSTER_JITTER, 0, (random.nextDouble() * 2 - 1) * CLUSTER_JITTER);
-				int delay = row * CLUSTER_TICKS_PER_ROW + random.nextInt(CLUSTER_TICKS_PER_ROW);
-				Blasts.later(level.getServer(), delay, () -> {
-					Vec3 ground = onGround(level, spot);
-					blast(player, ground, CLUSTER_RADIUS, CLUSTER_DEBRIS, Style.CLUSTER, ground);
-				});
-			}
+		Vec3 eye = player.getEyePosition();
+		Vec3 aim = player.getLookAngle();
+		int bomb = 0;
+		for (double distance = CLUSTER_START; distance <= CLUSTER_LENGTH; distance += CLUSTER_SPACING, bomb++) {
+			Vec3 spot = eye.add(aim.scale(distance)).add(new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1,
+				random.nextDouble() * 2 - 1).scale(CLUSTER_JITTER));
+			float radius = MIN_CLUSTER_RADIUS + random.nextFloat() * EXTRA_CLUSTER_RADIUS;
+			Blasts.later(level.getServer(), (int) (bomb / CLUSTER_BOMBS_PER_TICK),
+				() -> blast(player, spot, radius, CLUSTER_DEBRIS, Style.CLUSTER, spot));
 		}
-		level.playSound(null, feet.x, feet.y, feet.z, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 2.0f, 1.4f);
-	}
-
-	/** The spot moved onto the top of the ground below or above it, half a block up. */
-	private static Vec3 onGround(ServerLevel level, Vec3 spot) {
-		int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(spot.x), (int) Math.floor(spot.z));
-		return new Vec3(spot.x, top + 0.5, spot.z);
+		level.playSound(null, eye.x, eye.y, eye.z, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 2.0f, 1.4f);
 	}
 
 	public static void tick(MinecraftServer server) {

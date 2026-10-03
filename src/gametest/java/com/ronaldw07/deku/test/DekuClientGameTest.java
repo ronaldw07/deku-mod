@@ -192,6 +192,8 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(health < 100, "smash should damage the golem, health was " + health);
 		check(moved > 1, "smash should launch the golem, it moved " + moved);
 		command(singleplayer, "kill @e[type=minecraft:iron_golem]");
+		// Smash carves terrain, so carry on from untouched ground.
+		command(singleplayer, "execute as @p at @p run tp @s ~-30 -60 ~ 0 0");
 	}
 
 	private static void blackwhip(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
@@ -516,10 +518,10 @@ public class DekuClientGameTest implements FabricClientGameTest {
 	}
 
 	private static void clusterBomb(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
-		// X: an 8x8 grid of bombs ahead goes off row by row, catching husks spread across it.
+		// X: a long line of bombs down the crosshair goes off one after another, catching husks all along it.
 		command(singleplayer, "kill @e[type=!minecraft:player]");
 		command(singleplayer, "execute as @p at @p run tp @s ~40 ~ ~ 0 0");
-		for (String spot : List.of("~-8 ~ ~10", "~8 ~ ~20", "~ ~ ~28", "~-6 ~ ~34")) {
+		for (String spot : List.of("~ ~ ~10", "~ ~ ~35", "~ ~ ~60", "~ ~ ~90")) {
 			command(singleplayer, "execute at @p run summon minecraft:husk " + spot + " {NoAI:1b}");
 		}
 		camera(context, CameraType.THIRD_PERSON_BACK);
@@ -531,11 +533,11 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("cluster-done");
 		boolean allHit = singleplayer.getServer().computeOnServer(server -> server.overworld()
 			.getEntities(EntityTypes.HUSK, husk -> husk.isAlive() && husk.getHealth() >= husk.getMaxHealth()).isEmpty());
-		check(allHit, "the cluster bomb should hit every husk in its grid");
+		check(allHit, "the cluster bomb should hit every husk along its line");
 		int fires = singleplayer.getServer().computeOnServer(server -> {
 			BlockPos feet = player(server).blockPosition();
 			int count = 0;
-			for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-20, -6, 0), feet.offset(20, 6, 40))) {
+			for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-8, -8, 0), feet.offset(8, 8, 100))) {
 				count += server.overworld().getBlockState(pos).is(Blocks.FIRE) ? 1 : 0;
 			}
 			return count;

@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
@@ -18,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The look of an Explosion blast, on top of the vanilla boom: a burst of fiery rays,
  * a shockwave ring racing outward, flames, sparks and smoke, and for shots a streak
- * from the hand. The ground blast burns red.
+ * from the hand. The ground blast and cluster bombs burn red.
  */
 final class ExplosionFx {
 	private static final int LIFETIME_TICKS = 12;
@@ -43,6 +44,9 @@ final class ExplosionFx {
 	// Fireball volume: big explosion puffs filling the blast sphere.
 	private static final int MAX_FIREBALL_PUFFS = 40;
 	private static final double PUFFS_PER_RADIUS = 2.0;
+	private static final int CLUSTER_EMBERS = 120;
+	private static final DustParticleOptions CLUSTER_RED = new DustParticleOptions(0xFF0000, 4.0f);
+	private static final DustParticleOptions CLUSTER_DARK_RED = new DustParticleOptions(0xC00000, 3.5f);
 	// Smoke hangs over every blast for a few seconds.
 	private static final int SMOKE_LINGER_TICKS = 100;
 	private static final float RADIUS_PER_SMOKE_PUFF = 4.0f;
@@ -116,6 +120,14 @@ final class ExplosionFx {
 			Vec3 v = LightningDraw.randomDirection(random).scale(0.08 * spread);
 			level.addParticle(ParticleTypes.LARGE_SMOKE, c.x, c.y, c.z, v.x, v.y + 0.02, v.z);
 		}
+		if (blast.style() == Style.CLUSTER) {
+			// Cluster bombs burn deep red: a ball of red embers filling the blast.
+			for (int i = 0; i < CLUSTER_EMBERS; i++) {
+				Vec3 at = c.add(inSphere(random, blast.radius()));
+				Vec3 v = at.subtract(c).scale(0.05);
+				level.addAlwaysVisibleParticle(random.nextBoolean() ? CLUSTER_RED : CLUSTER_DARK_RED, true, at.x, at.y, at.z, v.x, v.y, v.z);
+			}
+		}
 		if (blast.style() == Style.HOWITZER) {
 			level.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y, c.z, 0, 0, 0);
 			for (int i = 0; i < HOWITZER_SPARKS; i++) {
@@ -155,7 +167,11 @@ final class ExplosionFx {
 			double age = now - blast.startTick() + age0;
 			int lifetime = lifetime(blast);
 			float fade = age < GROW_TICKS ? 1f : (float) Math.max(0, 1 - (age - GROW_TICKS) / (lifetime - GROW_TICKS));
-			Layer[] palette = blast.style() == Style.GROUND ? LightningDraw.RED : LightningDraw.FIRE;
+			Layer[] palette = switch (blast.style()) {
+				case GROUND -> LightningDraw.RED;
+				case CLUSTER -> LightningDraw.CRIMSON;
+				default -> LightningDraw.FIRE;
+			};
 			Vec3 center = blast.center().subtract(camera);
 			boolean howitzer = blast.style() == Style.HOWITZER;
 			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS) * (howitzer ? HOWITZER_RAY_REACH : 1));

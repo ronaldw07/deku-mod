@@ -41,6 +41,7 @@ public final class Blasts {
 	private static final double DEBRIS_MIN_SPEED = 0.6;
 	private static final double DEBRIS_EXTRA_SPEED = 0.8;
 	private static final int DEBRIS_ATTEMPTS_PER_BLOCK = 4;
+	private static final int FIRE_DELAY_TICKS = 4;
 
 	private record Scheduled(int runAt, Runnable action) {
 	}
@@ -114,18 +115,19 @@ public final class Blasts {
 			}
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
 		}
-		light(level, center, radius, fires);
+		// A beat later, so blasts landing right after this one don't snuff the fires out.
+		later(level.getServer(), FIRE_DELAY_TICKS, () -> light(level, center, radius, fires));
 	}
 
 	/** Sets fires on open floor at random spots in the crater. */
 	private static void light(ServerLevel level, Vec3 center, float radius, int fires) {
 		RandomSource random = level.getRandom();
 		for (int attempt = 0; attempt < fires * DEBRIS_ATTEMPTS_PER_BLOCK && fires > 0; attempt++) {
-			Vec3 spot = center.add((random.nextDouble() * 2 - 1) * radius, -radius, (random.nextDouble() * 2 - 1) * radius);
+			Vec3 spot = center.add((random.nextDouble() * 2 - 1) * radius, 0, (random.nextDouble() * 2 - 1) * radius);
 			BlockPos pos = BlockPos.containing(spot);
-			// Climb up from the bottom of the crater to the first open space.
-			for (int up = 0; up < radius * 2 && !level.getBlockState(pos).isAir(); up++) {
-				pos = pos.above();
+			// Drop from the middle of the crater down to its floor.
+			for (int down = 0; down < radius * 2 && level.getBlockState(pos.below()).isAir() && pos.getY() > level.getMinY(); down++) {
+				pos = pos.below();
 			}
 			BlockState fire = BaseFireBlock.getState(level, pos);
 			if (level.getBlockState(pos).isAir() && fire.canSurvive(level, pos)) {

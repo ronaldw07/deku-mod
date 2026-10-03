@@ -22,7 +22,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Double-tap and hold space: fly (W/A/S/D to move, hover otherwise)
 - Hold V: Howitzer Impact, release to explode
 - Hold C: charge the cross-arm ground blast, release to fire
-- X: Cluster Bomb, an 8x8 grid of bombs going off row by row
+- X: Cluster Bomb, a 100-block line of red bombs going off one after another
 
 ## Danger Sense
 

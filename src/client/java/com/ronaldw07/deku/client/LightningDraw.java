@@ -35,6 +35,12 @@ final class LightningDraw {
 		new Layer(0.06f, 1.0f, 0.55f, 0.1f, 0.5f),
 		new Layer(0.025f, 1.0f, 0.95f, 0.7f, 0.9f),
 	};
+	// The cluster bomb's deep crimson: red all the way to the core.
+	static final Layer[] CRIMSON = {
+		new Layer(0.14f, 1.0f, 0.0f, 0.0f, 0.45f),
+		new Layer(0.07f, 1.0f, 0.08f, 0.04f, 0.7f),
+		new Layer(0.03f, 1.0f, 0.35f, 0.25f, 0.9f),
+	};
 	static final Layer[] RED = {
 		new Layer(0.12f, 0.9f, 0.05f, 0.05f, 0.3f),
 		new Layer(0.06f, 1.0f, 0.2f, 0.1f, 0.55f),
