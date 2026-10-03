@@ -53,6 +53,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			floatQuirk(context, singleplayer);
 			dangerSense(context, singleplayer);
 			explosion(context, singleplayer);
+			fullPowerSmashTunnel(context, singleplayer);
 		}
 	}
 
@@ -339,6 +340,24 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		boolean huskDown = singleplayer.getServer().computeOnServer(server -> server.overworld()
 			.getEntities(EntityTypes.HUSK, husk -> husk.isAlive() && husk.getHealth() >= husk.getMaxHealth()).isEmpty());
 		check(huskDown, "the ground blast should hurt the husk in front");
+		camera(context, CameraType.FIRST_PERSON);
+	}
+
+	private static void fullPowerSmashTunnel(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// A 100% Smash, released instantly, blasts through a stone wall 5 blocks ahead.
+		command(singleplayer, "execute as @p at @p run tp @s ~-40 ~ ~ 0 0");
+		command(singleplayer, "execute at @p run fill ~-2 ~ ~5 ~2 ~4 ~5 minecraft:stone");
+		selectSlot(context, 0);
+		DekuSettings.set(DekuSettings.get().withPunchPower(100).withPunchChargeSeconds(0));
+		context.waitTicks(3);
+		BlockPos wallCenter = singleplayer.getServer().computeOnServer(server -> BlockPos.containing(player(server).getEyePosition()).south(5));
+		context.getInput().holdKeyFor(DekuModClient.SMASH_KEY, 2);
+		context.waitTicks(5);
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(2);
+		context.takeScreenshot("smash-tunnel");
+		boolean holed = singleplayer.getServer().computeOnServer(server -> server.overworld().getBlockState(wallCenter).isAir());
+		check(holed, "a 100% Smash should blast through the wall at " + wallCenter);
 		camera(context, CameraType.FIRST_PERSON);
 	}
 
