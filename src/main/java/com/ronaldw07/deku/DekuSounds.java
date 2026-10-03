@@ -10,7 +10,9 @@ import net.minecraft.sounds.SoundEvent;
  * sounds; a resource pack can point any of them at its own .ogg file instead.
  */
 public final class DekuSounds {
+	public static final SoundEvent COWLING_ACTIVATE = register("cowling.activate");
 	public static final SoundEvent COWLING_CRACKLE = register("cowling.crackle");
+	public static final SoundEvent SMASH_WINDUP = register("smash.windup");
 	public static final SoundEvent SMASH_CHARGE = register("smash.charge");
 	public static final SoundEvent SMASH_BLAST = register("smash.blast");
 	public static final SoundEvent SMASH_THUNDER = register("smash.thunder");

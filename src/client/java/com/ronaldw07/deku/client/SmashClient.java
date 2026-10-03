@@ -33,6 +33,9 @@ public final class SmashClient {
 
 		if (held || pressed) {
 			DekuSettings settings = DekuSettings.get();
+			if (!charging) {
+				player.level().playLocalSound(player, DekuSounds.SMASH_WINDUP, SoundSource.PLAYERS, 1.0f, 1.0f);
+			}
 			charge = Ramp.toward(charging ? charge : 0, settings.punchPower(), settings.punchChargeSeconds());
 			charging = true;
 			// Hum that rises in pitch as the punch charges.

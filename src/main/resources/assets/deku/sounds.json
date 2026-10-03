@@ -1,7 +1,17 @@
 {
+	"cowling.activate": {
+		"sounds": [
+			{ "name": "minecraft:block.beacon.activate", "type": "event", "pitch": 1.3 }
+		]
+	},
 	"cowling.crackle": {
 		"sounds": [
 			{ "name": "minecraft:entity.lightning_bolt.impact", "type": "event", "pitch": 1.8, "volume": 0.3 }
+		]
+	},
+	"smash.windup": {
+		"sounds": [
+			{ "name": "minecraft:entity.breeze.charge", "type": "event", "pitch": 0.8 }
 		]
 	},
 	"smash.charge": {

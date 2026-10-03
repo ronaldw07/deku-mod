@@ -3,6 +3,7 @@ package com.ronaldw07.deku;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -27,6 +28,13 @@ public final class FullCowling {
 
 	public static void apply(ServerPlayer player, int percent) {
 		double power = Mth.clamp(percent, 0, 100) / 100.0;
+		AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		boolean wasActive = speed != null && speed.getModifier(SPEED_ID) != null;
+		if (!wasActive && power > 0) {
+			player.level().playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.COWLING_ACTIVATE,
+				SoundSource.PLAYERS, 1.0f, 1.0f);
+		}
+
 		setBonus(player, Attributes.MOVEMENT_SPEED, SPEED_ID, MAX_SPEED_BONUS * power, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
 		setBonus(player, Attributes.JUMP_STRENGTH, JUMP_ID, MAX_JUMP_BONUS * power, AttributeModifier.Operation.ADD_VALUE);
 		setBonus(player, Attributes.SAFE_FALL_DISTANCE, SAFE_FALL_ID, MAX_SAFE_FALL_BONUS * power, AttributeModifier.Operation.ADD_VALUE);
