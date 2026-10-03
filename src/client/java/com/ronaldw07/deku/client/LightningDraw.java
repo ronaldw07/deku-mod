@@ -6,7 +6,10 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4fc;
 
-/** Draws glowing lightning segments; meant for the additive lightning render type. */
+/**
+ * Draws chains of segments as thin crossed ribbons: the green glow for lightning (meant for
+ * the additive lightning render type) or any flat color, like Blackwhip's tendrils.
+ */
 final class LightningDraw {
 	record Segment(Vec3 from, Vec3 to) {
 	}
@@ -33,30 +36,58 @@ final class LightningDraw {
 		}
 	}
 
+	static void drawFlat(Matrix4fc pose, VertexConsumer buffer, List<Segment> segments, float halfWidth,
+			float red, float green, float blue, float alpha) {
+		Layer layer = new Layer(halfWidth, red, green, blue, alpha);
+		for (Segment segment : segments) {
+			drawSegment(pose, buffer, segment, halfWidth, layer);
+		}
+	}
+
+	/**
+	 * Glowing edges only: strips from innerHalfWidth out to outerHalfWidth on both sides,
+	 * leaving the middle clear so a separately drawn dark core stays dark.
+	 */
+	static void drawEdges(Matrix4fc pose, VertexConsumer buffer, List<Segment> segments, float innerHalfWidth,
+			float outerHalfWidth, float red, float green, float blue, float alpha) {
+		Layer layer = new Layer(outerHalfWidth, red, green, blue, alpha);
+		for (Segment segment : segments) {
+			Vec3 along = segment.to().subtract(segment.from());
+			for (Vec3 side : sides(along)) {
+				for (int sign = -1; sign <= 1; sign += 2) {
+					Vec3 inner = side.scale(sign * innerHalfWidth);
+					Vec3 outer = side.scale(sign * outerHalfWidth);
+					quad(pose, buffer, segment.from().add(inner), segment.to().add(inner),
+						segment.to().add(outer), segment.from().add(outer), layer);
+				}
+			}
+		}
+	}
+
 	static Vec3 randomDirection(RandomSource random) {
 		return new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1).normalize();
 	}
 
 	/** Two crossed ribbons along the segment, each drawn from both sides so it shows from any angle. */
 	private static void drawSegment(Matrix4fc pose, VertexConsumer buffer, Segment segment, float halfWidth, Layer layer) {
-		Vec3 along = segment.to().subtract(segment.from());
+		for (Vec3 side : sides(segment.to().subtract(segment.from()))) {
+			Vec3 offset = side.scale(halfWidth);
+			quad(pose, buffer, segment.from().add(offset), segment.to().add(offset),
+				segment.to().subtract(offset), segment.from().subtract(offset), layer);
+		}
+	}
+
+	/** Two unit vectors at right angles to each other and to the segment: the ribbons' widths. */
+	private static Vec3[] sides(Vec3 along) {
 		Vec3 side = along.cross(new Vec3(0, 1, 0));
 		if (side.lengthSqr() < 1.0E-6) {
 			side = along.cross(new Vec3(1, 0, 0));
 		}
-		Vec3 u = side.normalize().scale(halfWidth);
-		Vec3 v = along.cross(u).normalize().scale(halfWidth);
-
-		ribbon(pose, buffer, segment, u, layer);
-		ribbon(pose, buffer, segment, v, layer);
+		Vec3 u = side.normalize();
+		return new Vec3[] {u, along.cross(u).normalize()};
 	}
 
-	private static void ribbon(Matrix4fc pose, VertexConsumer buffer, Segment segment, Vec3 offset, Layer layer) {
-		Vec3 a = segment.from().add(offset);
-		Vec3 b = segment.to().add(offset);
-		Vec3 c = segment.to().subtract(offset);
-		Vec3 d = segment.from().subtract(offset);
-
+	private static void quad(Matrix4fc pose, VertexConsumer buffer, Vec3 a, Vec3 b, Vec3 c, Vec3 d, Layer layer) {
 		vertex(pose, buffer, a, layer);
 		vertex(pose, buffer, b, layer);
 		vertex(pose, buffer, c, layer);
