@@ -10,10 +10,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Lays the player out flat along their view, like elytra gliding, while blasting through the air. */
+/**
+ * Lays the player out flat along their view, like elytra gliding, while blasting through
+ * the air; during Howitzer Impact they also spin like a drill around their length.
+ */
 @Mixin(AvatarRenderer.class)
 abstract class AvatarRendererMixin {
 	private static final float FULLY_GLIDING_TICKS = 20;
+	private static final float HOWITZER_ROLL_PER_TICK = 0.9f; // radians
 
 	@Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V",
 		at = @At("TAIL"))
@@ -24,7 +28,8 @@ abstract class AvatarRendererMixin {
 		}
 		state.isFallFlying = true;
 		state.fallFlyingTimeInTicks = FULLY_GLIDING_TICKS;
-		state.shouldApplyFlyingYRot = false;
+		state.shouldApplyFlyingYRot = ExplosionClient.spinning();
+		state.flyingYRot = (entity.tickCount + partialTicks) * HOWITZER_ROLL_PER_TICK;
 		state.isAutoSpinAttack = false;
 	}
 }

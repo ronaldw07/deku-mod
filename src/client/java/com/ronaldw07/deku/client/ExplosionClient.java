@@ -24,7 +24,6 @@ public final class ExplosionClient {
 	private static final double HOWITZER_FORWARD_SPEED = 0.8;
 	private static final double HOWITZER_CIRCLE_SPEED = 0.75;
 	private static final double HOWITZER_TURN = 0.8; // radians per tick around the circle
-	private static final float HOWITZER_BODY_SPIN = 50; // degrees per tick
 
 	private static int useHeldTicks;
 	private static int bigShotLoad;
@@ -140,7 +139,6 @@ public final class ExplosionClient {
 		Vec3 up = right.cross(look);
 		Vec3 circle = right.scale(Math.cos(spinAngle)).add(up.scale(Math.sin(spinAngle))).scale(HOWITZER_CIRCLE_SPEED);
 		player.setDeltaMovement(look.scale(HOWITZER_FORWARD_SPEED).add(circle));
-		player.setYBodyRot(player.yBodyRot + HOWITZER_BODY_SPIN);
 	}
 
 	/** Arms stay up in a cross while C is held, charging; letting go makes the ground in front erupt. */
