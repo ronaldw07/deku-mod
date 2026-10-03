@@ -20,6 +20,10 @@ public final class FloatClient {
 	private FloatClient() {
 	}
 
+	public static boolean active() {
+		return lastSent;
+	}
+
 	static void tick(LocalPlayer player, boolean held, boolean jumpRises) {
 		if (player == null) {
 			lastSent = false;

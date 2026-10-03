@@ -15,7 +15,7 @@ final class HeroNotebook {
 				Slot 1: One For All
 				Slot 2: Explosion
 
-				Hold a quirk item to use its moves.
+				Hold a quirk item to use its moves. Its controls show in the bottom right.
 
 				K opens settings.
 				Change keys in
@@ -45,7 +45,9 @@ final class HeroNotebook {
 
 				Smash power and charge time.
 
-				Danger Sense on/off."""));
+				Danger Sense on/off.
+
+				Cooldowns on/off."""));
 	}
 
 	private static Component page(String title, String body) {

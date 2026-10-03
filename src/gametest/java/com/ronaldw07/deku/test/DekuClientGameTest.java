@@ -4,6 +4,7 @@ import com.ronaldw07.deku.Aim;
 import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
+import com.ronaldw07.deku.client.Cooldowns;
 import com.ronaldw07.deku.client.DangerSenseClient;
 import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DekuSettings;
@@ -50,6 +51,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			smash(context, singleplayer);
 			blackwhip(context, singleplayer);
 			smokescreen(context, singleplayer);
+			poses(context, singleplayer);
 			floatQuirk(context, singleplayer);
 			dangerSense(context, singleplayer);
 			explosion(context, singleplayer);
@@ -210,6 +212,41 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("smokescreen");
 		camera(context, CameraType.FIRST_PERSON);
 		command(singleplayer, "kill @e[type=minecraft:husk]");
+	}
+
+	private static void poses(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Smokescreen was just used, so it's recharging on the controls panel and can't go off again.
+		check(!context.computeOnClient(client -> Cooldowns.ready(Cooldowns.Ability.SMOKESCREEN)), "smokescreen should be on cooldown");
+		context.takeScreenshot("controls-panel");
+
+		// Face the camera, aiming up at open sky so nothing gets hit.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p at @p run tp @s ~20 ~ ~ 0 -20");
+		camera(context, CameraType.THIRD_PERSON_FRONT);
+		context.waitTicks(3);
+		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.waitTicks(3);
+		context.takeScreenshot("pose-power-up");
+		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.getInput().holdKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(10);
+		context.takeScreenshot("pose-smash-charge");
+		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(2);
+		context.takeScreenshot("pose-punch");
+		context.waitTicks(20);
+		context.getInput().pressKey(DekuModClient.BLACKWHIP_KEY);
+		context.waitTicks(3);
+		context.takeScreenshot("pose-whip");
+
+		selectSlot(context, 1);
+		context.waitTicks(3);
+		context.getInput().holdKeyFor(options -> options.keyUse, 2);
+		context.waitTicks(3);
+		context.takeScreenshot("pose-ap-aim");
+		context.waitTicks(20);
+		selectSlot(context, 0);
+		camera(context, CameraType.FIRST_PERSON);
 	}
 
 	private static void floatQuirk(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

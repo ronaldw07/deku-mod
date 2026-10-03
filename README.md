@@ -3,7 +3,7 @@
 Fabric mod for Minecraft 26.2: One For All and Explosion quirks.
 
 New players get One For All, Explosion and a notebook of instructions in hotbar slots 1-3.
-Hold a quirk item to use its moves. Keys can be changed in Options > Controls.
+Hold a quirk item to use its moves; its controls and cooldowns show in the bottom right. Keys can be changed in Options > Controls.
 
 ## One For All (slot 1)
 
@@ -12,7 +12,7 @@ Hold a quirk item to use its moves. Keys can be changed in Options > Controls.
 - Z: Smokescreen
 - Hold R, or double-tap and hold space: Float
 - B: Blackwhip
-- K: settings (power, ramp-up and charge times, Danger Sense)
+- K: settings (power, ramp-up and charge times, Danger Sense, cooldowns on/off)
 
 ## Explosion (slot 2)
 

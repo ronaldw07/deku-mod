@@ -41,8 +41,12 @@ public class SettingsScreen extends Screen {
 			.create(x, y + ROW_SPACING * 4, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Danger Sense"),
 				(button, on) -> DekuSettings.set(DekuSettings.get().withDangerSense(on))));
 
+		addRenderableWidget(CycleButton.onOffBuilder(!settings.noCooldowns())
+			.create(x, y + ROW_SPACING * 5, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Cooldowns"),
+				(button, on) -> DekuSettings.set(DekuSettings.get().withNoCooldowns(!on))));
+
 		addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose())
-			.bounds(x, y + ROW_SPACING * 5 + 12, WIDGET_WIDTH, WIDGET_HEIGHT)
+			.bounds(x, y + ROW_SPACING * 6 + 12, WIDGET_WIDTH, WIDGET_HEIGHT)
 			.build());
 	}
 

@@ -10,6 +10,7 @@ import net.minecraft.sounds.SoundSource;
 public final class FullCowlingClient {
 	// Average gap between crackles at 100%; lower power crackles less often and more quietly.
 	private static final double CRACKLE_TICKS_AT_FULL = 8;
+	private static final int POWER_UP_POSE_TICKS = 12;
 
 	private static boolean active;
 	private static double percent;
@@ -37,6 +38,8 @@ public final class FullCowlingClient {
 
 		if (!holdingQuirk || player.isDeadOrDying()) {
 			active = false;
+		} else if (togglePressed && active) {
+			Poses.play(Poses.Pose.POWER_UP, POWER_UP_POSE_TICKS);
 		}
 
 		DekuSettings settings = DekuSettings.get();

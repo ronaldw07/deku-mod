@@ -45,6 +45,7 @@ public class DekuModClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(DekuModClient::tick);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("power"), PowerHud::extract);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("danger_sense"), DangerSenseHud::extract);
+		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, DekuMod.id("controls"), ControlsHud::extract);
 		ClientPlayNetworking.registerGlobalReceiver(DangerPayload.TYPE, (payload, context) -> DangerSenseClient.receive(payload, context.player()));
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingAura::render);
@@ -61,6 +62,8 @@ public class DekuModClient implements ClientModInitializer {
 	}
 
 	private static final DoubleTapHold floatTap = new DoubleTapHold();
+	private static final int SMOKESCREEN_POSE_TICKS = 12;
+	private static final int WHIP_POSE_TICKS = 14;
 
 	private static KeyMapping register(String name, int key) {
 		return KeyMappingHelper.registerKeyMapping(new KeyMapping(name, InputConstants.Type.KEYSYM, key, CATEGORY));
@@ -73,6 +76,11 @@ public class DekuModClient implements ClientModInitializer {
 
 		// Keys are read once here, then go to whichever quirk item is in hand.
 		LocalPlayer player = client.player;
+		if (player == null) {
+			Cooldowns.reset();
+		}
+		Cooldowns.tick();
+		Poses.tick();
 		boolean oneForAll = player != null && DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL);
 		boolean explosion = player != null && DekuItems.isHolding(player, DekuItems.EXPLOSION);
 		int cowlingClicks = countClicks(COWLING_KEY);
@@ -82,13 +90,17 @@ public class DekuModClient implements ClientModInitializer {
 
 		FullCowlingClient.tick(player, oneForAll && cowlingClicks % 2 == 1, oneForAll);
 		SmashClient.tick(player, oneForAll && SMASH_KEY.isDown(), oneForAll && smashClicks > 0);
-		if (oneForAll && smokescreenClicks > 0) {
+		if (oneForAll && smokescreenClicks > 0 && Cooldowns.ready(Cooldowns.Ability.SMOKESCREEN)) {
 			send(SmokescreenPayload.INSTANCE);
+			Cooldowns.start(Cooldowns.Ability.SMOKESCREEN);
+			Poses.play(Poses.Pose.SMOKESCREEN, SMOKESCREEN_POSE_TICKS);
 		}
 		boolean floatTapped = floatTap.tick(client.options.keyJump.isDown(), oneForAll);
 		FloatClient.tick(player, oneForAll && (FLOAT_KEY.isDown() || floatTapped), FLOAT_KEY.isDown());
-		if (oneForAll && blackwhipClicks > 0) {
+		if (oneForAll && blackwhipClicks > 0 && Cooldowns.ready(Cooldowns.Ability.BLACKWHIP)) {
 			send(BlackwhipPayload.INSTANCE);
+			Cooldowns.start(Cooldowns.Ability.BLACKWHIP);
+			Poses.play(Poses.Pose.WHIP, WHIP_POSE_TICKS);
 		}
 
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),

@@ -9,6 +9,7 @@ import net.minecraft.sounds.SoundSource;
 /** Client side of Smash: hold to charge up to the chosen power, let go to throw the punch. */
 public final class SmashClient {
 	private static final int CHARGE_SOUND_INTERVAL = 6;
+	private static final int PUNCH_POSE_TICKS = 8;
 
 	private static boolean charging;
 	private static double charge;
@@ -21,6 +22,10 @@ public final class SmashClient {
 		return charge;
 	}
 
+	public static boolean charging() {
+		return charging;
+	}
+
 	/**
 	 * @param held whether the key is down right now
 	 * @param pressed whether the key was pressed since last tick (catches taps shorter than a tick)
@@ -31,7 +36,7 @@ public final class SmashClient {
 			return;
 		}
 
-		if (held || pressed) {
+		if ((held || pressed) && (charging || Cooldowns.ready(Cooldowns.Ability.SMASH))) {
 			DekuSettings settings = DekuSettings.get();
 			if (!charging) {
 				player.level().playLocalSound(player, DekuSounds.SMASH_WINDUP, SoundSource.PLAYERS, 1.0f, 1.0f);
@@ -48,6 +53,8 @@ public final class SmashClient {
 			if (ClientPlayNetworking.canSend(SmashPayload.TYPE)) {
 				ClientPlayNetworking.send(new SmashPayload(Math.max(1, (int) Math.round(charge))));
 			}
+			Cooldowns.start(Cooldowns.Ability.SMASH);
+			Poses.play(Poses.Pose.PUNCH, PUNCH_POSE_TICKS);
 			reset();
 		}
 	}

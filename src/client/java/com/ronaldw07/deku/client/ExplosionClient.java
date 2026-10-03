@@ -24,6 +24,7 @@ public final class ExplosionClient {
 	private static final double HOWITZER_FORWARD_SPEED = 0.8;
 	private static final double HOWITZER_CIRCLE_SPEED = 0.75;
 	private static final double HOWITZER_TURN = 0.8; // radians per tick around the circle
+	private static final int BURST_POSE_TICKS = 10;
 
 	private static int useHeldTicks;
 	private static int bigShotLoad;
@@ -53,6 +54,10 @@ public final class ExplosionClient {
 		return spinning;
 	}
 
+	public static boolean rapidFiring() {
+		return useHeldTicks >= TAP_TICKS;
+	}
+
 	static void tick(LocalPlayer player, boolean holding, boolean useDown, boolean jumpDown, boolean howitzerDown,
 			boolean groundBlastDown) {
 		if (player == null) {
@@ -74,6 +79,7 @@ public final class ExplosionClient {
 	private static void apShot(LocalPlayer player, boolean down) {
 		if (bigShotLoad > 0 && --bigShotLoad == 0) {
 			send(Move.AP_SHOT_BIG, true, 0);
+			Cooldowns.start(Cooldowns.Ability.AP_SHOT);
 		}
 
 		if (down) {
@@ -85,8 +91,9 @@ public final class ExplosionClient {
 		}
 
 		// A tap loads for a moment, then fires one big shot.
-		if (useHeldTicks > 0 && useHeldTicks < TAP_TICKS && bigShotLoad == 0) {
+		if (useHeldTicks > 0 && useHeldTicks < TAP_TICKS && bigShotLoad == 0 && Cooldowns.ready(Cooldowns.Ability.AP_SHOT)) {
 			bigShotLoad = BIG_SHOT_LOAD_TICKS;
+			Poses.play(Poses.Pose.AIM_BOTH, BIG_SHOT_LOAD_TICKS + 4);
 			player.level().playLocalSound(player, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 1.0f, 1.0f);
 		}
 		useHeldTicks = 0;
@@ -120,13 +127,14 @@ public final class ExplosionClient {
 
 	/** Spirals toward wherever the player is looking while the key is held; letting go explodes. */
 	private static void howitzer(LocalPlayer player, boolean down) {
-		if (down && !spinning) {
+		if (down && !spinning && Cooldowns.ready(Cooldowns.Ability.HOWITZER)) {
 			spinning = true;
 			spinAngle = 0;
 			send(Move.HOWITZER, true, 0);
 		} else if (!down && spinning) {
 			spinning = false;
 			send(Move.HOWITZER, false, 0);
+			Cooldowns.start(Cooldowns.Ability.HOWITZER);
 		}
 		if (!spinning) {
 			return;
@@ -143,7 +151,7 @@ public final class ExplosionClient {
 
 	/** Arms stay up in a cross while C is held, charging; letting go makes the ground in front erupt. */
 	private static void groundBlast(LocalPlayer player, boolean down) {
-		if (down) {
+		if (down && (groundCharge > 0 || Cooldowns.ready(Cooldowns.Ability.GROUND_BLAST))) {
 			if (groundCharge % GROUND_CHARGE_SOUND_INTERVAL == 0) {
 				player.level().playLocalSound(player, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 1.0f,
 					0.6f + 0.8f * groundBlastCharge() / 100f);
@@ -154,6 +162,8 @@ public final class ExplosionClient {
 		if (groundCharge > 0) {
 			send(Move.GROUND_BLAST, true, groundBlastCharge());
 			groundCharge = 0;
+			Cooldowns.start(Cooldowns.Ability.GROUND_BLAST);
+			Poses.play(Poses.Pose.BURST, BURST_POSE_TICKS);
 		}
 	}
 
