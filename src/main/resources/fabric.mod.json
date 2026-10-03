@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "deku",
+	"version": "${version}",
+	"name": "Deku Mod",
+	"description": "One For All abilities: Full Cowling and Smash.",
+	"authors": [
+		"ronaldw07"
+	],
+	"contact": {
+		"sources": "https://github.com/ronaldw07/deku-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/deku/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.ronaldw07.deku.DekuMod"
+		],
+		"client": [
+			"com.ronaldw07.deku.client.DekuModClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
