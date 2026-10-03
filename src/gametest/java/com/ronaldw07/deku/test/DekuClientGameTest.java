@@ -295,8 +295,8 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(golemHealth < 100, "a big AP Shot should hurt the golem, health was " + golemHealth);
 		command(singleplayer, "kill @e[type=minecraft:iron_golem]");
 
-		// Hold right-click: rapid fire at the ground ahead blasts a hole in it.
-		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 35");
+		// Hold right-click: rapid fire at untouched ground ahead blasts a hole in it.
+		command(singleplayer, "execute as @p at @p run tp @s ~30 ~ ~ 0 35");
 		context.waitTicks(3);
 		BlockPos aimed = singleplayer.getServer().computeOnServer(server -> BlockPos.containing(
 			Aim.trace(player(server), 48).getLocation().add(player(server).getLookAngle().scale(0.1))));
@@ -316,11 +316,20 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.getInput().holdKey(options -> options.keyJump);
 		context.waitTicks(3);
 		check(context.computeOnClient(client -> ExplosionClient.flying()), "double-tapping jump should start explosion flight");
-		camera(context, CameraType.THIRD_PERSON_BACK);
+		// With no movement keys the player hovers in place.
+		Vec3 hoverStart = context.computeOnClient(client -> client.player.position());
+		context.waitTicks(10);
+		double hoverDrift = context.computeOnClient(client -> client.player.position().distanceTo(hoverStart));
+		check(hoverDrift < 1, "explosion flight should hover without movement keys, drifted " + hoverDrift);
+		// Holding W blasts them toward where they're looking.
+		context.getInput().holdKey(options -> options.keyUp);
+		camera(context, CameraType.THIRD_PERSON_FRONT);
 		context.waitTicks(15);
 		context.takeScreenshot("explosion-flight");
 		double flown = context.computeOnClient(client -> client.player.position().distanceTo(flightStart));
 		check(flown > 8, "explosion flight should carry the player, moved " + flown);
+		context.getInput().releaseKey(options -> options.keyUp);
+		camera(context, CameraType.THIRD_PERSON_BACK);
 		context.getInput().releaseKey(options -> options.keyJump);
 		context.waitTicks(40);
 

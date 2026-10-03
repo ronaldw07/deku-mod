@@ -6,6 +6,7 @@ import com.ronaldw07.deku.network.ExplosionPayload.Move;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -17,7 +18,7 @@ public final class ExplosionClient {
 	private static final int TAP_TICKS = 6; // right-click held for less than this is a tap
 	private static final int RAPID_FIRE_INTERVAL = 2;
 	private static final int BIG_SHOT_LOAD_TICKS = 8;
-	private static final int FULL_GROUND_CHARGE_TICKS = 60;
+	private static final int FULL_GROUND_CHARGE_TICKS = 30;
 	private static final int GROUND_CHARGE_SOUND_INTERVAL = 10;
 	private static final double FLIGHT_SPEED = 1.3;
 	private static final double HOWITZER_FORWARD_SPEED = 0.8;
@@ -99,8 +100,23 @@ public final class ExplosionClient {
 			send(Move.FLIGHT, flying, 0);
 		}
 		if (flying) {
-			player.setDeltaMovement(player.getLookAngle().scale(FLIGHT_SPEED));
+			player.setDeltaMovement(flightVelocity(player));
 		}
+	}
+
+	/**
+	 * Hovers in place until a movement key is pressed, then blasts that way: W toward where
+	 * the player is looking, S back, A and D sideways.
+	 */
+	private static Vec3 flightVelocity(LocalPlayer player) {
+		Input keys = player.input.keyPresses;
+		double forward = (keys.forward() ? 1 : 0) - (keys.backward() ? 1 : 0);
+		double strafe = (keys.right() ? 1 : 0) - (keys.left() ? 1 : 0);
+		Vec3 look = player.getLookAngle();
+		double yaw = Math.toRadians(player.getYRot());
+		Vec3 right = new Vec3(-Math.cos(yaw), 0, -Math.sin(yaw));
+		Vec3 direction = look.scale(forward).add(right.scale(strafe));
+		return direction.lengthSqr() < 1.0E-6 ? Vec3.ZERO : direction.normalize().scale(FLIGHT_SPEED);
 	}
 
 	/** Spirals toward wherever the player is looking while the key is held; letting go explodes. */

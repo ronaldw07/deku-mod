@@ -10,16 +10,16 @@ Hold a quirk item to use its moves. Keys can be changed in Options > Controls.
 - C: Full Cowling on/off
 - Hold V: charge Smash, release to throw (100% blasts through terrain)
 - Z: Smokescreen
-- Hold R: Float
+- Hold R, or double-tap and hold space: Float
 - B: Blackwhip
 - K: settings (power, ramp-up and charge times, Danger Sense)
 
 ## Explosion (slot 2)
 
 - Tap right-click: big AP Shot. Hold: rapid fire
-- Double-tap and hold space: fly
+- Double-tap and hold space: fly (W/A/S/D to move, hover otherwise)
 - Hold V: Howitzer Impact, release to explode
-- C: cross-arm ground blast
+- Hold C: charge the cross-arm ground blast, release to fire
 
 ## Danger Sense
 

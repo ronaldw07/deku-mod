@@ -3,6 +3,7 @@
 	"package": "com.ronaldw07.deku.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"AvatarRendererMixin",
 		"PlayerModelMixin"
 	],
 	"injectors": {

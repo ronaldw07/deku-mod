@@ -24,9 +24,7 @@ final class HeroNotebook {
 				C: Full Cowling on/off
 				Hold V: charge Smash, let go to throw
 				Z: Smokescreen
-				Hold R: Float
-				  (jump rises,
-				   sneak sinks)
+				Hold R, or double-tap and hold space: Float
 				B: Blackwhip"""),
 			page("One For All tips", """
 				Smash locks onto the mob nearest your crosshair.
@@ -39,9 +37,9 @@ final class HeroNotebook {
 			page("Explosion", """
 				Tap right-click: big AP Shot
 				Hold right-click: rapid fire
-				Double-tap space, keep holding: fly
+				Double-tap space, keep holding: fly (WASD to move)
 				Hold V: Howitzer Impact, let go to explode
-				C: cross-arm ground blast"""),
+				Hold C: charge ground blast, let go"""),
 			page("Settings (K)", """
 				Full Cowling power and ramp-up time.
 

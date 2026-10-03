@@ -1,0 +1,30 @@
+package com.ronaldw07.deku.client.mixin;
+
+import com.ronaldw07.deku.client.ExplosionClient;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.world.entity.Avatar;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+/** Lays the player out flat along their view, like elytra gliding, while blasting through the air. */
+@Mixin(AvatarRenderer.class)
+abstract class AvatarRendererMixin {
+	private static final float FULLY_GLIDING_TICKS = 20;
+
+	@Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V",
+		at = @At("TAIL"))
+	private void deku$supermanPose(Avatar entity, AvatarRenderState state, float partialTicks, CallbackInfo info) {
+		Minecraft minecraft = Minecraft.getInstance();
+		if (entity != minecraft.player || !(ExplosionClient.flying() || ExplosionClient.spinning())) {
+			return;
+		}
+		state.isFallFlying = true;
+		state.fallFlyingTimeInTicks = FULLY_GLIDING_TICKS;
+		state.shouldApplyFlyingYRot = false;
+		state.isAutoSpinAttack = false;
+	}
+}
