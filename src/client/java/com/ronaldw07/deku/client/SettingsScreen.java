@@ -5,6 +5,7 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -36,8 +37,12 @@ public class SettingsScreen extends Screen {
 			settings.punchChargeSeconds(), SettingsScreen::seconds,
 			v -> DekuSettings.set(DekuSettings.get().withPunchChargeSeconds(v)));
 
+		addRenderableWidget(CycleButton.onOffBuilder(settings.dangerSense())
+			.create(x, y + ROW_SPACING * 4, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Danger Sense"),
+				(button, on) -> DekuSettings.set(DekuSettings.get().withDangerSense(on))));
+
 		addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose())
-			.bounds(x, y + ROW_SPACING * 4 + 12, WIDGET_WIDTH, WIDGET_HEIGHT)
+			.bounds(x, y + ROW_SPACING * 5 + 12, WIDGET_WIDTH, WIDGET_HEIGHT)
 			.build());
 	}
 

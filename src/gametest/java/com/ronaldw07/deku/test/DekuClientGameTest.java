@@ -2,6 +2,7 @@ package com.ronaldw07.deku.test;
 
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
+import com.ronaldw07.deku.client.DangerSenseClient;
 import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.FullCowlingClient;
@@ -43,6 +44,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			blackwhip(context, singleplayer);
 			smokescreen(context, singleplayer);
 			floatQuirk(context, singleplayer);
+			dangerSense(context, singleplayer);
 		}
 	}
 
@@ -181,6 +183,43 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		double dropped = startY - context.computeOnClient(client -> client.player.getY());
 		check(dropped > 3, "releasing float should drop the player, dropped " + dropped);
 		camera(context, CameraType.FIRST_PERSON);
+	}
+
+	private static void dangerSense(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Well clear of the earlier smokescreen, which would stop mobs hunting the player.
+		command(singleplayer, "execute as @p at @p run tp @s ~30 ~ ~ 0 0");
+		context.waitTicks(5);
+
+		// A husk 5 blocks away and hunting the player is very close.
+		command(singleplayer, "execute at @p run summon minecraft:husk ~3 ~ ~4");
+		for (int tick = 0; tick < HUSK_NOTICE_TICKS && dangerLevel(context) < DangerSenseClient.VERY_CLOSE; tick++) {
+			context.waitTick();
+		}
+		check(dangerLevel(context) >= DangerSenseClient.VERY_CLOSE, "danger sense should flare for a husk 5 blocks away, was " + dangerLevel(context));
+		context.takeScreenshot("danger-sense-very-close");
+		command(singleplayer, "kill @e[type=minecraft:husk]");
+		context.waitTicks(3);
+		check(dangerLevel(context) == 0, "danger sense should calm down once the husk is gone, was " + dangerLevel(context));
+
+		// An arrow flying straight at the player from 10 blocks ahead.
+		command(singleplayer, "execute at @p run summon minecraft:arrow ~ ~1.5 ~10 {Motion:[0.0d,0.0d,-2.0d],NoGravity:1b}");
+		context.waitTicks(1);
+		check(dangerLevel(context) > 0.5, "danger sense should pick up an incoming arrow, was " + dangerLevel(context));
+		context.takeScreenshot("danger-sense-arrow");
+		context.waitTicks(10);
+		command(singleplayer, "kill @e[type=minecraft:arrow]");
+
+		// Switched off, a hunting husk raises nothing.
+		context.getInput().pressKey(DekuModClient.DANGER_SENSE_KEY);
+		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~4");
+		context.waitTicks(40);
+		check(dangerLevel(context) == 0, "danger sense should stay quiet while switched off, was " + dangerLevel(context));
+		context.getInput().pressKey(DekuModClient.DANGER_SENSE_KEY);
+		command(singleplayer, "kill @e[type=minecraft:husk]");
+	}
+
+	private static float dangerLevel(ClientGameTestContext context) {
+		return context.computeOnClient(client -> DangerSenseClient.level());
 	}
 
 	/** Every deku: sound must point at a real sound, so a typo in sounds.json fails here instead of going silent. */

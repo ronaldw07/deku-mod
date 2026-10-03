@@ -14,9 +14,10 @@ import net.minecraft.util.Mth;
  * Player-tunable ability settings, saved to config/deku.json.
  * Powers are percentages (1-100); times are seconds (0 = instant).
  */
-public record DekuSettings(int cowlingPower, double cowlingRampSeconds, int punchPower, double punchChargeSeconds) {
+public record DekuSettings(int cowlingPower, double cowlingRampSeconds, int punchPower, double punchChargeSeconds,
+		boolean dangerSense) {
 	public static final double MAX_SECONDS = 5.0;
-	private static final DekuSettings DEFAULTS = new DekuSettings(100, 1.0, 100, 1.0);
+	private static final DekuSettings DEFAULTS = new DekuSettings(100, 1.0, 100, 1.0, true);
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("deku.json");
 
@@ -54,19 +55,23 @@ public record DekuSettings(int cowlingPower, double cowlingRampSeconds, int punc
 	}
 
 	public DekuSettings withCowlingPower(int value) {
-		return new DekuSettings(value, cowlingRampSeconds, punchPower, punchChargeSeconds);
+		return new DekuSettings(value, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense);
 	}
 
 	public DekuSettings withCowlingRampSeconds(double value) {
-		return new DekuSettings(cowlingPower, value, punchPower, punchChargeSeconds);
+		return new DekuSettings(cowlingPower, value, punchPower, punchChargeSeconds, dangerSense);
 	}
 
 	public DekuSettings withPunchPower(int value) {
-		return new DekuSettings(cowlingPower, cowlingRampSeconds, value, punchChargeSeconds);
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, value, punchChargeSeconds, dangerSense);
 	}
 
 	public DekuSettings withPunchChargeSeconds(double value) {
-		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, value);
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, value, dangerSense);
+	}
+
+	public DekuSettings withDangerSense(boolean value) {
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, value);
 	}
 
 	private DekuSettings clamped() {
@@ -74,7 +79,8 @@ public record DekuSettings(int cowlingPower, double cowlingRampSeconds, int punc
 			Mth.clamp(cowlingPower, 1, 100),
 			Mth.clamp(cowlingRampSeconds, 0.0, MAX_SECONDS),
 			Mth.clamp(punchPower, 1, 100),
-			Mth.clamp(punchChargeSeconds, 0.0, MAX_SECONDS)
+			Mth.clamp(punchChargeSeconds, 0.0, MAX_SECONDS),
+			dangerSense
 		);
 	}
 }

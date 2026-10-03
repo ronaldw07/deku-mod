@@ -3,6 +3,8 @@ package com.ronaldw07.deku;
 import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.CowlingPayload;
+import com.ronaldw07.deku.network.DangerPayload;
+import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.FloatPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
@@ -10,6 +12,7 @@ import com.ronaldw07.deku.network.SmokescreenPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 import net.minecraft.resources.Identifier;
@@ -48,6 +51,13 @@ public class DekuMod implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(BlackwhipPayload.TYPE, (payload, context) -> Blackwhip.lash(context.player()));
 		PayloadTypeRegistry.clientboundPlay().register(BlackwhipFxPayload.TYPE, BlackwhipFxPayload.CODEC);
 		ServerTickEvents.END_SERVER_TICK.register(Blackwhip::tick);
+
+		PayloadTypeRegistry.serverboundPlay().register(DangerSenseTogglePayload.TYPE, DangerSenseTogglePayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(DangerSenseTogglePayload.TYPE,
+			(payload, context) -> DangerSense.setEnabled(context.player(), payload.enabled()));
+		PayloadTypeRegistry.clientboundPlay().register(DangerPayload.TYPE, DangerPayload.CODEC);
+		ServerTickEvents.END_SERVER_TICK.register(DangerSense::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> DangerSense.setEnabled(handler.player, false));
 
 		LOGGER.info("One For All loaded");
 	}

@@ -5,6 +5,7 @@ import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.DekuParticles;
 import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
+import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
 import net.fabricmc.api.ClientModInitializer;
@@ -27,6 +28,7 @@ public class DekuModClient implements ClientModInitializer {
 	public static final KeyMapping SMOKESCREEN_KEY = register("key.deku.smokescreen", GLFW.GLFW_KEY_Z);
 	public static final KeyMapping FLOAT_KEY = register("key.deku.float", GLFW.GLFW_KEY_R);
 	public static final KeyMapping BLACKWHIP_KEY = register("key.deku.blackwhip", GLFW.GLFW_KEY_B);
+	public static final KeyMapping DANGER_SENSE_KEY = register("key.deku.danger_sense", GLFW.GLFW_KEY_H);
 	public static final KeyMapping SETTINGS_KEY = register("key.deku.settings", GLFW.GLFW_KEY_K);
 
 	@Override
@@ -34,6 +36,8 @@ public class DekuModClient implements ClientModInitializer {
 		DekuSettings.load();
 		ClientTickEvents.END_CLIENT_TICK.register(DekuModClient::tick);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("power"), PowerHud::extract);
+		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("danger_sense"), DangerSenseHud::extract);
+		ClientPlayNetworking.registerGlobalReceiver(DangerPayload.TYPE, (payload, context) -> DangerSenseClient.receive(payload, context.player()));
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
@@ -77,5 +81,11 @@ public class DekuModClient implements ClientModInitializer {
 				ClientPlayNetworking.send(BlackwhipPayload.INSTANCE);
 			}
 		}
+
+		boolean dangerSenseToggled = false;
+		while (DANGER_SENSE_KEY.consumeClick()) {
+			dangerSenseToggled = !dangerSenseToggled;
+		}
+		DangerSenseClient.tick(client.player, dangerSenseToggled);
 	}
 }
