@@ -1,16 +1,40 @@
 # Deku Mod
 
-Fabric mod for Minecraft 26.2 that adds One For All abilities.
+Fabric mod for Minecraft 26.2: One For All and Explosion quirks.
 
-- Full Cowling: toggle a power-up at a chosen %, with green lightning.
-- Smash: charge and release a wind-blast punch.
+New players get One For All, Explosion and a notebook of instructions in hotbar slots 1-3.
+Hold a quirk item to use its moves. Keys can be changed in Options > Controls.
+
+## One For All (slot 1)
+
+- C: Full Cowling on/off
+- Hold V: charge Smash, release to throw (100% blasts through terrain)
+- Z: Smokescreen
+- Hold R: Float
+- B: Blackwhip
+- K: settings (power, ramp-up and charge times, Danger Sense)
+
+## Explosion (slot 2)
+
+- Tap right-click: big AP Shot. Hold: rapid fire
+- Double-tap and hold space: fly
+- Hold V: Howitzer Impact, release to explode
+- C: cross-arm ground blast
+
+## Danger Sense
+
+Always on with any item; H toggles it. Yellow lightning on screen shows where danger is coming from.
+
+## Custom sounds
+
+Every sound is a `deku:` sound event built from vanilla sounds in `assets/deku/sounds.json`.
+A resource pack can replace any of them with its own `.ogg` files.
 
 ## Build
 
 Requires Java 25.
 
 ```
-./gradlew build
+./gradlew build             # jar in build/libs/
+./gradlew runClientGameTest # launches the game, exercises every move, saves screenshots
 ```
-
-The mod jar is written to `build/libs/`.
