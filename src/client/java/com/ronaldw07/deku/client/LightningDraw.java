@@ -14,7 +14,8 @@ final class LightningDraw {
 	record Segment(Vec3 from, Vec3 to) {
 	}
 
-	private record Layer(float halfWidth, float red, float green, float blue, float alpha) {
+	/** One glow layer; a palette is several, drawn outside-in. */
+	record Layer(float halfWidth, float red, float green, float blue, float alpha) {
 	}
 
 	// Glow layers, drawn outside-in. Blending is additive, so where they overlap the
@@ -28,10 +29,28 @@ final class LightningDraw {
 	private LightningDraw() {
 	}
 
+	// Explosion palettes: orange-yellow fire, and the deep red of the ground blast.
+	static final Layer[] FIRE = {
+		new Layer(0.12f, 1.0f, 0.25f, 0.05f, 0.25f),
+		new Layer(0.06f, 1.0f, 0.55f, 0.1f, 0.5f),
+		new Layer(0.025f, 1.0f, 0.95f, 0.7f, 0.9f),
+	};
+	static final Layer[] RED = {
+		new Layer(0.12f, 0.9f, 0.05f, 0.05f, 0.3f),
+		new Layer(0.06f, 1.0f, 0.2f, 0.1f, 0.55f),
+		new Layer(0.025f, 1.0f, 0.75f, 0.6f, 0.9f),
+	};
+
 	static void drawGreen(Matrix4fc pose, VertexConsumer buffer, List<Segment> segments, float widthScale) {
-		for (Layer layer : GREEN) {
+		draw(pose, buffer, segments, widthScale, GREEN, 1f);
+	}
+
+	static void draw(Matrix4fc pose, VertexConsumer buffer, List<Segment> segments, float widthScale, Layer[] palette,
+			float alphaScale) {
+		for (Layer layer : palette) {
+			Layer faded = new Layer(layer.halfWidth(), layer.red(), layer.green(), layer.blue(), layer.alpha() * alphaScale);
 			for (Segment segment : segments) {
-				drawSegment(pose, buffer, segment, layer.halfWidth() * widthScale, layer);
+				drawSegment(pose, buffer, segment, layer.halfWidth() * widthScale, faded);
 			}
 		}
 	}

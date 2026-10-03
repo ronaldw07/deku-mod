@@ -15,11 +15,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -48,22 +44,15 @@ public final class Blackwhip {
 
 	public static void lash(ServerPlayer player) {
 		ServerLevel level = player.level();
-		Vec3 eye = player.getEyePosition();
-		Vec3 reachEnd = eye.add(player.getLookAngle().scale(REACH));
-		BlockHitResult blockHit = level.clip(new ClipContext(eye, reachEnd, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-		Vec3 end = blockHit.getType() == HitResult.Type.MISS ? reachEnd : blockHit.getLocation();
-		EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(player, eye, end,
-			player.getBoundingBox().expandTowards(end.subtract(eye)).inflate(1),
-			entity -> entity instanceof LivingEntity && !entity.isSpectator() && entity.isPickable(),
-			eye.distanceToSqr(end));
+		HitResult hit = Aim.trace(player, REACH);
 
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.BLACKWHIP_LASH, SoundSource.PLAYERS, 1.0f, 1.0f);
-		if (entityHit != null) {
+		if (hit instanceof EntityHitResult entityHit) {
 			grab(level, player, entityHit.getEntity().getId(), entityHit.getLocation());
-		} else if (blockHit.getType() != HitResult.Type.MISS) {
-			grab(level, player, NO_TARGET, blockHit.getLocation());
+		} else if (hit.getType() != HitResult.Type.MISS) {
+			grab(level, player, NO_TARGET, hit.getLocation());
 		} else {
-			sendFx(level, new BlackwhipFxPayload(player.getId(), NO_TARGET, end, MISS_TICKS));
+			sendFx(level, new BlackwhipFxPayload(player.getId(), NO_TARGET, hit.getLocation(), MISS_TICKS));
 		}
 	}
 

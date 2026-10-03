@@ -21,6 +21,9 @@ public final class DekuSounds {
 	public static final SoundEvent BLACKWHIP_LASH = register("blackwhip.lash");
 	public static final SoundEvent BLACKWHIP_GRAB = register("blackwhip.grab");
 	public static final SoundEvent DANGER_SENSE = register("danger_sense");
+	public static final SoundEvent EXPLOSION_POP = register("explosion.pop");
+	public static final SoundEvent EXPLOSION_CHARGE = register("explosion.charge");
+	public static final SoundEvent HOWITZER_SPIN = register("explosion.howitzer_spin");
 
 	private DekuSounds() {
 	}

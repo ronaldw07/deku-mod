@@ -50,6 +50,21 @@
 			{ "name": "minecraft:item.trident.hit", "type": "event", "pitch": 0.7 }
 		]
 	},
+	"explosion.pop": {
+		"sounds": [
+			{ "name": "minecraft:entity.firework_rocket.blast", "type": "event", "pitch": 0.8 }
+		]
+	},
+	"explosion.charge": {
+		"sounds": [
+			{ "name": "minecraft:item.firecharge.use", "type": "event", "pitch": 1.3 }
+		]
+	},
+	"explosion.howitzer_spin": {
+		"sounds": [
+			{ "name": "minecraft:entity.breeze.wind_burst", "type": "event", "pitch": 0.5 }
+		]
+	},
 	"danger_sense": {
 		"sounds": [
 			{ "name": "minecraft:block.amethyst_block.chime", "type": "event", "pitch": 2.0, "volume": 1.5 }

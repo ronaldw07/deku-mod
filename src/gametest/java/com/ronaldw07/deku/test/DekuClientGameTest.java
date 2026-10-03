@@ -1,11 +1,13 @@
 package com.ronaldw07.deku.test;
 
+import com.ronaldw07.deku.Aim;
 import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
 import com.ronaldw07.deku.client.DangerSenseClient;
 import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DekuSettings;
+import com.ronaldw07.deku.client.ExplosionClient;
 import com.ronaldw07.deku.client.FullCowlingClient;
 import com.ronaldw07.deku.client.SettingsScreen;
 import com.ronaldw07.deku.client.SmashClient;
@@ -14,6 +16,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.CameraType;
+import net.minecraft.core.BlockPos;
 import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.WeighedSoundEvents;
@@ -49,6 +52,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			smokescreen(context, singleplayer);
 			floatQuirk(context, singleplayer);
 			dangerSense(context, singleplayer);
+			explosion(context, singleplayer);
 		}
 	}
 
@@ -257,6 +261,85 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(dangerLevel(context) == 0, "danger sense should stay quiet while switched off, was " + dangerLevel(context));
 		context.getInput().pressKey(DekuModClient.DANGER_SENSE_KEY);
 		command(singleplayer, "kill @e[type=minecraft:husk]");
+	}
+
+	private static void explosion(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "effect give @p minecraft:resistance 600 4 true");
+		command(singleplayer, "execute as @p at @p run tp @s ~40 ~ ~ 0 0");
+		selectSlot(context, 1);
+
+		// Tap right-click: a moment to load, then one big AP Shot at a golem 8 blocks ahead.
+		command(singleplayer, "execute at @p run summon minecraft:iron_golem ~ ~ ~8 {NoAI:1b}");
+		command(singleplayer, "execute as @p at @p anchored eyes run tp @s ~ ~ ~ facing entity @e[type=minecraft:iron_golem,limit=1] eyes");
+		context.waitTicks(3);
+		context.getInput().holdKeyFor(options -> options.keyUse, 2);
+		context.waitTicks(11);
+		context.takeScreenshot("ap-shot-big");
+		float golemHealth = singleplayer.getServer().computeOnServer(server -> golem(server).getHealth());
+		check(golemHealth < 100, "a big AP Shot should hurt the golem, health was " + golemHealth);
+		command(singleplayer, "kill @e[type=minecraft:iron_golem]");
+
+		// Hold right-click: rapid fire at the ground ahead blasts a hole in it.
+		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 35");
+		context.waitTicks(3);
+		BlockPos aimed = singleplayer.getServer().computeOnServer(server -> BlockPos.containing(
+			Aim.trace(player(server), 48).getLocation().add(player(server).getLookAngle().scale(0.1))));
+		context.getInput().holdKey(options -> options.keyUse);
+		context.waitTicks(20);
+		context.takeScreenshot("ap-rapid-fire");
+		context.getInput().releaseKey(options -> options.keyUse);
+		boolean blasted = singleplayer.getServer().computeOnServer(server -> server.overworld().getBlockState(aimed).isAir());
+		check(blasted, "rapid fire should blast away the ground it hits at " + aimed);
+
+		// Double-tap and hold jump to fly where you look.
+		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 -20");
+		context.waitTicks(3);
+		Vec3 flightStart = context.computeOnClient(client -> client.player.position());
+		context.getInput().holdKeyFor(options -> options.keyJump, 2);
+		context.waitTicks(2);
+		context.getInput().holdKey(options -> options.keyJump);
+		context.waitTicks(3);
+		check(context.computeOnClient(client -> ExplosionClient.flying()), "double-tapping jump should start explosion flight");
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(15);
+		context.takeScreenshot("explosion-flight");
+		double flown = context.computeOnClient(client -> client.player.position().distanceTo(flightStart));
+		check(flown > 8, "explosion flight should carry the player, moved " + flown);
+		context.getInput().releaseKey(options -> options.keyJump);
+		context.waitTicks(40);
+
+		// Hold V: spiral toward the aim inside a spinning cloud, then let go to explode.
+		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 0");
+		context.waitTicks(3);
+		Vec3 howitzerStart = context.computeOnClient(client -> client.player.position());
+		context.getInput().holdKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(20);
+		check(context.computeOnClient(client -> ExplosionClient.spinning()), "holding V with Explosion should start Howitzer Impact");
+		context.takeScreenshot("howitzer-spin");
+		double spiralled = context.computeOnClient(client -> client.player.position().distanceTo(howitzerStart));
+		check(spiralled > 5, "Howitzer Impact should carry the player forward, moved " + spiralled);
+		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(2);
+		context.takeScreenshot("howitzer-impact");
+		context.waitTicks(40);
+
+		// C: arms up in a cross, then the ground ahead erupts and takes out a husk.
+		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 0");
+		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~6 {NoAI:1b}");
+		camera(context, CameraType.THIRD_PERSON_FRONT);
+		context.waitTicks(3);
+		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.waitTicks(4);
+		check(context.computeOnClient(client -> ExplosionClient.armsCrossed()), "the ground blast should start with arms crossed");
+		context.takeScreenshot("ground-blast-windup");
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(8);
+		context.takeScreenshot("ground-blast");
+		boolean huskDown = singleplayer.getServer().computeOnServer(server -> server.overworld()
+			.getEntities(EntityTypes.HUSK, husk -> husk.isAlive() && husk.getHealth() >= husk.getMaxHealth()).isEmpty());
+		check(huskDown, "the ground blast should hurt the husk in front");
+		camera(context, CameraType.FIRST_PERSON);
 	}
 
 	private static float dangerLevel(ClientGameTestContext context) {

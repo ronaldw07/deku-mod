@@ -10,6 +10,10 @@ public final class DekuParticles {
 	public static final SimpleParticleType PURPLE_SMOKE = Registry.register(
 		BuiltInRegistries.PARTICLE_TYPE, DekuMod.id("purple_smoke"), FabricParticleTypes.simple(true));
 
+	/** Shorter-lived white cloud for the Howitzer Impact vortex. */
+	public static final SimpleParticleType WHITE_SMOKE = Registry.register(
+		BuiltInRegistries.PARTICLE_TYPE, DekuMod.id("white_smoke"), FabricParticleTypes.simple(true));
+
 	private DekuParticles() {
 	}
 

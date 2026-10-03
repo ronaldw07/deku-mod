@@ -5,6 +5,8 @@ import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.CowlingPayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
+import com.ronaldw07.deku.network.ExplosionFxPayload;
+import com.ronaldw07.deku.network.ExplosionPayload;
 import com.ronaldw07.deku.network.FloatPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
@@ -60,6 +62,13 @@ public class DekuMod implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(DangerPayload.TYPE, DangerPayload.CODEC);
 		ServerTickEvents.END_SERVER_TICK.register(DangerSense::tick);
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> DangerSense.setEnabled(handler.player, false));
+
+		PayloadTypeRegistry.serverboundPlay().register(ExplosionPayload.TYPE, ExplosionPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ExplosionPayload.TYPE,
+			(payload, context) -> Bakugo.handle(context.player(), payload.move(), payload.active()));
+		PayloadTypeRegistry.clientboundPlay().register(ExplosionFxPayload.TYPE, ExplosionFxPayload.CODEC);
+		ServerTickEvents.END_SERVER_TICK.register(Bakugo::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Bakugo.forget(handler.player));
 
 		LOGGER.info("One For All loaded");
 	}

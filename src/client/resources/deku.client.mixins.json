@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "com.ronaldw07.deku.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"PlayerModelMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

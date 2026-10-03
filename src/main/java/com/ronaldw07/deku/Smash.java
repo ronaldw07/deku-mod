@@ -11,7 +11,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.ExplosionDamageCalculator;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -39,6 +43,22 @@ public final class Smash {
 	private static final int GUST_EVERY = 3;
 	private static final double HEAVY_THRESHOLD = 0.5; // adds an explosion and thunder
 	private static final double FX_VIEW_DISTANCE = 64;
+	// A full-power punch blasts a tunnel through terrain along its path.
+	private static final int TUNNEL_PERCENT = 100;
+	private static final double TUNNEL_START = 2.0;
+	private static final double TUNNEL_SPACING = 2.5;
+	private static final float TUNNEL_RADIUS = 2.5f;
+	private static final ExplosionDamageCalculator TERRAIN_ONLY = new ExplosionDamageCalculator() {
+		@Override
+		public boolean shouldDamageEntity(Explosion explosion, Entity entity) {
+			return false;
+		}
+
+		@Override
+		public float getKnockbackMultiplier(Entity entity) {
+			return 0;
+		}
+	};
 
 	private Smash() {
 	}
@@ -59,6 +79,13 @@ public final class Smash {
 			target.hurtServer(level, player.damageSources().playerAttack(player), damage);
 			target.push(push);
 			target.hurtMarked = true;
+		}
+
+		if (percent >= TUNNEL_PERCENT) {
+			for (double distance = TUNNEL_START; distance <= range; distance += TUNNEL_SPACING) {
+				level.explode(player, player.damageSources().explosion(player, player), TERRAIN_ONLY, eye.add(aim.scale(distance)),
+					TUNNEL_RADIUS, false, Level.ExplosionInteraction.TNT);
+			}
 		}
 
 		Vec3 end = locked.map(target -> target.getBoundingBox().getCenter()).orElse(eye.add(aim.scale(range)));

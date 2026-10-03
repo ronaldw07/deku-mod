@@ -4,29 +4,34 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
-/** A big purple smoke puff that drifts out, slows to a stop, hangs, then fades. */
-final class PurpleSmokeParticle extends SingleQuadParticle {
-	private static final float SCALE = 6.0f;
-	private static final int MIN_LIFETIME = 160;
-	private static final int EXTRA_LIFETIME = 60;
+/** A big smoke puff that drifts out, slows to a stop, hangs, then fades. */
+final class SmokePuffParticle extends SingleQuadParticle {
+	/** How a kind of puff looks and how long it lingers. */
+	record Look(float red, float green, float blue, float scale, int minLifetime) {
+	}
+
+	// Light lavender, so overlapping puffs build into a thick bright haze rather than a dark blot.
+	static final Look SMOKESCREEN = new Look(0.7f, 0.52f, 0.92f, 6.0f, 160);
+	static final Look HOWITZER_CLOUD = new Look(0.95f, 0.95f, 0.97f, 4.0f, 25);
+
 	private static final int FADE_TICKS = 40;
-	// Strong drag so the opening burst spreads out about six blocks, then stops.
+	// Strong drag so a burst spreads out a few blocks, then stops.
 	private static final float DRAG = 0.92f;
 	private static final float START_ALPHA = 0.9f;
 
-	PurpleSmokeParticle(ClientLevel level, double x, double y, double z, double xa, double ya, double za, TextureAtlasSprite sprite) {
+	SmokePuffParticle(ClientLevel level, double x, double y, double z, double xa, double ya, double za,
+			TextureAtlasSprite sprite, Look look) {
 		super(level, x, y, z, sprite);
-		this.scale(SCALE);
+		this.scale(look.scale());
 		this.setSize(0.25f, 0.25f);
-		this.lifetime = MIN_LIFETIME + this.random.nextInt(EXTRA_LIFETIME);
+		this.lifetime = look.minLifetime() + this.random.nextInt(Math.max(1, look.minLifetime() / 3));
 		this.friction = DRAG;
 		this.gravity = 0;
 		this.xd = xa;
 		this.yd = ya;
 		this.zd = za;
 		float shade = 0.85f + this.random.nextFloat() * 0.15f;
-		// Light lavender, so overlapping puffs build into a thick bright haze rather than a dark blot.
-		this.setColor(0.7f * shade, 0.52f * shade, 0.92f * shade);
+		this.setColor(look.red() * shade, look.green() * shade, look.blue() * shade);
 		this.setAlpha(START_ALPHA);
 	}
 
@@ -34,8 +39,9 @@ final class PurpleSmokeParticle extends SingleQuadParticle {
 	public void tick() {
 		super.tick();
 		int remaining = this.lifetime - this.age;
-		if (remaining < FADE_TICKS) {
-			this.setAlpha(START_ALPHA * remaining / FADE_TICKS);
+		int fade = Math.min(FADE_TICKS, this.lifetime / 2);
+		if (remaining < fade) {
+			this.setAlpha(START_ALPHA * remaining / fade);
 		}
 	}
 

@@ -8,6 +8,7 @@ import com.ronaldw07.deku.HeroNotebookItem;
 import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.DangerPayload;
+import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
 import net.fabricmc.api.ClientModInitializer;
@@ -49,10 +50,14 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingAura::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
+		ClientPlayNetworking.registerGlobalReceiver(ExplosionFxPayload.TYPE, (payload, context) -> ExplosionFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(BlackwhipFxPayload.TYPE, (payload, context) -> BlackwhipTendrils.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(SmashFxPayload.TYPE, (payload, context) -> SmashLightning.add(payload));
-		ParticleProviderRegistry.getInstance().register(DekuParticles.PURPLE_SMOKE,
-			sprites -> (options, level, x, y, z, xa, ya, za, random) -> new PurpleSmokeParticle(level, x, y, z, xa, ya, za, sprites.get(random)));
+		ParticleProviderRegistry.getInstance().register(DekuParticles.PURPLE_SMOKE, sprites -> (options, level, x, y, z, xa, ya, za, random) ->
+			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.SMOKESCREEN));
+		ParticleProviderRegistry.getInstance().register(DekuParticles.WHITE_SMOKE, sprites -> (options, level, x, y, z, xa, ya, za, random) ->
+			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.HOWITZER_CLOUD));
 	}
 
 	private static KeyMapping register(String name, int key) {
@@ -67,6 +72,7 @@ public class DekuModClient implements ClientModInitializer {
 		// Keys are read once here, then go to whichever quirk item is in hand.
 		LocalPlayer player = client.player;
 		boolean oneForAll = player != null && DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL);
+		boolean explosion = player != null && DekuItems.isHolding(player, DekuItems.EXPLOSION);
 		int cowlingClicks = countClicks(COWLING_KEY);
 		int smashClicks = countClicks(SMASH_KEY);
 		int smokescreenClicks = countClicks(SMOKESCREEN_KEY);
@@ -81,6 +87,9 @@ public class DekuModClient implements ClientModInitializer {
 		if (oneForAll && blackwhipClicks > 0) {
 			send(BlackwhipPayload.INSTANCE);
 		}
+
+		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
+			SMASH_KEY.isDown(), cowlingClicks > 0);
 
 		DangerSenseClient.tick(player, countClicks(DANGER_SENSE_KEY) % 2 == 1);
 	}
