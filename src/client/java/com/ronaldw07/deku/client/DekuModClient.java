@@ -2,9 +2,11 @@ package com.ronaldw07.deku.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.ronaldw07.deku.DekuMod;
+import com.ronaldw07.deku.network.SmashFxPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
@@ -25,6 +27,8 @@ public class DekuModClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(DekuModClient::tick);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("power"), PowerHud::extract);
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingLightning::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
+		ClientPlayNetworking.registerGlobalReceiver(SmashFxPayload.TYPE, (payload, context) -> SmashLightning.add(payload));
 	}
 
 	private static KeyMapping register(String name, int key) {

@@ -1,6 +1,7 @@
 package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.CowlingPayload;
+import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -26,6 +27,7 @@ public class DekuMod implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(SmashPayload.TYPE, SmashPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(SmashPayload.TYPE,
 			(payload, context) -> Smash.perform(context.player(), payload.percent()));
+		PayloadTypeRegistry.clientboundPlay().register(SmashFxPayload.TYPE, SmashFxPayload.CODEC);
 
 		LOGGER.info("One For All loaded");
 	}

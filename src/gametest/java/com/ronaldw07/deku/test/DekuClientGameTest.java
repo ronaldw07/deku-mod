@@ -65,10 +65,11 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			check(context.computeOnClient(client -> FullCowlingClient.percent()) == 0, "cowling should turn off instantly");
 			check(!hasSpeedBoost(singleplayer), "server should remove the speed boost when cowling turns off");
 
-			// Smash: face south with a golem 4 blocks ahead, charge for half a second (50%) and let go.
+			// Smash: face south with a golem 45 degrees off to the side, outside the blast cone, so it
+			// only gets hit if the punch locks onto it. Charge for half a second (50%) and let go.
 			singleplayer.getServer().runCommand("time set day");
 			singleplayer.getServer().runCommand("execute as @p at @p run tp @s ~ ~ ~ 0 0");
-			singleplayer.getServer().runCommand("execute at @p run summon minecraft:iron_golem ~ ~ ~4");
+			singleplayer.getServer().runCommand("execute at @p run summon minecraft:iron_golem ~3 ~ ~3");
 			context.runOnClient(client -> client.options.setCameraType(CameraType.THIRD_PERSON_BACK));
 			context.waitTicks(5);
 			Vec3 golemStart = singleplayer.getServer().computeOnServer(server -> golem(server).position());
@@ -78,9 +79,11 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			double charge = context.computeOnClient(client -> SmashClient.charge());
 			check(charge > 30 && charge < 70, "smash should be about half charged after 10 ticks, was " + charge);
 			context.takeScreenshot("smash-charging");
-			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
 			context.getInput().releaseKey(DekuModClient.SMASH_KEY);
-			context.waitTicks(4);
+			context.waitTicks(2);
+			context.takeScreenshot("smash-lightning");
+			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
+			context.waitTicks(2);
 			context.takeScreenshot("smash-blast");
 
 			float health = singleplayer.getServer().computeOnServer(server -> golem(server).getHealth());
