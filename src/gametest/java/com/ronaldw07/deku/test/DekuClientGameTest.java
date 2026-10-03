@@ -19,6 +19,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.phys.Vec3;
@@ -92,16 +93,36 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			check(moved > 1, "smash should launch the golem, it moved " + moved);
 
 			// Smokescreen: a husk (doesn't burn in daylight) hunts the player until the smoke goes up.
+			// The golem goes first so it can't pick a fight with the husk.
+			singleplayer.getServer().runCommand("kill @e[type=minecraft:iron_golem]");
 			singleplayer.getServer().runCommand("difficulty normal");
 			singleplayer.getServer().runCommand("execute at @p run summon minecraft:husk ~ ~ ~8");
 			context.waitTicks(20);
-			check(huskHasTarget(singleplayer), "husk should be hunting the player before the smoke");
+			check(huskHuntsPlayer(singleplayer), "husk should be hunting the player before the smoke");
 			context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
 			context.waitTicks(5);
-			check(!huskHasTarget(singleplayer), "husk should lose the player inside the smoke");
+			check(!huskHuntsPlayer(singleplayer), "husk should lose the player inside the smoke");
 			context.runOnClient(client -> client.options.setCameraType(CameraType.THIRD_PERSON_BACK));
 			context.waitTicks(15);
 			context.takeScreenshot("smokescreen");
+			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
+
+			// Float: from 6 blocks up, hold the key and stay put; let go and drop.
+			singleplayer.getServer().runCommand("kill @e[type=minecraft:husk]");
+			singleplayer.getServer().runCommand("execute as @p at @p run tp @s ~ ~6 ~");
+			context.getInput().holdKey(DekuModClient.FLOAT_KEY);
+			context.waitTicks(2);
+			double startY = context.computeOnClient(client -> client.player.getY());
+			context.waitTicks(40);
+			double hoverDrift = Math.abs(context.computeOnClient(client -> client.player.getY()) - startY);
+			check(hoverDrift < 0.6, "float should hold the player in the air, drifted " + hoverDrift);
+			context.runOnClient(client -> client.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
+			context.waitTicks(2);
+			context.takeScreenshot("float");
+			context.getInput().releaseKey(DekuModClient.FLOAT_KEY);
+			context.waitTicks(30);
+			double dropped = startY - context.computeOnClient(client -> client.player.getY());
+			check(dropped > 3, "releasing float should drop the player, dropped " + dropped);
 			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
 		}
 	}
@@ -121,9 +142,11 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		}
 	}
 
-	private static boolean huskHasTarget(TestSingleplayerContext singleplayer) {
-		return singleplayer.getServer().computeOnServer(server ->
-			server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().getTarget() != null);
+	private static boolean huskHuntsPlayer(TestSingleplayerContext singleplayer) {
+		return singleplayer.getServer().computeOnServer(server -> {
+			LivingEntity target = server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().getTarget();
+			return target != null && target == server.getPlayerList().getPlayers().getFirst();
+		});
 	}
 
 	private static IronGolem golem(MinecraftServer server) {

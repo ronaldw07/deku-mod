@@ -23,6 +23,7 @@ public class DekuModClient implements ClientModInitializer {
 	public static final KeyMapping COWLING_KEY = register("key.deku.full_cowling", GLFW.GLFW_KEY_C);
 	public static final KeyMapping SMASH_KEY = register("key.deku.smash", GLFW.GLFW_KEY_V);
 	public static final KeyMapping SMOKESCREEN_KEY = register("key.deku.smokescreen", GLFW.GLFW_KEY_Z);
+	public static final KeyMapping FLOAT_KEY = register("key.deku.float", GLFW.GLFW_KEY_R);
 	public static final KeyMapping SETTINGS_KEY = register("key.deku.settings", GLFW.GLFW_KEY_K);
 
 	@Override
@@ -63,5 +64,7 @@ public class DekuModClient implements ClientModInitializer {
 				ClientPlayNetworking.send(SmokescreenPayload.INSTANCE);
 			}
 		}
+
+		FloatClient.tick(client.player, FLOAT_KEY.isDown());
 	}
 }

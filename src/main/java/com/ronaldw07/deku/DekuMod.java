@@ -1,6 +1,7 @@
 package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.CowlingPayload;
+import com.ronaldw07.deku.network.FloatPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
@@ -36,6 +37,10 @@ public class DekuMod implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(SmokescreenPayload.TYPE,
 			(payload, context) -> Smokescreen.deploy(context.player()));
 		ServerTickEvents.END_SERVER_TICK.register(Smokescreen::tick);
+
+		PayloadTypeRegistry.serverboundPlay().register(FloatPayload.TYPE, FloatPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(FloatPayload.TYPE,
+			(payload, context) -> FloatQuirk.apply(context.player(), payload.active()));
 
 		LOGGER.info("One For All loaded");
 	}
