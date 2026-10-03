@@ -3,7 +3,9 @@ package com.ronaldw07.deku;
 import com.ronaldw07.deku.network.CowlingPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
+import com.ronaldw07.deku.network.SmokescreenPayload;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
@@ -19,6 +21,7 @@ public class DekuMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		DekuSounds.init();
+		DekuParticles.init();
 
 		PayloadTypeRegistry.serverboundPlay().register(CowlingPayload.TYPE, CowlingPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(CowlingPayload.TYPE,
@@ -28,6 +31,11 @@ public class DekuMod implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(SmashPayload.TYPE,
 			(payload, context) -> Smash.perform(context.player(), payload.percent()));
 		PayloadTypeRegistry.clientboundPlay().register(SmashFxPayload.TYPE, SmashFxPayload.CODEC);
+
+		PayloadTypeRegistry.serverboundPlay().register(SmokescreenPayload.TYPE, SmokescreenPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(SmokescreenPayload.TYPE,
+			(payload, context) -> Smokescreen.deploy(context.player()));
+		ServerTickEvents.END_SERVER_TICK.register(Smokescreen::tick);
 
 		LOGGER.info("One For All loaded");
 	}

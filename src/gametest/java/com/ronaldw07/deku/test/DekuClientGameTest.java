@@ -90,6 +90,19 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			double moved = singleplayer.getServer().computeOnServer(server -> golem(server).position().distanceTo(golemStart));
 			check(health < 100, "smash should damage the golem, health was " + health);
 			check(moved > 1, "smash should launch the golem, it moved " + moved);
+
+			// Smokescreen: a husk (doesn't burn in daylight) hunts the player until the smoke goes up.
+			singleplayer.getServer().runCommand("difficulty normal");
+			singleplayer.getServer().runCommand("execute at @p run summon minecraft:husk ~ ~ ~8");
+			context.waitTicks(20);
+			check(huskHasTarget(singleplayer), "husk should be hunting the player before the smoke");
+			context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+			context.waitTicks(5);
+			check(!huskHasTarget(singleplayer), "husk should lose the player inside the smoke");
+			context.runOnClient(client -> client.options.setCameraType(CameraType.THIRD_PERSON_BACK));
+			context.waitTicks(15);
+			context.takeScreenshot("smokescreen");
+			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
 		}
 	}
 
@@ -106,6 +119,11 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			});
 			check(resolves, "sound " + id + " should resolve to a real sound");
 		}
+	}
+
+	private static boolean huskHasTarget(TestSingleplayerContext singleplayer) {
+		return singleplayer.getServer().computeOnServer(server ->
+			server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().getTarget() != null);
 	}
 
 	private static IronGolem golem(MinecraftServer server) {
