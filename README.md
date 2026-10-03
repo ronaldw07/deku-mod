@@ -13,6 +13,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Hold R, or double-tap and hold space: Float
 - B: Blackwhip
 - Hold space on the ground: crouch and charge, release to launch toward the crosshair
+- Space in the air: flick a blast of air to push yourself where you look; hold to keep flicking
 - K: settings (power, ramp-up and charge times, Danger Sense, cooldowns on/off)
 
 ## Explosion (slot 2)
@@ -21,6 +22,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Double-tap and hold space: fly (W/A/S/D to move, hover otherwise)
 - Hold V: Howitzer Impact, release to explode
 - Hold C: charge the cross-arm ground blast, release to fire
+- X: Cluster Bomb, an 8x8 grid of bombs going off row by row
 
 ## Danger Sense
 

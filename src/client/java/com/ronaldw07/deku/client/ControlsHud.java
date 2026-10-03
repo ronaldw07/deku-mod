@@ -52,6 +52,7 @@ final class ControlsHud {
 		new Row(Ability.FLIGHT, ControlsHud::doubleTap),
 		new Row(Ability.HOWITZER, () -> hold(DekuModClient.SMASH_KEY)),
 		new Row(Ability.GROUND_BLAST, () -> hold(DekuModClient.COWLING_KEY)),
+		new Row(Ability.CLUSTER, () -> key(DekuModClient.CLUSTER_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private ControlsHud() {

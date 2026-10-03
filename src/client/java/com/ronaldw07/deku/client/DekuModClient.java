@@ -34,6 +34,7 @@ public class DekuModClient implements ClientModInitializer {
 	public static final KeyMapping SMOKESCREEN_KEY = register("key.deku.smokescreen", GLFW.GLFW_KEY_Z);
 	public static final KeyMapping FLOAT_KEY = register("key.deku.float", GLFW.GLFW_KEY_R);
 	public static final KeyMapping BLACKWHIP_KEY = register("key.deku.blackwhip", GLFW.GLFW_KEY_B);
+	public static final KeyMapping CLUSTER_KEY = register("key.deku.cluster", GLFW.GLFW_KEY_X);
 	public static final KeyMapping DANGER_SENSE_KEY = register("key.deku.danger_sense", GLFW.GLFW_KEY_H);
 	public static final KeyMapping SETTINGS_KEY = register("key.deku.settings", GLFW.GLFW_KEY_K);
 
@@ -49,6 +50,7 @@ public class DekuModClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(DangerPayload.TYPE, (payload, context) -> DangerSenseClient.receive(payload, context.player()));
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingAura::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
@@ -104,7 +106,8 @@ public class DekuModClient implements ClientModInitializer {
 		}
 
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
-			SMASH_KEY.isDown(), COWLING_KEY.isDown());
+			SMASH_KEY.isDown(), COWLING_KEY.isDown(), countClicks(CLUSTER_KEY) > 0);
+		ExplosionFx.tick(client.level);
 
 		DangerSenseClient.tick(player, countClicks(DANGER_SENSE_KEY) % 2 == 1);
 	}

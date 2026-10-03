@@ -14,7 +14,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -26,8 +28,8 @@ public final class Bakugo {
 	private static final Identifier FLIGHT_ID = DekuMod.id("explosion_flight_no_gravity");
 	private static final Identifier HOWITZER_ID = DekuMod.id("howitzer_no_gravity");
 	private static final double SHOT_REACH = 48.0;
-	private static final float SHOT_RADIUS = 2.0f;
-	private static final float BIG_SHOT_RADIUS = 5.0f;
+	private static final float SHOT_RADIUS = 3.0f;
+	private static final float BIG_SHOT_RADIUS = 7.0f;
 	// The big shot is a beam: everything along it from hand to target is hit too.
 	private static final double BEAM_WIDTH = 1.5;
 	private static final float BEAM_DAMAGE = 12.0f;
@@ -35,20 +37,20 @@ public final class Bakugo {
 	private static final double HOWITZER_REACH = 1.5;
 	// Howitzer Impact: a huge core blast, two rings of blasts rolling outward from it, and a
 	// shockwave that throws everything within SHOCKWAVE_RANGE and badly hurts anything close.
-	private static final float HOWITZER_CORE_RADIUS = 14.0f;
-	private static final int HOWITZER_CORE_DEBRIS = 180;
-	private static final double[] HOWITZER_RING_DISTANCES = {20, 36};
+	private static final float HOWITZER_CORE_RADIUS = 18.0f;
+	private static final int HOWITZER_CORE_DEBRIS = 220;
+	private static final double[] HOWITZER_RING_DISTANCES = {24, 42};
 	private static final int[] HOWITZER_RING_BLASTS = {8, 10};
-	private static final float[] HOWITZER_RING_RADII = {9.0f, 7.0f};
+	private static final float[] HOWITZER_RING_RADII = {11.0f, 9.0f};
 	// Blasts stacked above the core, so the explosion towers instead of just spreading.
-	private static final double[] HOWITZER_COLUMN_HEIGHTS = {12, 24, 36};
-	private static final float[] HOWITZER_COLUMN_RADII = {11.0f, 9.0f, 7.0f};
+	private static final double[] HOWITZER_COLUMN_HEIGHTS = {14, 28, 42};
+	private static final float[] HOWITZER_COLUMN_RADII = {14.0f, 11.0f, 8.0f};
 	private static final int HOWITZER_RING_DEBRIS = 8;
 	private static final int TICKS_PER_RING = 3;
 	private static final double SHOCKWAVE_RANGE = 200.0;
-	private static final double SHOCKWAVE_MAX_PUSH = 3.5;
-	private static final double SHOCKWAVE_DAMAGE_RANGE = 40.0;
-	private static final float SHOCKWAVE_MAX_DAMAGE = 40.0f;
+	private static final double SHOCKWAVE_MAX_PUSH = 5.0;
+	private static final double SHOCKWAVE_DAMAGE_RANGE = 60.0;
+	private static final float SHOCKWAVE_MAX_DAMAGE = 80.0f;
 	// The ground blast: rows of explosions fanning out in front of the player, one row a tick.
 	// Holding C longer adds rows, widens the fan and grows each blast.
 	private static final int MIN_GROUND_ROWS = 3;
@@ -56,9 +58,20 @@ public final class Bakugo {
 	private static final double GROUND_FIRST_ROW = 4.0;
 	private static final double GROUND_ROW_SPACING = 7.0;
 	private static final double GROUND_BLAST_SPREAD = 0.45; // sideways offset per block of distance
-	private static final float MIN_GROUND_RADIUS = 5.0f;
-	private static final float EXTRA_GROUND_RADIUS = 4.0f;
+	private static final float MIN_GROUND_RADIUS = 6.0f;
+	private static final float EXTRA_GROUND_RADIUS = 5.0f;
 	private static final int GROUND_DEBRIS = 4;
+	// Cluster bomb: an 8x8 grid of bombs laid out jaggedly ahead, going off a row at a time.
+	private static final int CLUSTER_GRID = 8;
+	private static final double CLUSTER_FIRST_ROW = 5.0;
+	private static final double CLUSTER_SPACING = 4.5;
+	private static final double CLUSTER_JITTER = 1.6;
+	private static final float CLUSTER_RADIUS = 3.5f;
+	private static final int CLUSTER_TICKS_PER_ROW = 3;
+	private static final int CLUSTER_DEBRIS = 2;
+	// Fires left in a crater: one for every few blocks of radius; smaller blasts only sometimes leave one.
+	private static final float RADIUS_PER_FIRE = 4.0f;
+	private static final double SMALL_BLAST_FIRE_CHANCE = 0.3;
 	private static final double HAND_HEIGHT = 1.1;
 	private static final double HAND_SIDE = 0.35;
 	private static final int POP_INTERVAL = 4;
@@ -75,7 +88,8 @@ public final class Bakugo {
 	}
 
 	public static void handle(ServerPlayer player, Move move, boolean active, int charge) {
-		boolean starting = active || move == Move.AP_SHOT || move == Move.AP_SHOT_BIG || move == Move.GROUND_BLAST;
+		boolean starting = active || move == Move.AP_SHOT || move == Move.AP_SHOT_BIG || move == Move.GROUND_BLAST
+			|| move == Move.CLUSTER;
 		if (starting && !DekuItems.isHolding(player, DekuItems.EXPLOSION)) {
 			return;
 		}
@@ -92,6 +106,7 @@ public final class Bakugo {
 				}
 			}
 			case GROUND_BLAST -> groundBlast(player, Math.clamp(charge, 0, 100) / 100.0);
+			case CLUSTER -> cluster(player);
 		}
 	}
 
@@ -211,6 +226,39 @@ public final class Bakugo {
 			2.0f + 2.0f * (float) charge, 0.6f);
 	}
 
+	/**
+	 * Bombs on the ground in a jagged 8x8 grid ahead, each row going off a moment after the
+	 * last and each bomb in a row a beat apart, so they boom one after another.
+	 */
+	private static void cluster(ServerPlayer player) {
+		ServerLevel level = player.level();
+		RandomSource random = level.getRandom();
+		Vec3 look = player.getLookAngle();
+		Vec3 forward = new Vec3(look.x, 0, look.z).lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : new Vec3(look.x, 0, look.z).normalize();
+		Vec3 right = new Vec3(-forward.z, 0, forward.x);
+		Vec3 feet = player.position();
+		double half = (CLUSTER_GRID - 1) / 2.0;
+		for (int row = 0; row < CLUSTER_GRID; row++) {
+			for (int column = 0; column < CLUSTER_GRID; column++) {
+				Vec3 spot = feet.add(forward.scale(CLUSTER_FIRST_ROW + row * CLUSTER_SPACING))
+					.add(right.scale((column - half) * CLUSTER_SPACING))
+					.add((random.nextDouble() * 2 - 1) * CLUSTER_JITTER, 0, (random.nextDouble() * 2 - 1) * CLUSTER_JITTER);
+				int delay = row * CLUSTER_TICKS_PER_ROW + random.nextInt(CLUSTER_TICKS_PER_ROW);
+				Blasts.later(level.getServer(), delay, () -> {
+					Vec3 ground = onGround(level, spot);
+					blast(player, ground, CLUSTER_RADIUS, CLUSTER_DEBRIS, Style.CLUSTER, ground);
+				});
+			}
+		}
+		level.playSound(null, feet.x, feet.y, feet.z, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 2.0f, 1.4f);
+	}
+
+	/** The spot moved onto the top of the ground below or above it, half a block up. */
+	private static Vec3 onGround(ServerLevel level, Vec3 spot) {
+		int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(spot.x), (int) Math.floor(spot.z));
+		return new Vec3(spot.x, top + 0.5, spot.z);
+	}
+
 	public static void tick(MinecraftServer server) {
 		for (UUID id : flying) {
 			ServerPlayer player = server.getPlayerList().getPlayer(id);
@@ -270,10 +318,15 @@ public final class Bakugo {
 		return player.position().add(0, HAND_HEIGHT, 0).add(right.scale(side * HAND_SIDE));
 	}
 
-	/** A real, terrain-breaking explosion that spares its owner, plus the custom fireball effect. */
+	/**
+	 * A real explosion that spares its owner, with a crater as big as the fireball, a few fires
+	 * left burning in it, and the custom fireball effect.
+	 */
 	private static void blast(ServerPlayer owner, Vec3 center, float radius, int debris, Style style, Vec3 from) {
 		ServerLevel level = owner.level();
 		Blasts.blast(owner, center, radius, Blasts.sparing(owner), debris);
+		int fires = (int) (radius / RADIUS_PER_FIRE);
+		Blasts.carve(level, center, radius, fires > 0 || level.getRandom().nextDouble() >= SMALL_BLAST_FIRE_CHANCE ? fires : 1);
 		ExplosionFxPayload fx = new ExplosionFxPayload(center, radius, style, from);
 		for (ServerPlayer viewer : PlayerLookup.around(level, center, FX_VIEW_DISTANCE)) {
 			if (ServerPlayNetworking.canSend(viewer, ExplosionFxPayload.TYPE)) {

@@ -40,10 +40,20 @@ final class ExplosionFx {
 	private static final int HOWITZER_SMOKE_COLUMN = 90;
 	private static final double HOWITZER_COLUMN_HEIGHT = 40.0;
 
+	// Fireball volume: big explosion puffs filling the blast sphere.
+	private static final int MAX_FIREBALL_PUFFS = 40;
+	private static final double PUFFS_PER_RADIUS = 2.0;
+	// Smoke hangs over every blast for a few seconds.
+	private static final int SMOKE_LINGER_TICKS = 100;
+	private static final float RADIUS_PER_SMOKE_PUFF = 4.0f;
+	private static final int SMOKE_EVERY_TICKS = 4;
+	private static final int MAX_LINGERING = 80;
+
 	private record Blast(Vec3 center, float radius, Style style, Vec3 from, long startTick) {
 	}
 
 	private static List<Blast> blasts = List.of();
+	private static List<Blast> smoking = List.of();
 
 	private ExplosionFx() {
 	}
@@ -55,7 +65,32 @@ final class ExplosionFx {
 		}
 		Blast blast = new Blast(fx.center(), fx.radius(), fx.style(), fx.from(), level.getGameTime());
 		blasts = Stream.concat(blasts.stream(), Stream.of(blast)).toList();
+		smoking = Stream.concat(smoking.stream().skip(Math.max(0, smoking.size() - MAX_LINGERING + 1)), Stream.of(blast)).toList();
 		spawnParticles(level, blast);
+	}
+
+	/** Keeps smoke rolling off recent blasts. */
+	static void tick(ClientLevel level) {
+		if (level == null) {
+			smoking = List.of();
+			return;
+		}
+		long now = level.getGameTime();
+		smoking = smoking.stream().filter(blast -> now - blast.startTick() < SMOKE_LINGER_TICKS).toList();
+		if (now % SMOKE_EVERY_TICKS != 0) {
+			return;
+		}
+		RandomSource random = level.getRandom();
+		for (Blast blast : smoking) {
+			for (int i = 0; i < Math.max(1, blast.radius() / RADIUS_PER_SMOKE_PUFF); i++) {
+				Vec3 at = blast.center().add(inSphere(random, blast.radius() * 0.7));
+				level.addAlwaysVisibleParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, true, at.x, at.y, at.z, 0, 0.01 + random.nextDouble() * 0.02, 0);
+			}
+		}
+	}
+
+	private static Vec3 inSphere(RandomSource random, double radius) {
+		return LightningDraw.randomDirection(random).scale(radius * Math.cbrt(random.nextDouble()));
 	}
 
 	private static void spawnParticles(ClientLevel level, Blast blast) {
@@ -69,6 +104,13 @@ final class ExplosionFx {
 		}
 		for (int i = 0; i < blast.radius() * 3; i++) {
 			level.addParticle(ParticleTypes.LAVA, c.x, c.y, c.z, 0, 0, 0);
+		}
+		int puffs = (int) Math.min(MAX_FIREBALL_PUFFS, blast.radius() * PUFFS_PER_RADIUS);
+		for (int i = 0; i < puffs; i++) {
+			Vec3 at = c.add(inSphere(random, blast.radius() * 0.8));
+			level.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION, true, at.x, at.y, at.z, 0, 0, 0);
+			Vec3 v = at.subtract(c).scale(0.08);
+			level.addParticle(ParticleTypes.FLAME, at.x, at.y, at.z, v.x, v.y, v.z);
 		}
 		for (int i = 0; i < blast.radius() * 6; i++) {
 			Vec3 v = LightningDraw.randomDirection(random).scale(0.08 * spread);

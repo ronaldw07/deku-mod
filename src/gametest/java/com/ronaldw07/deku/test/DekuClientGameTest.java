@@ -37,6 +37,8 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
@@ -146,6 +148,19 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitTicks(2);
 		check(context.computeOnClient(client -> FullCowlingClient.percent()) == 0, "cowling should turn off instantly");
 		check(!hasSpeedBoost(singleplayer), "server should remove the speed boost when cowling turns off");
+
+		// A slow 2 second ramp: red lightning climbs the body, then bursts at full power.
+		DekuSettings.set(DekuSettings.get().withCowlingRampSeconds(2.0));
+		camera(context, CameraType.THIRD_PERSON_FRONT);
+		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.waitTicks(25);
+		context.takeScreenshot("cowling-charging");
+		context.waitTicks(16);
+		check(context.computeOnClient(client -> FullCowlingClient.percent()) == 100, "cowling should reach full power after 2 seconds");
+		context.takeScreenshot("cowling-burst");
+		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		DekuSettings.set(DekuSettings.get().withCowlingRampSeconds(1.0));
+		camera(context, CameraType.FIRST_PERSON);
 		command(singleplayer, "time set day");
 	}
 
@@ -310,6 +325,26 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		}
 		check(highest - groundY > 0.5, "tapping jump should still jump, rose " + (highest - groundY));
 		context.waitTicks(20);
+
+		// In the air, a tap flicks the player where they look; holding flicks again and again.
+		command(singleplayer, "execute as @p at @p run tp @s ~ ~12 ~ 0 0");
+		context.waitTicks(2);
+		Vec3 airStart = context.computeOnClient(client -> client.player.position());
+		context.getInput().holdKeyFor(options -> options.keyJump, 2);
+		context.waitTicks(2);
+		double oneFlick = context.computeOnClient(client -> client.player.position()).subtract(airStart).horizontalDistance();
+		check(oneFlick > 1, "a tap in the air should flick the player forward, moved " + oneFlick);
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(8); // long enough apart that the next press isn't a double-tap (which floats)
+		context.getInput().holdKey(options -> options.keyJump);
+		context.waitTicks(12);
+		context.takeScreenshot("air-flick");
+		context.waitTicks(12);
+		context.getInput().releaseKey(options -> options.keyJump);
+		double held = context.computeOnClient(client -> client.player.position()).subtract(airStart).horizontalDistance();
+		check(held > 12, "holding jump in the air should keep flicking the player along, moved " + held);
+		camera(context, CameraType.FIRST_PERSON);
+		context.waitTicks(60);
 	}
 
 	private static void floatQuirk(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
@@ -474,11 +509,63 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			.getEntities(EntityTypes.HUSK, husk -> husk.isAlive() && husk.getHealth() >= husk.getMaxHealth()).isEmpty());
 		check(huskDown, "the ground blast should hurt the husk in front");
 		camera(context, CameraType.FIRST_PERSON);
+		clusterBomb(context, singleplayer);
+		crater(context, singleplayer);
+	}
+
+	private static void clusterBomb(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// X: an 8x8 grid of bombs ahead goes off row by row, catching husks spread across it.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p at @p run tp @s ~40 ~ ~ 0 0");
+		for (String spot : List.of("~-8 ~ ~10", "~8 ~ ~20", "~ ~ ~28", "~-6 ~ ~34")) {
+			command(singleplayer, "execute at @p run summon minecraft:husk " + spot + " {NoAI:1b}");
+		}
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(3);
+		context.getInput().pressKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(10);
+		context.takeScreenshot("cluster-boom");
+		context.waitTicks(20);
+		context.takeScreenshot("cluster-done");
+		boolean allHit = singleplayer.getServer().computeOnServer(server -> server.overworld()
+			.getEntities(EntityTypes.HUSK, husk -> husk.isAlive() && husk.getHealth() >= husk.getMaxHealth()).isEmpty());
+		check(allHit, "the cluster bomb should hit every husk in its grid");
+		int fires = singleplayer.getServer().computeOnServer(server -> {
+			BlockPos feet = player(server).blockPosition();
+			int count = 0;
+			for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-20, -6, 0), feet.offset(20, 6, 40))) {
+				count += server.overworld().getBlockState(pos).is(Blocks.FIRE) ? 1 : 0;
+			}
+			return count;
+		});
+		check(fires > 0, "the cluster bomb should leave some fire burning");
+		context.waitTicks(40);
+		context.takeScreenshot("cluster-smoke");
+		camera(context, CameraType.FIRST_PERSON);
+	}
+
+	private static void crater(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// A big AP Shot into the ground leaves a crater as big as its fireball: nothing breakable left inside.
+		command(singleplayer, "execute as @p at @p run tp @s ~40 ~ ~ 0 40");
+		context.waitTicks(3);
+		Vec3 hit = singleplayer.getServer().computeOnServer(server -> Aim.trace(player(server), 48).getLocation());
+		context.getInput().holdKeyFor(options -> options.keyUse, 2);
+		context.waitTicks(14);
+		int left = singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			for (BlockPos pos : BlockPos.betweenClosed(BlockPos.containing(hit).offset(-5, -5, -5), BlockPos.containing(hit).offset(5, 5, 5))) {
+				BlockState state = server.overworld().getBlockState(pos);
+				boolean breakable = !state.isAir() && !state.is(Blocks.FIRE) && state.getDestroySpeed(server.overworld(), pos) >= 0;
+				count += breakable && Vec3.atCenterOf(pos).distanceTo(hit) < 5 ? 1 : 0;
+			}
+			return count;
+		});
+		check(left == 0, "the AP Shot crater should be cleared out, " + left + " blocks left inside");
 	}
 
 	private static void fullPowerSmashTunnel(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
 		// A 100% Smash, released instantly, blasts through a stone wall 5 blocks ahead.
-		command(singleplayer, "execute as @p at @p run tp @s ~-40 ~ ~ 0 0");
+		command(singleplayer, "execute as @p at @p run tp @s ~40 ~ ~ 0 0");
 		command(singleplayer, "execute at @p run fill ~-2 ~ ~5 ~2 ~4 ~5 minecraft:stone");
 		command(singleplayer, "execute at @p run fill ~-2 ~ ~40 ~2 ~4 ~40 minecraft:stone");
 		selectSlot(context, 0);

@@ -23,6 +23,12 @@ public final class FullCowlingClient {
 		return percent;
 	}
 
+	/** How far Full Cowling is through powering up, 0-1; 0 once it's at full power or off. */
+	static double chargeProgress() {
+		double target = DekuSettings.get().cowlingPower();
+		return active && percent < target ? percent / target : 0;
+	}
+
 	/** @param holdingQuirk whether One For All is in hand; letting go of it switches Full Cowling off */
 	static void tick(LocalPlayer player, boolean togglePressed, boolean holdingQuirk) {
 		if (player == null) {
@@ -43,9 +49,11 @@ public final class FullCowlingClient {
 		}
 
 		DekuSettings settings = DekuSettings.get();
+		double previous = percent;
 		percent = active ? Ramp.toward(percent, settings.cowlingPower(), settings.cowlingRampSeconds()) : 0;
 
 		crackle(player);
+		CowlingFx.tick(player, previous, percent, settings.cowlingPower());
 
 		int rounded = (int) Math.round(percent);
 		if (rounded != lastSent && ClientPlayNetworking.canSend(CowlingPayload.TYPE)) {

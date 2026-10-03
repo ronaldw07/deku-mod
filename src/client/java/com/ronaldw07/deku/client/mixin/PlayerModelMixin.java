@@ -76,6 +76,11 @@ abstract class PlayerModelMixin {
 				set(right, 1.1f, 0, 0.3f);
 				set(left, 1.1f, 0, -0.3f);
 			}
+			// Both hands snapped back, palms flicking the air behind.
+			case FLICK -> {
+				set(right, 1.3f, 0, 0.25f);
+				set(left, 1.3f, 0, -0.25f);
+			}
 			// Lying along the flight path: right fist punched out ahead, left arm trailing.
 			case LAUNCH -> {
 				set(right, (float) -Math.PI, 0, 0);

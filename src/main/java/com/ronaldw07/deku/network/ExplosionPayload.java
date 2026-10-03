@@ -12,7 +12,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  */
 public record ExplosionPayload(Move move, boolean active, int charge) implements CustomPacketPayload {
 	public enum Move {
-		AP_SHOT, AP_SHOT_BIG, FLIGHT, HOWITZER, GROUND_BLAST
+		AP_SHOT, AP_SHOT_BIG, FLIGHT, HOWITZER, GROUND_BLAST, CLUSTER
 	}
 
 	public static final Type<ExplosionPayload> TYPE = new Type<>(DekuMod.id("explosion"));

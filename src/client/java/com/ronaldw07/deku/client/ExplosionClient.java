@@ -12,7 +12,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Client side of the Explosion quirk, used while the Explosion item is in hand:
  * right-click for AP Shot (tap for a big one, hold for rapid fire), double-tap and hold
- * jump to fly, hold V for Howitzer Impact, and C for the cross-arm ground blast.
+ * jump to fly, hold V for Howitzer Impact, C for the cross-arm ground blast, and X for the
+ * cluster bomb.
  */
 public final class ExplosionClient {
 	private static final int TAP_TICKS = 6; // right-click held for less than this is a tap
@@ -25,6 +26,7 @@ public final class ExplosionClient {
 	private static final double HOWITZER_CIRCLE_SPEED = 0.75;
 	private static final double HOWITZER_TURN = 0.8; // radians per tick around the circle
 	private static final int BURST_POSE_TICKS = 10;
+	private static final int CLUSTER_POSE_TICKS = 10;
 
 	private static int useHeldTicks;
 	private static int bigShotLoad;
@@ -59,7 +61,7 @@ public final class ExplosionClient {
 	}
 
 	static void tick(LocalPlayer player, boolean holding, boolean useDown, boolean jumpDown, boolean howitzerDown,
-			boolean groundBlastDown) {
+			boolean groundBlastDown, boolean clusterPressed) {
 		if (player == null) {
 			useHeldTicks = 0;
 			bigShotLoad = 0;
@@ -74,6 +76,11 @@ public final class ExplosionClient {
 		flight(player, able, jumpDown);
 		howitzer(player, able && howitzerDown);
 		groundBlast(player, able && groundBlastDown);
+		if (able && clusterPressed && Cooldowns.ready(Cooldowns.Ability.CLUSTER)) {
+			send(Move.CLUSTER, true, 0);
+			Cooldowns.start(Cooldowns.Ability.CLUSTER);
+			Poses.play(Poses.Pose.AIM_BOTH, CLUSTER_POSE_TICKS);
+		}
 	}
 
 	private static void apShot(LocalPlayer player, boolean down) {

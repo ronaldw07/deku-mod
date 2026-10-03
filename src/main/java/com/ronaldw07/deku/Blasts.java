@@ -12,6 +12,9 @@ import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseFireBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -93,6 +96,43 @@ public final class Blasts {
 
 	private static Vec3 randomDirection(RandomSource random) {
 		return new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1).normalize();
+	}
+
+	/**
+	 * Clears every breakable block inside the sphere, so the crater is as big as the fireball,
+	 * and leaves a few fires burning on its floor. Fluids and block entities are left alone.
+	 */
+	public static void carve(ServerLevel level, Vec3 center, float radius, int fires) {
+		BlockPos middle = BlockPos.containing(center);
+		int reach = (int) Math.ceil(radius);
+		double radiusSqr = radius * radius;
+		for (BlockPos pos : BlockPos.betweenClosed(middle.offset(-reach, -reach, -reach), middle.offset(reach, reach, reach))) {
+			BlockState state = level.getBlockState(pos);
+			if (Vec3.atCenterOf(pos).distanceToSqr(center) > radiusSqr || state.isAir() || state.hasBlockEntity()
+					|| !state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0) {
+				continue;
+			}
+			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+		}
+		light(level, center, radius, fires);
+	}
+
+	/** Sets fires on open floor at random spots in the crater. */
+	private static void light(ServerLevel level, Vec3 center, float radius, int fires) {
+		RandomSource random = level.getRandom();
+		for (int attempt = 0; attempt < fires * DEBRIS_ATTEMPTS_PER_BLOCK && fires > 0; attempt++) {
+			Vec3 spot = center.add((random.nextDouble() * 2 - 1) * radius, -radius, (random.nextDouble() * 2 - 1) * radius);
+			BlockPos pos = BlockPos.containing(spot);
+			// Climb up from the bottom of the crater to the first open space.
+			for (int up = 0; up < radius * 2 && !level.getBlockState(pos).isAir(); up++) {
+				pos = pos.above();
+			}
+			BlockState fire = BaseFireBlock.getState(level, pos);
+			if (level.getBlockState(pos).isAir() && fire.canSurvive(level, pos)) {
+				level.setBlockAndUpdate(pos, fire);
+				fires--;
+			}
+		}
 	}
 
 	/** Runs the action after the given number of server ticks. */

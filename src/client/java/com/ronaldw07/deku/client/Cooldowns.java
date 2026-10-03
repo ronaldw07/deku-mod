@@ -17,7 +17,8 @@ public final class Cooldowns {
 		AP_SHOT("AP Shot", 20),
 		FLIGHT("Explosion Flight", 0),
 		HOWITZER("Howitzer Impact", 160),
-		GROUND_BLAST("Ground Blast", 100);
+		GROUND_BLAST("Ground Blast", 100),
+		CLUSTER("Cluster Bomb", 120);
 
 		final String label;
 		final int ticks;
