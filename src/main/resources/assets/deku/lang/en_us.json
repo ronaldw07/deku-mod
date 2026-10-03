@@ -7,5 +7,8 @@
 	"key.deku.blackwhip": "Blackwhip",
 	"key.deku.danger_sense": "Danger Sense (on/off)",
 	"key.deku.settings": "Open Settings",
-	"screen.deku.settings": "One For All Settings"
+	"screen.deku.settings": "One For All Settings",
+	"item.deku.one_for_all": "One For All",
+	"item.deku.explosion": "Explosion",
+	"item.deku.hero_notebook": "Hero Analysis for the Future No. 13"
 }

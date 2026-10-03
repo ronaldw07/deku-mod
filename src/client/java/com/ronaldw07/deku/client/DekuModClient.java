@@ -1,8 +1,10 @@
 package com.ronaldw07.deku.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.DekuParticles;
+import com.ronaldw07.deku.HeroNotebookItem;
 import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.DangerPayload;
@@ -18,6 +20,9 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.BookViewScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import org.lwjgl.glfw.GLFW;
 
 public class DekuModClient implements ClientModInitializer {
@@ -34,6 +39,8 @@ public class DekuModClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		DekuSettings.load();
+		HeroNotebookItem.opener = player ->
+			Minecraft.getInstance().gui.setScreen(new BookViewScreen(new BookViewScreen.BookAccess(HeroNotebook.pages())));
 		ClientTickEvents.END_CLIENT_TICK.register(DekuModClient::tick);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("power"), PowerHud::extract);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("danger_sense"), DangerSenseHud::extract);
@@ -56,36 +63,38 @@ public class DekuModClient implements ClientModInitializer {
 			client.gui.setScreen(new SettingsScreen());
 		}
 
-		boolean cowlingToggled = false;
-		while (COWLING_KEY.consumeClick()) {
-			cowlingToggled = !cowlingToggled;
+		// Keys are read once here, then go to whichever quirk item is in hand.
+		LocalPlayer player = client.player;
+		boolean oneForAll = player != null && DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL);
+		int cowlingClicks = countClicks(COWLING_KEY);
+		int smashClicks = countClicks(SMASH_KEY);
+		int smokescreenClicks = countClicks(SMOKESCREEN_KEY);
+		int blackwhipClicks = countClicks(BLACKWHIP_KEY);
+
+		FullCowlingClient.tick(player, oneForAll && cowlingClicks % 2 == 1, oneForAll);
+		SmashClient.tick(player, oneForAll && SMASH_KEY.isDown(), oneForAll && smashClicks > 0);
+		if (oneForAll && smokescreenClicks > 0) {
+			send(SmokescreenPayload.INSTANCE);
 		}
-		FullCowlingClient.tick(client.player, cowlingToggled);
-
-		boolean smashPressed = false;
-		while (SMASH_KEY.consumeClick()) {
-			smashPressed = true;
-		}
-		SmashClient.tick(client.player, SMASH_KEY.isDown(), smashPressed);
-
-		while (SMOKESCREEN_KEY.consumeClick()) {
-			if (ClientPlayNetworking.canSend(SmokescreenPayload.TYPE)) {
-				ClientPlayNetworking.send(SmokescreenPayload.INSTANCE);
-			}
-		}
-
-		FloatClient.tick(client.player, FLOAT_KEY.isDown());
-
-		while (BLACKWHIP_KEY.consumeClick()) {
-			if (ClientPlayNetworking.canSend(BlackwhipPayload.TYPE)) {
-				ClientPlayNetworking.send(BlackwhipPayload.INSTANCE);
-			}
+		FloatClient.tick(player, oneForAll && FLOAT_KEY.isDown());
+		if (oneForAll && blackwhipClicks > 0) {
+			send(BlackwhipPayload.INSTANCE);
 		}
 
-		boolean dangerSenseToggled = false;
-		while (DANGER_SENSE_KEY.consumeClick()) {
-			dangerSenseToggled = !dangerSenseToggled;
+		DangerSenseClient.tick(player, countClicks(DANGER_SENSE_KEY) % 2 == 1);
+	}
+
+	private static int countClicks(KeyMapping key) {
+		int clicks = 0;
+		while (key.consumeClick()) {
+			clicks++;
 		}
-		DangerSenseClient.tick(client.player, dangerSenseToggled);
+		return clicks;
+	}
+
+	private static void send(CustomPacketPayload payload) {
+		if (ClientPlayNetworking.canSend(payload.type())) {
+			ClientPlayNetworking.send(payload);
+		}
 	}
 }

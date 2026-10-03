@@ -1,5 +1,6 @@
 package com.ronaldw07.deku.test;
 
+import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
 import com.ronaldw07.deku.client.DangerSenseClient;
@@ -13,6 +14,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -24,6 +26,7 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.golem.IronGolem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -38,6 +41,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getClientLevel().waitForChunksRender();
 			checkSoundsResolve(context);
+			starterKit(context, singleplayer);
 			settings(context);
 			fullCowling(context, singleplayer);
 			smash(context, singleplayer);
@@ -46,6 +50,35 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			floatQuirk(context, singleplayer);
 			dangerSense(context, singleplayer);
 		}
+	}
+
+	private static void starterKit(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		Item[] expected = {DekuItems.ONE_FOR_ALL, DekuItems.EXPLOSION, DekuItems.HERO_NOTEBOOK};
+		for (int slot = 0; slot < expected.length; slot++) {
+			int index = slot;
+			Item actual = singleplayer.getServer().computeOnServer(server -> player(server).getInventory().getItem(index).getItem());
+			check(actual == expected[slot], "hotbar slot " + (slot + 1) + " should hold " + expected[slot] + ", had " + actual);
+		}
+
+		// The notebook opens on right-click.
+		selectSlot(context, 2);
+		context.getInput().pressKey(options -> options.keyUse);
+		context.waitForScreen(BookViewScreen.class);
+		context.takeScreenshot("notebook");
+		context.setScreen(() -> null);
+
+		// Deku's moves need One For All in hand: with an empty hand, C does nothing.
+		selectSlot(context, 5);
+		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.waitTicks(5);
+		check(context.computeOnClient(client -> FullCowlingClient.percent()) == 0, "full cowling shouldn't start without One For All in hand");
+		selectSlot(context, 0);
+		context.takeScreenshot("hotbar");
+	}
+
+	private static void selectSlot(ClientGameTestContext context, int slot) {
+		context.getInput().pressKey(options -> options.keyHotbarSlots[slot]);
+		context.waitTicks(2);
 	}
 
 	private static void settings(ClientGameTestContext context) {

@@ -22,7 +22,8 @@ public final class FullCowlingClient {
 		return percent;
 	}
 
-	static void tick(LocalPlayer player, boolean togglePressed) {
+	/** @param holdingQuirk whether One For All is in hand; letting go of it switches Full Cowling off */
+	static void tick(LocalPlayer player, boolean togglePressed, boolean holdingQuirk) {
 		if (player == null) {
 			active = false;
 			percent = 0;
@@ -34,7 +35,7 @@ public final class FullCowlingClient {
 			active = !active;
 		}
 
-		if (player.isDeadOrDying()) {
+		if (!holdingQuirk || player.isDeadOrDying()) {
 			active = false;
 		}
 
