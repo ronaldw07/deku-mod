@@ -55,16 +55,20 @@ public final class Smash {
 	private static final int GUST_EVERY = 3;
 	private static final double HEAVY_THRESHOLD = 0.5; // adds an explosion and thunder
 	private static final double FX_VIEW_DISTANCE = 192;
-	// A full-power punch tears a tunnel along its whole path, rolling outward a few blocks a
-	// tick, and ends in a huge impact.
-	private static final int TUNNEL_PERCENT = 100;
+	// Every punch carves a tunnel along its path, rolling outward a few blocks a tick: every
+	// block inside is cleared, stone included. It widens with power, and ends in an impact
+	// crater; a full-power punch also sets off a huge blast there.
 	private static final double TUNNEL_START = 2.0;
-	private static final double TUNNEL_SPACING = 3.0;
-	private static final float TUNNEL_RADIUS = 5.0f;
-	private static final int TUNNEL_DEBRIS = 3;
+	private static final double TUNNEL_SPACING = 2.0;
+	private static final float MIN_TUNNEL_RADIUS = 1.5f;
+	private static final float MAX_TUNNEL_RADIUS = 4.5f;
+	private static final float FULL_POWER_EXTRA_TUNNEL_RADIUS = 2.5f; // 7 blocks at 100%
+	private static final int TUNNEL_DEBRIS = 6;
+	private static final int BOOM_EVERY_STEPS = 3;
 	private static final double TUNNEL_BLOCKS_PER_TICK = 6.0;
-	private static final float IMPACT_RADIUS = 10.0f;
-	private static final int IMPACT_DEBRIS = 90;
+	private static final double IMPACT_CRATER_SCALE = 1.6; // crater radius, relative to the tunnel's
+	private static final float IMPACT_RADIUS = 12.0f;
+	private static final int IMPACT_DEBRIS = 120;
 	private static final int IMPACT_BOLTS = 8;
 	private static final double IMPACT_BOLT_LENGTH = 6.0;
 	private static final int HIT_BOLTS = 3;
@@ -96,9 +100,8 @@ public final class Smash {
 		}
 
 		Vec3 end = locked.map(target -> target.getBoundingBox().getCenter()).orElse(eye.add(aim.scale(range)));
-		if (percent >= TUNNEL_PERCENT) {
-			tunnel(player, eye, aim, eye.distanceTo(end));
-		}
+		float tunnelRadius = (float) (Mth.lerp(power, MIN_TUNNEL_RADIUS, MAX_TUNNEL_RADIUS) + FULL_POWER_EXTRA_TUNNEL_RADIUS * fullPower);
+		tunnel(player, eye, aim, eye.distanceTo(end), tunnelRadius, percent >= 100);
 
 		sendLightning(level, eye.add(aim.scale(LIGHTNING_START)), end, power);
 		showBlast(level, player, eye, aim, range, power);
@@ -124,19 +127,29 @@ public final class Smash {
 		return distance <= range && (distance < POINT_BLANK || toTarget.normalize().dot(aim) >= coneCos);
 	}
 
-	/** Blasts a tunnel from the fist to the end of the punch's reach, a few blocks a tick, then a huge impact. */
-	private static void tunnel(ServerPlayer player, Vec3 eye, Vec3 aim, double length) {
+	/** Carves a tunnel from the fist to the end of the punch's reach, a few blocks a tick, then an impact crater. */
+	private static void tunnel(ServerPlayer player, Vec3 eye, Vec3 aim, double length, float radius, boolean fullPower) {
 		MinecraftServer server = player.level().getServer();
-		for (double distance = TUNNEL_START; distance <= length; distance += TUNNEL_SPACING) {
+		int step = 0;
+		for (double distance = TUNNEL_START; distance <= length; distance += TUNNEL_SPACING, step++) {
 			Vec3 center = eye.add(aim.scale(distance));
-			Blasts.later(server, (int) (distance / TUNNEL_BLOCKS_PER_TICK),
-				() -> Blasts.blast(player, center, TUNNEL_RADIUS, Blasts.TERRAIN_ONLY, TUNNEL_DEBRIS));
+			// A real explosion every few steps throws debris and booms; carving does the clearing.
+			boolean boom = step % BOOM_EVERY_STEPS == 0;
+			Blasts.later(server, (int) (distance / TUNNEL_BLOCKS_PER_TICK), () -> {
+				if (boom) {
+					Blasts.blast(player, center, radius, Blasts.TERRAIN_ONLY, TUNNEL_DEBRIS);
+				}
+				Blasts.carve(player.level(), center, radius, 0);
+			});
 		}
 
 		Vec3 impact = eye.add(aim.scale(length));
 		Blasts.later(server, (int) (length / TUNNEL_BLOCKS_PER_TICK), () -> {
-			Blasts.blast(player, impact, IMPACT_RADIUS, Blasts.sparing(player), IMPACT_DEBRIS);
-			lightningBurst(player.level(), impact, IMPACT_BOLTS, IMPACT_BOLT_LENGTH, 1.0);
+			if (fullPower) {
+				Blasts.blast(player, impact, IMPACT_RADIUS, Blasts.sparing(player), IMPACT_DEBRIS);
+				lightningBurst(player.level(), impact, IMPACT_BOLTS, IMPACT_BOLT_LENGTH, 1.0);
+			}
+			Blasts.carve(player.level(), impact, (float) (radius * IMPACT_CRATER_SCALE), 0);
 		});
 	}
 

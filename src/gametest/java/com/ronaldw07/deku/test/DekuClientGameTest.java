@@ -283,7 +283,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 	private static void launch(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
 		// Hold jump on the ground: crouch and charge without jumping, with a pig standing close by.
 		command(singleplayer, "kill @e[type=!minecraft:player]");
-		command(singleplayer, "execute as @p at @p run tp @s ~20 ~ ~ 0 -15");
+		command(singleplayer, "execute as @p at @p run tp @s ~20 -60 ~ 0 -15"); // back up on the superflat surface, clear of Smash holes
 		command(singleplayer, "execute at @p run summon minecraft:pig ~4 ~ ~");
 		context.waitTicks(5);
 		Vec3 start = context.computeOnClient(client -> client.player.position());
