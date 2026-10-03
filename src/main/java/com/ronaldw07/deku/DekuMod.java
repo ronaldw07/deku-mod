@@ -17,6 +17,8 @@ public class DekuMod implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		DekuSounds.init();
+
 		PayloadTypeRegistry.serverboundPlay().register(CowlingPayload.TYPE, CowlingPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(CowlingPayload.TYPE,
 			(payload, context) -> FullCowling.apply(context.player(), payload.percent()));

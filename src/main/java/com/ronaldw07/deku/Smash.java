@@ -3,7 +3,6 @@ package com.ronaldw07.deku;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -28,7 +27,7 @@ public final class Smash {
 	private static final double EXPLOSION_DISTANCE = 3.5;
 	private static final double TRAIL_SPACING = 0.75;
 	private static final int GUST_EVERY = 3;
-	private static final double EXPLOSION_THRESHOLD = 0.5;
+	private static final double HEAVY_THRESHOLD = 0.5; // adds an explosion and thunder
 
 	private Smash() {
 	}
@@ -70,12 +69,14 @@ public final class Smash {
 			}
 		}
 
-		if (power >= EXPLOSION_THRESHOLD) {
+		if (power >= HEAVY_THRESHOLD) {
 			Vec3 burst = eye.add(look.scale(EXPLOSION_DISTANCE));
 			level.sendParticles(ParticleTypes.EXPLOSION, burst.x, burst.y, burst.z, 1, 0, 0, 0, 0);
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.SMASH_THUNDER,
+				SoundSource.PLAYERS, (float) power, 1.0f);
 		}
 
-		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WIND_CHARGE_BURST,
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.SMASH_BLAST,
 			SoundSource.PLAYERS, (float) (0.5 + power), (float) (1.2 - 0.4 * power));
 		player.swing(InteractionHand.MAIN_HAND, true);
 	}

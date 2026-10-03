@@ -1,13 +1,18 @@
 package com.ronaldw07.deku.client;
 
+import com.ronaldw07.deku.DekuSounds;
 import com.ronaldw07.deku.network.SmashPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.sounds.SoundSource;
 
 /** Client side of Smash: hold to charge up to the chosen power, let go to throw the punch. */
 public final class SmashClient {
+	private static final int CHARGE_SOUND_INTERVAL = 6;
+
 	private static boolean charging;
 	private static double charge;
+	private static int chargeTicks;
 
 	private SmashClient() {
 	}
@@ -30,6 +35,10 @@ public final class SmashClient {
 			DekuSettings settings = DekuSettings.get();
 			charge = Ramp.toward(charging ? charge : 0, settings.punchPower(), settings.punchChargeSeconds());
 			charging = true;
+			// Hum that rises in pitch as the punch charges.
+			if (chargeTicks++ % CHARGE_SOUND_INTERVAL == 0) {
+				player.level().playLocalSound(player, DekuSounds.SMASH_CHARGE, SoundSource.PLAYERS, 0.8f, (float) (0.6 + charge / 100.0));
+			}
 		}
 
 		if (charging && !held) {
@@ -43,5 +52,6 @@ public final class SmashClient {
 	private static void reset() {
 		charging = false;
 		charge = 0;
+		chargeTicks = 0;
 	}
 }

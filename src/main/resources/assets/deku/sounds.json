@@ -1,0 +1,48 @@
+{
+	"cowling.crackle": {
+		"sounds": [
+			{ "name": "minecraft:entity.lightning_bolt.impact", "type": "event", "pitch": 1.8, "volume": 0.3 }
+		]
+	},
+	"smash.charge": {
+		"sounds": [
+			{ "name": "minecraft:block.respawn_anchor.charge", "type": "event", "volume": 0.6 }
+		]
+	},
+	"smash.blast": {
+		"sounds": [
+			{ "name": "minecraft:entity.wind_charge.wind_burst", "type": "event", "pitch": 0.7 },
+			{ "name": "minecraft:entity.breeze.wind_burst", "type": "event", "pitch": 0.6 }
+		]
+	},
+	"smash.thunder": {
+		"sounds": [
+			{ "name": "minecraft:entity.lightning_bolt.thunder", "type": "event", "pitch": 1.4, "volume": 0.5 }
+		]
+	},
+	"smokescreen": {
+		"sounds": [
+			{ "name": "minecraft:entity.generic.extinguish_fire", "type": "event", "pitch": 0.5, "volume": 1.5 }
+		]
+	},
+	"float": {
+		"sounds": [
+			{ "name": "minecraft:entity.breeze.idle_air", "type": "event", "pitch": 1.3 }
+		]
+	},
+	"blackwhip.lash": {
+		"sounds": [
+			{ "name": "minecraft:item.trident.throw", "type": "event", "pitch": 0.6 }
+		]
+	},
+	"blackwhip.grab": {
+		"sounds": [
+			{ "name": "minecraft:item.trident.hit", "type": "event", "pitch": 0.7 }
+		]
+	},
+	"danger_sense": {
+		"sounds": [
+			{ "name": "minecraft:block.amethyst_block.chime", "type": "event", "pitch": 2.0, "volume": 1.5 }
+		]
+	}
+}

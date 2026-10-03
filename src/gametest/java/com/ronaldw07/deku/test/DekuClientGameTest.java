@@ -1,5 +1,6 @@
 package com.ronaldw07.deku.test;
 
+import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
 import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DekuSettings;
@@ -9,7 +10,13 @@ import com.ronaldw07.deku.client.SmashClient;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import java.util.List;
 import net.minecraft.client.CameraType;
+import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.client.sounds.WeighedSoundEvents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.RandomSource;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -22,6 +29,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 	public void runTest(ClientGameTestContext context) {
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getClientLevel().waitForChunksRender();
+			checkSoundsResolve(context);
 
 			context.getInput().pressKey(DekuModClient.SETTINGS_KEY);
 			context.waitForScreen(SettingsScreen.class);
@@ -79,6 +87,21 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			double moved = singleplayer.getServer().computeOnServer(server -> golem(server).position().distanceTo(golemStart));
 			check(health < 100, "smash should damage the golem, health was " + health);
 			check(moved > 1, "smash should launch the golem, it moved " + moved);
+		}
+	}
+
+	/** Every deku: sound must point at a real sound, so a typo in sounds.json fails here instead of going silent. */
+	private static void checkSoundsResolve(ClientGameTestContext context) {
+		List<Identifier> sounds = BuiltInRegistries.SOUND_EVENT.keySet().stream()
+			.filter(id -> id.getNamespace().equals(DekuMod.MOD_ID))
+			.toList();
+		check(!sounds.isEmpty(), "mod should register sounds");
+		for (Identifier id : sounds) {
+			boolean resolves = context.computeOnClient(client -> {
+				WeighedSoundEvents event = client.getSoundManager().getSoundEvent(id);
+				return event != null && event.getSound(RandomSource.create()) != SoundManager.EMPTY_SOUND;
+			});
+			check(resolves, "sound " + id + " should resolve to a real sound");
 		}
 	}
 
