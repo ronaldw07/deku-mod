@@ -16,6 +16,7 @@ public class DekuModClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(DekuMod.id("abilities"));
 
 	public static final KeyMapping COWLING_KEY = register("key.deku.full_cowling", GLFW.GLFW_KEY_C);
+	public static final KeyMapping SMASH_KEY = register("key.deku.smash", GLFW.GLFW_KEY_V);
 	public static final KeyMapping SETTINGS_KEY = register("key.deku.settings", GLFW.GLFW_KEY_K);
 
 	@Override
@@ -40,5 +41,11 @@ public class DekuModClient implements ClientModInitializer {
 			cowlingToggled = !cowlingToggled;
 		}
 		FullCowlingClient.tick(client.player, cowlingToggled);
+
+		boolean smashPressed = false;
+		while (SMASH_KEY.consumeClick()) {
+			smashPressed = true;
+		}
+		SmashClient.tick(client.player, SMASH_KEY.isDown(), smashPressed);
 	}
 }

@@ -5,11 +5,16 @@ import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.FullCowlingClient;
 import com.ronaldw07.deku.client.SettingsScreen;
+import com.ronaldw07.deku.client.SmashClient;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.CameraType;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.animal.golem.IronGolem;
+import net.minecraft.world.phys.Vec3;
 
 /** Launches the real game, uses each ability, and saves screenshots to check by eye. */
 public class DekuClientGameTest implements FabricClientGameTest {
@@ -51,7 +56,34 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			context.waitTicks(2);
 			check(context.computeOnClient(client -> FullCowlingClient.percent()) == 0, "cowling should turn off instantly");
 			check(!hasSpeedBoost(singleplayer), "server should remove the speed boost when cowling turns off");
+
+			// Smash: face south with a golem 4 blocks ahead, charge for half a second (50%) and let go.
+			singleplayer.getServer().runCommand("time set day");
+			singleplayer.getServer().runCommand("execute as @p at @p run tp @s ~ ~ ~ 0 0");
+			singleplayer.getServer().runCommand("execute at @p run summon minecraft:iron_golem ~ ~ ~4");
+			context.runOnClient(client -> client.options.setCameraType(CameraType.THIRD_PERSON_BACK));
+			context.waitTicks(5);
+			Vec3 golemStart = singleplayer.getServer().computeOnServer(server -> golem(server).position());
+
+			context.getInput().holdKey(DekuModClient.SMASH_KEY);
+			context.waitTicks(10);
+			double charge = context.computeOnClient(client -> SmashClient.charge());
+			check(charge > 30 && charge < 70, "smash should be about half charged after 10 ticks, was " + charge);
+			context.takeScreenshot("smash-charging");
+			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
+			context.getInput().releaseKey(DekuModClient.SMASH_KEY);
+			context.waitTicks(4);
+			context.takeScreenshot("smash-blast");
+
+			float health = singleplayer.getServer().computeOnServer(server -> golem(server).getHealth());
+			double moved = singleplayer.getServer().computeOnServer(server -> golem(server).position().distanceTo(golemStart));
+			check(health < 100, "smash should damage the golem, health was " + health);
+			check(moved > 1, "smash should launch the golem, it moved " + moved);
 		}
+	}
+
+	private static IronGolem golem(MinecraftServer server) {
+		return server.overworld().getEntities(EntityTypes.IRON_GOLEM, golem -> true).getFirst();
 	}
 
 	private static boolean hasSpeedBoost(TestSingleplayerContext singleplayer) {
