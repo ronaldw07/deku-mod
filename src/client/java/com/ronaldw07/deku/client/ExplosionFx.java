@@ -24,6 +24,8 @@ final class ExplosionFx {
 	private static final int LIFETIME_TICKS = 12;
 	private static final int GROW_TICKS = 3;
 	private static final int TRACER_TICKS = 3;
+	private static final int BEAM_TICKS = 7;
+	private static final float BEAM_WIDTH = 3.0f;
 	private static final int RAYS = 22;
 	private static final int RING_SEGMENTS = 40;
 	private static final double RING_GROWTH = 1.8;
@@ -33,10 +35,10 @@ final class ExplosionFx {
 	private static final int HOWITZER_LIFETIME_TICKS = 40;
 	private static final double HOWITZER_SHOCKWAVE_RADIUS = 200.0;
 	private static final double SECOND_RING_FRACTION = 0.55;
-	private static final double HOWITZER_RAY_REACH = 1.8;
-	private static final int HOWITZER_SPARKS = 150;
-	private static final int HOWITZER_SMOKE_COLUMN = 50;
-	private static final double HOWITZER_COLUMN_HEIGHT = 18.0;
+	private static final double HOWITZER_RAY_REACH = 2.5;
+	private static final int HOWITZER_SPARKS = 200;
+	private static final int HOWITZER_SMOKE_COLUMN = 90;
+	private static final double HOWITZER_COLUMN_HEIGHT = 40.0;
 
 	private record Blast(Vec3 center, float radius, Style style, Vec3 from, long startTick) {
 	}
@@ -122,14 +124,16 @@ final class ExplosionFx {
 			if (howitzer) {
 				ring.addAll(ring(center, HOWITZER_SHOCKWAVE_RADIUS * SECOND_RING_FRACTION * (1 - Math.pow(1 - Math.min(1, age / lifetime), 2))));
 			}
-			List<Segment> tracer = isShot(blast) && age < TRACER_TICKS
+			boolean beam = blast.style() == Style.BIG_SHOT;
+			List<Segment> tracer = isShot(blast) && age < (beam ? BEAM_TICKS : TRACER_TICKS)
 				? List.of(new Segment(blast.from().subtract(camera), center)) : List.of();
+			float tracerWidth = beam ? BEAM_WIDTH * (float) Math.max(0, 1 - age / BEAM_TICKS) : 0.5f;
 			float width = blast.radius() / 2;
 
 			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
 				LightningDraw.draw(pose.pose(), buffer, rays, width, palette, fade);
 				LightningDraw.draw(pose.pose(), buffer, ring, width / 2, palette, fade * 0.8f);
-				LightningDraw.draw(pose.pose(), buffer, tracer, 0.5f, palette, 1f);
+				LightningDraw.draw(pose.pose(), buffer, tracer, tracerWidth, palette, 1f);
 			});
 		}
 	}

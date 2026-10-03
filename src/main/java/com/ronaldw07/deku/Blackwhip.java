@@ -25,7 +25,7 @@ import net.minecraft.world.phys.Vec3;
  * a block reels you to it. Misses lash out and snap back.
  */
 public final class Blackwhip {
-	private static final double REACH = 24.0;
+	private static final double REACH = 36.0;
 	private static final double PULL_SPEED = 1.2;
 	private static final double LIFT = 0.15; // keeps whatever is being reeled from dragging on the ground
 	private static final double ARRIVE_DISTANCE = 2.0;

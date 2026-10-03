@@ -27,14 +27,24 @@ public final class Smash {
 	private static final double MIN_RANGE = 3.0;
 	private static final double MAX_RANGE = 12.0;
 	private static final double FULL_POWER_EXTRA_RANGE = 138.0; // 150 blocks at 100%
-	private static final double FULL_POWER_EXTRA_KNOCKBACK = 4.0;
+	private static final double FULL_POWER_EXTRA_KNOCKBACK = 8.0;
 	private static final double FULL_POWER_CURVE = 8.0;
-	private static final float MIN_DAMAGE = 2.0f;
-	private static final float MAX_DAMAGE = 20.0f;
-	private static final double MIN_KNOCKBACK = 0.5;
-	private static final double MAX_KNOCKBACK = 4.0;
+	private static final float MIN_DAMAGE = 3.0f;
+	private static final float MAX_DAMAGE = 30.0f;
+	private static final float FULL_POWER_EXTRA_DAMAGE = 20.0f;
+	private static final double MIN_KNOCKBACK = 0.75;
+	private static final double MAX_KNOCKBACK = 6.0;
 	private static final double MAX_LIFT = 0.6;
-	private static final double CONE_COS = 0.8; // about 37 degrees either side of the aim
+	// The blast widens with power: about 37 degrees either side of the aim at 1%, 53 at 100%.
+	private static final double NARROW_CONE_COS = 0.8;
+	private static final double WIDE_CONE_COS = 0.6;
+	// Wind: more cloud puffs further off the aim line as power rises.
+	private static final int MAX_EXTRA_PUFFS = 4;
+	private static final double WIND_SPREAD = 0.5; // sideways reach per block of distance, at 100%
+	// Lightning bursts dotted along a long punch's path.
+	private static final double PATH_BURST_SPACING = 20.0;
+	private static final int PATH_BURST_BOLTS = 4;
+	private static final double PATH_BURST_LENGTH = 4.0;
 	private static final double LOCK_ON_COS = 0.6; // locks onto targets up to about 53 degrees off the crosshair
 	private static final double POINT_BLANK = 1.0;
 	// Effects start a little way out so they don't cover the screen in first person.
@@ -50,11 +60,11 @@ public final class Smash {
 	private static final int TUNNEL_PERCENT = 100;
 	private static final double TUNNEL_START = 2.0;
 	private static final double TUNNEL_SPACING = 3.0;
-	private static final float TUNNEL_RADIUS = 3.5f;
+	private static final float TUNNEL_RADIUS = 5.0f;
 	private static final int TUNNEL_DEBRIS = 3;
 	private static final double TUNNEL_BLOCKS_PER_TICK = 6.0;
-	private static final float IMPACT_RADIUS = 7.0f;
-	private static final int IMPACT_DEBRIS = 60;
+	private static final float IMPACT_RADIUS = 10.0f;
+	private static final int IMPACT_DEBRIS = 90;
 	private static final int IMPACT_BOLTS = 8;
 	private static final double IMPACT_BOLT_LENGTH = 6.0;
 	private static final int HIT_BOLTS = 3;
@@ -67,7 +77,8 @@ public final class Smash {
 		double power = Mth.clamp(percent, 1, 100) / 100.0;
 		double fullPower = Math.pow(power, FULL_POWER_CURVE);
 		double range = Mth.lerp(power, MIN_RANGE, MAX_RANGE) + FULL_POWER_EXTRA_RANGE * fullPower;
-		float damage = (float) Mth.lerp(power, MIN_DAMAGE, MAX_DAMAGE);
+		float damage = (float) (Mth.lerp(power, MIN_DAMAGE, MAX_DAMAGE) + FULL_POWER_EXTRA_DAMAGE * Math.pow(power, FULL_POWER_CURVE));
+		double coneCos = Mth.lerp(power, NARROW_CONE_COS, WIDE_CONE_COS);
 		ServerLevel level = player.level();
 		Vec3 eye = player.getEyePosition();
 
@@ -77,7 +88,7 @@ public final class Smash {
 		Vec3 push = aim.scale(knockback).add(0, MAX_LIFT * power, 0);
 
 		for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, new AABB(eye, eye).inflate(range),
-				target -> target != player && target.isAlive() && inCone(eye, aim, target, range))) {
+				target -> target != player && target.isAlive() && inCone(eye, aim, target, range, coneCos))) {
 			target.hurtServer(level, player.damageSources().playerAttack(player), damage);
 			target.push(push);
 			target.hurtMarked = true;
@@ -107,10 +118,10 @@ public final class Smash {
 		return target.getBoundingBox().getCenter().subtract(eye).normalize();
 	}
 
-	private static boolean inCone(Vec3 eye, Vec3 aim, LivingEntity target, double range) {
+	private static boolean inCone(Vec3 eye, Vec3 aim, LivingEntity target, double range, double coneCos) {
 		Vec3 toTarget = target.getBoundingBox().getCenter().subtract(eye);
 		double distance = toTarget.length();
-		return distance <= range && (distance < POINT_BLANK || toTarget.normalize().dot(aim) >= CONE_COS);
+		return distance <= range && (distance < POINT_BLANK || toTarget.normalize().dot(aim) >= coneCos);
 	}
 
 	/** Blasts a tunnel from the fist to the end of the punch's reach, a few blocks a tick, then a huge impact. */
@@ -148,14 +159,26 @@ public final class Smash {
 	}
 
 	private static void showBlast(ServerLevel level, ServerPlayer player, Vec3 eye, Vec3 aim, double range, double power) {
+		RandomSource random = level.getRandom();
+		int puffs = 1 + (int) Math.round(MAX_EXTRA_PUFFS * power);
+		// Spread puffs out along very long punches so the packet count stays sane.
+		double spacing = TRAIL_SPACING + range / 100;
 		int step = 0;
-		for (double distance = TRAIL_START; distance <= range; distance += TRAIL_SPACING, step++) {
-			Vec3 point = eye.add(aim.scale(distance));
-			// Count 0 makes the cloud fly along (x, y, z) offset at the given speed.
-			level.sendParticles(ParticleTypes.CLOUD, point.x, point.y, point.z, 0, aim.x, aim.y, aim.z, 0.2 + 0.6 * power);
-			if (step % GUST_EVERY == 0) {
-				level.sendParticles(ParticleTypes.GUST, point.x, point.y, point.z, 1, 0, 0, 0, 0);
+		for (double distance = TRAIL_START; distance <= range; distance += spacing, step++) {
+			Vec3 onAim = eye.add(aim.scale(distance));
+			for (int puff = 0; puff < puffs; puff++) {
+				Vec3 point = onAim.add(new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1)
+					.scale(puff == 0 ? 0 : distance * WIND_SPREAD * power));
+				// Count 0 makes the cloud fly along (x, y, z) offset at the given speed.
+				level.sendParticles(ParticleTypes.CLOUD, point.x, point.y, point.z, 0, aim.x, aim.y, aim.z, 0.2 + 0.8 * power);
 			}
+			if (step % GUST_EVERY == 0) {
+				level.sendParticles(ParticleTypes.GUST, onAim.x, onAim.y, onAim.z, 1, 0, 0, 0, 0);
+			}
+		}
+
+		for (double distance = PATH_BURST_SPACING; distance < range; distance += PATH_BURST_SPACING) {
+			lightningBurst(level, eye.add(aim.scale(distance)), PATH_BURST_BOLTS, PATH_BURST_LENGTH, power);
 		}
 
 		if (power >= HEAVY_THRESHOLD) {

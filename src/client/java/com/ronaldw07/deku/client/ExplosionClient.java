@@ -17,19 +17,17 @@ public final class ExplosionClient {
 	private static final int TAP_TICKS = 6; // right-click held for less than this is a tap
 	private static final int RAPID_FIRE_INTERVAL = 2;
 	private static final int BIG_SHOT_LOAD_TICKS = 8;
-	private static final int DOUBLE_TAP_TICKS = 7;
 	private static final int FULL_GROUND_CHARGE_TICKS = 60;
 	private static final int GROUND_CHARGE_SOUND_INTERVAL = 10;
-	private static final double FLIGHT_SPEED = 0.9;
-	private static final double HOWITZER_FORWARD_SPEED = 0.55;
-	private static final double HOWITZER_CIRCLE_SPEED = 0.55;
-	private static final double HOWITZER_TURN = 0.6; // radians per tick around the circle
+	private static final double FLIGHT_SPEED = 1.3;
+	private static final double HOWITZER_FORWARD_SPEED = 0.8;
+	private static final double HOWITZER_CIRCLE_SPEED = 0.75;
+	private static final double HOWITZER_TURN = 0.8; // radians per tick around the circle
 	private static final float HOWITZER_BODY_SPIN = 50; // degrees per tick
 
 	private static int useHeldTicks;
 	private static int bigShotLoad;
-	private static boolean jumpWasDown;
-	private static int ticksSinceJumpPress = DOUBLE_TAP_TICKS + 1;
+	private static final DoubleTapHold flightTap = new DoubleTapHold();
 	private static boolean flying;
 	private static boolean spinning;
 	private static double spinAngle;
@@ -95,20 +93,10 @@ public final class ExplosionClient {
 	}
 
 	private static void flight(LocalPlayer player, boolean able, boolean jumpDown) {
-		boolean pressedNow = jumpDown && !jumpWasDown;
-		jumpWasDown = jumpDown;
-		ticksSinceJumpPress++;
-		if (pressedNow) {
-			if (able && ticksSinceJumpPress <= DOUBLE_TAP_TICKS && !flying) {
-				flying = true;
-				send(Move.FLIGHT, true, 0);
-			}
-			ticksSinceJumpPress = 0;
-		}
-
-		if (flying && (!jumpDown || !able)) {
-			flying = false;
-			send(Move.FLIGHT, false, 0);
+		boolean nowFlying = flightTap.tick(jumpDown, able);
+		if (nowFlying != flying) {
+			flying = nowFlying;
+			send(Move.FLIGHT, flying, 0);
 		}
 		if (flying) {
 			player.setDeltaMovement(player.getLookAngle().scale(FLIGHT_SPEED));

@@ -60,6 +60,8 @@ public class DekuModClient implements ClientModInitializer {
 			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.HOWITZER_CLOUD));
 	}
 
+	private static final DoubleTapHold floatTap = new DoubleTapHold();
+
 	private static KeyMapping register(String name, int key) {
 		return KeyMappingHelper.registerKeyMapping(new KeyMapping(name, InputConstants.Type.KEYSYM, key, CATEGORY));
 	}
@@ -83,7 +85,8 @@ public class DekuModClient implements ClientModInitializer {
 		if (oneForAll && smokescreenClicks > 0) {
 			send(SmokescreenPayload.INSTANCE);
 		}
-		FloatClient.tick(player, oneForAll && FLOAT_KEY.isDown());
+		boolean floatTapped = floatTap.tick(client.options.keyJump.isDown(), oneForAll);
+		FloatClient.tick(player, oneForAll && (FLOAT_KEY.isDown() || floatTapped), FLOAT_KEY.isDown());
 		if (oneForAll && blackwhipClicks > 0) {
 			send(BlackwhipPayload.INSTANCE);
 		}

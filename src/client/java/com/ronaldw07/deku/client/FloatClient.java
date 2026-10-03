@@ -6,9 +6,12 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec3;
 
-/** Client side of Float: hover while the key is held; jump rises, sneak sinks. */
+/**
+ * Client side of Float: hover while active; sneak sinks. Jump rises too, except when Float
+ * was started by double-tapping and holding jump, where holding it just keeps you up.
+ */
 public final class FloatClient {
-	private static final double VERTICAL_SPEED = 0.25;
+	private static final double VERTICAL_SPEED = 0.35;
 	// Any leftover rise or fall bleeds off quickly so the player settles into a hover.
 	private static final double HOVER_DAMPING = 0.6;
 
@@ -17,7 +20,7 @@ public final class FloatClient {
 	private FloatClient() {
 	}
 
-	static void tick(LocalPlayer player, boolean held) {
+	static void tick(LocalPlayer player, boolean held, boolean jumpRises) {
 		if (player == null) {
 			lastSent = false;
 			return;
@@ -32,7 +35,7 @@ public final class FloatClient {
 		if (active) {
 			Input input = player.input.keyPresses;
 			Vec3 motion = player.getDeltaMovement();
-			double vertical = input.jump() ? VERTICAL_SPEED : input.shift() ? -VERTICAL_SPEED : motion.y * HOVER_DAMPING;
+			double vertical = input.jump() && jumpRises ? VERTICAL_SPEED : input.shift() ? -VERTICAL_SPEED : motion.y * HOVER_DAMPING;
 			player.setDeltaMovement(motion.x, vertical, motion.z);
 		}
 	}

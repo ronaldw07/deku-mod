@@ -20,15 +20,15 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class Smokescreen {
 	private static final int DURATION_TICKS = 240;
-	private static final double RADIUS = 6.0;
-	private static final double HEIGHT = 4.0;
+	private static final double RADIUS = 9.0;
+	private static final double HEIGHT = 6.0;
 	// The opening burst flies outward and slows to a stop at about RADIUS (see the particle's drag).
-	private static final int BURST_PARTICLES = 400;
-	private static final double MIN_BURST_SPEED = 0.25;
-	private static final double MAX_BURST_SPEED = 0.5;
+	private static final int BURST_PARTICLES = 550;
+	private static final double MIN_BURST_SPEED = 0.35;
+	private static final double MAX_BURST_SPEED = 0.75;
 	// Then a few puffs at a time keep it thick until it clears.
 	private static final int REFILL_INTERVAL = 4;
-	private static final int REFILL_PARTICLES = 16;
+	private static final int REFILL_PARTICLES = 24;
 	private static final int REFILL_STOP_BEFORE_END = 60;
 	// Mobs this far outside the cloud still lose a target that's hiding inside it.
 	private static final double TARGET_SEARCH_MARGIN = 24.0;

@@ -21,7 +21,7 @@ import net.minecraft.world.phys.Vec3;
  * threat (a mob hunting them, or a projectile on course to hit them) and tells their client.
  */
 public final class DangerSense {
-	private static final double SENSE_RANGE = 24.0;
+	private static final double SENSE_RANGE = 36.0;
 	// A projectile counts if it will pass this close, and gets more urgent the sooner it arrives.
 	private static final double PROJECTILE_MISS_MARGIN = 2.0;
 	private static final double PROJECTILE_WARNING_TICKS = 40.0;

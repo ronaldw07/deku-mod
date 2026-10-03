@@ -26,16 +26,23 @@ public final class Bakugo {
 	private static final Identifier FLIGHT_ID = DekuMod.id("explosion_flight_no_gravity");
 	private static final Identifier HOWITZER_ID = DekuMod.id("howitzer_no_gravity");
 	private static final double SHOT_REACH = 48.0;
-	private static final float SHOT_RADIUS = 1.3f;
-	private static final float BIG_SHOT_RADIUS = 3.0f;
+	private static final float SHOT_RADIUS = 2.0f;
+	private static final float BIG_SHOT_RADIUS = 5.0f;
+	// The big shot is a beam: everything along it from hand to target is hit too.
+	private static final double BEAM_WIDTH = 1.5;
+	private static final float BEAM_DAMAGE = 12.0f;
+	private static final double BEAM_KNOCKBACK = 1.5;
 	private static final double HOWITZER_REACH = 1.5;
 	// Howitzer Impact: a huge core blast, two rings of blasts rolling outward from it, and a
 	// shockwave that throws everything within SHOCKWAVE_RANGE and badly hurts anything close.
-	private static final float HOWITZER_CORE_RADIUS = 10.0f;
-	private static final int HOWITZER_CORE_DEBRIS = 120;
-	private static final double[] HOWITZER_RING_DISTANCES = {14, 26};
+	private static final float HOWITZER_CORE_RADIUS = 14.0f;
+	private static final int HOWITZER_CORE_DEBRIS = 180;
+	private static final double[] HOWITZER_RING_DISTANCES = {20, 36};
 	private static final int[] HOWITZER_RING_BLASTS = {8, 10};
-	private static final float[] HOWITZER_RING_RADII = {7.0f, 5.0f};
+	private static final float[] HOWITZER_RING_RADII = {9.0f, 7.0f};
+	// Blasts stacked above the core, so the explosion towers instead of just spreading.
+	private static final double[] HOWITZER_COLUMN_HEIGHTS = {12, 24, 36};
+	private static final float[] HOWITZER_COLUMN_RADII = {11.0f, 9.0f, 7.0f};
 	private static final int HOWITZER_RING_DEBRIS = 8;
 	private static final int TICKS_PER_RING = 3;
 	private static final double SHOCKWAVE_RANGE = 200.0;
@@ -47,10 +54,10 @@ public final class Bakugo {
 	private static final int MIN_GROUND_ROWS = 3;
 	private static final int EXTRA_GROUND_ROWS = 9;
 	private static final double GROUND_FIRST_ROW = 4.0;
-	private static final double GROUND_ROW_SPACING = 5.0;
+	private static final double GROUND_ROW_SPACING = 7.0;
 	private static final double GROUND_BLAST_SPREAD = 0.45; // sideways offset per block of distance
-	private static final float MIN_GROUND_RADIUS = 3.5f;
-	private static final float EXTRA_GROUND_RADIUS = 2.5f;
+	private static final float MIN_GROUND_RADIUS = 5.0f;
+	private static final float EXTRA_GROUND_RADIUS = 4.0f;
 	private static final int GROUND_DEBRIS = 4;
 	private static final double HAND_HEIGHT = 1.1;
 	private static final double HAND_SIDE = 0.35;
@@ -90,7 +97,30 @@ public final class Bakugo {
 
 	private static void apShot(ServerPlayer player, float radius, Style style) {
 		Vec3 target = Aim.trace(player, SHOT_REACH).getLocation();
-		blast(player, target, radius, 0, style, hand(player, 1));
+		Vec3 hand = hand(player, 1);
+		if (style == Style.BIG_SHOT) {
+			beam(player, hand, target);
+		}
+		blast(player, target, radius, 0, style, hand);
+	}
+
+	/** Hits and shoves everything along the beam's path. */
+	private static void beam(ServerPlayer player, Vec3 from, Vec3 to) {
+		ServerLevel level = player.level();
+		Vec3 path = to.subtract(from);
+		double length = path.length();
+		Vec3 direction = path.scale(1 / Math.max(length, 1.0E-3));
+		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(from, to).inflate(BEAM_WIDTH),
+				entity -> entity != player && entity.isAlive())) {
+			Vec3 offset = entity.getBoundingBox().getCenter().subtract(from);
+			double along = offset.dot(direction);
+			if (along < 0 || along > length || offset.subtract(direction.scale(along)).length() > BEAM_WIDTH) {
+				continue;
+			}
+			entity.hurtServer(level, player.damageSources().explosion(player, player), BEAM_DAMAGE);
+			entity.push(direction.scale(BEAM_KNOCKBACK));
+			entity.hurtMarked = true;
+		}
 	}
 
 	private static void setFlying(ServerPlayer player, boolean on) {
@@ -117,6 +147,12 @@ public final class Bakugo {
 		blast(player, center, HOWITZER_CORE_RADIUS, HOWITZER_CORE_DEBRIS, Style.HOWITZER, center);
 		shockwave(player, center);
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 4.0f, 0.5f);
+
+		for (int layer = 0; layer < HOWITZER_COLUMN_HEIGHTS.length; layer++) {
+			Vec3 spot = center.add(0, HOWITZER_COLUMN_HEIGHTS[layer], 0);
+			float radius = HOWITZER_COLUMN_RADII[layer];
+			Blasts.later(level.getServer(), layer + 1, () -> blast(player, spot, radius, HOWITZER_RING_DEBRIS, Style.HOWITZER, spot));
+		}
 
 		for (int ring = 0; ring < HOWITZER_RING_DISTANCES.length; ring++) {
 			double distance = HOWITZER_RING_DISTANCES[ring];

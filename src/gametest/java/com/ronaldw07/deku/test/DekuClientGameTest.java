@@ -231,6 +231,17 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(dropped > 3, "releasing float should drop the player, dropped " + dropped);
 		float healthAfterDrop = singleplayer.getServer().computeOnServer(server -> player(server).getHealth());
 		check(healthAfterDrop >= healthBeforeDrop, "the player shouldn't take fall damage, health went " + healthBeforeDrop + " -> " + healthAfterDrop);
+
+		// Double-tap and hold jump also floats: the jump lifts the player off the ground and they stay up.
+		double groundY = context.computeOnClient(client -> client.player.getY());
+		context.getInput().holdKeyFor(options -> options.keyJump, 2);
+		context.waitTicks(2);
+		context.getInput().holdKey(options -> options.keyJump);
+		context.waitTicks(30);
+		double floating = context.computeOnClient(client -> client.player.getY()) - groundY;
+		check(floating > 0.5, "double-tapping and holding jump should float the player, height " + floating);
+		context.getInput().releaseKey(options -> options.keyJump);
+		context.waitTicks(30);
 		camera(context, CameraType.FIRST_PERSON);
 	}
 
