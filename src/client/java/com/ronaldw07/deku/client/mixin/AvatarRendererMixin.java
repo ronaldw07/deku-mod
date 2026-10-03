@@ -1,6 +1,7 @@
 package com.ronaldw07.deku.client.mixin;
 
 import com.ronaldw07.deku.client.ExplosionClient;
+import com.ronaldw07.deku.client.LaunchClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -12,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Lays the player out flat along their view, like elytra gliding, while blasting through
- * the air; during Howitzer Impact they also spin like a drill around their length.
+ * the air or launching with One For All; during Howitzer Impact they also spin like a drill around their length.
  */
 @Mixin(AvatarRenderer.class)
 abstract class AvatarRendererMixin {
@@ -23,7 +24,7 @@ abstract class AvatarRendererMixin {
 		at = @At("TAIL"))
 	private void deku$supermanPose(Avatar entity, AvatarRenderState state, float partialTicks, CallbackInfo info) {
 		Minecraft minecraft = Minecraft.getInstance();
-		if (entity != minecraft.player || !(ExplosionClient.flying() || ExplosionClient.spinning())) {
+		if (entity != minecraft.player || !(ExplosionClient.flying() || ExplosionClient.spinning() || LaunchClient.launching())) {
 			return;
 		}
 		state.isFallFlying = true;

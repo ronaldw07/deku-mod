@@ -141,7 +141,7 @@ public final class Smash {
 	}
 
 	/** Green bolts crackling out in every direction from a point the punch hit. */
-	private static void lightningBurst(ServerLevel level, Vec3 center, int bolts, double length, double power) {
+	static void lightningBurst(ServerLevel level, Vec3 center, int bolts, double length, double power) {
 		RandomSource random = level.getRandom();
 		for (int i = 0; i < bolts; i++) {
 			Vec3 direction = new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1).normalize();
@@ -149,7 +149,7 @@ public final class Smash {
 		}
 	}
 
-	private static void sendLightning(ServerLevel level, Vec3 from, Vec3 to, double power) {
+	static void sendLightning(ServerLevel level, Vec3 from, Vec3 to, double power) {
 		SmashFxPayload fx = new SmashFxPayload(from, to, (float) power);
 		for (ServerPlayer viewer : PlayerLookup.around(level, from, FX_VIEW_DISTANCE)) {
 			if (ServerPlayNetworking.canSend(viewer, SmashFxPayload.TYPE)) {

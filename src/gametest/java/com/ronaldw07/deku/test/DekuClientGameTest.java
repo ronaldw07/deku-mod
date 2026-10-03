@@ -10,20 +10,25 @@ import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.ExplosionClient;
 import com.ronaldw07.deku.client.FullCowlingClient;
+import com.ronaldw07.deku.client.LaunchClient;
 import com.ronaldw07.deku.client.SettingsScreen;
 import com.ronaldw07.deku.client.SmashClient;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.CameraType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityTypes;
@@ -31,6 +36,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -52,10 +59,17 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			blackwhip(context, singleplayer);
 			smokescreen(context, singleplayer);
 			poses(context, singleplayer);
+			launch(context, singleplayer);
 			floatQuirk(context, singleplayer);
 			dangerSense(context, singleplayer);
 			explosion(context, singleplayer);
 			fullPowerSmashTunnel(context, singleplayer);
+		}
+		// The test world above is superflat; mountains need normal terrain.
+		try (TestSingleplayerContext singleplayer = context.worldBuilder()
+				.adjustSettings(settings -> settings.setWorldType(settings.getNormalPresetList().getFirst())).create()) {
+			singleplayer.getClientLevel().waitForChunksRender();
+			mountainSmash(context, singleplayer);
 		}
 	}
 
@@ -249,6 +263,55 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		camera(context, CameraType.FIRST_PERSON);
 	}
 
+	private static void launch(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Hold jump on the ground: crouch and charge without jumping, with a pig standing close by.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p at @p run tp @s ~20 ~ ~ 0 -15");
+		command(singleplayer, "execute at @p run summon minecraft:pig ~4 ~ ~");
+		context.waitTicks(5);
+		Vec3 start = context.computeOnClient(client -> client.player.position());
+		Vec3 pigStart = singleplayer.getServer().computeOnServer(server ->
+			server.overworld().getEntities(EntityTypes.PIG, pig -> true).getFirst().position());
+		context.getInput().holdKey(options -> options.keyJump);
+		context.waitTicks(16);
+		check(context.computeOnClient(client -> client.player.isCrouching()), "charging a launch should crouch");
+		check(context.computeOnClient(client -> client.player.getY()) - start.y < 0.1, "charging a launch shouldn't jump");
+		int charge = context.computeOnClient(client -> LaunchClient.charge());
+		check(charge > 30, "holding jump should charge the launch, was " + charge);
+		camera(context, CameraType.THIRD_PERSON_FRONT);
+		context.waitTicks(2);
+		context.takeScreenshot("launch-charge");
+
+		// Let go: rocket toward the crosshair, kicking off a blast and a shockwave.
+		context.getInput().releaseKey(options -> options.keyJump);
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(3);
+		context.takeScreenshot("launch-liftoff");
+		context.waitTicks(5);
+		context.takeScreenshot("launch-trail");
+		double flown = context.computeOnClient(client -> client.player.position()).distanceTo(start);
+		check(flown > 10, "the launch should send the player flying, moved " + flown);
+		double pigThrown = singleplayer.getServer().computeOnServer(server ->
+			server.overworld().getEntities(EntityTypes.PIG, pig -> true).getFirst().position().distanceTo(pigStart));
+		check(pigThrown > 1, "the launch shockwave should throw the pig, it moved " + pigThrown);
+		command(singleplayer, "kill @e[type=minecraft:pig]");
+		context.waitTicks(60);
+
+		// A quick tap still jumps.
+		camera(context, CameraType.FIRST_PERSON);
+		command(singleplayer, "execute as @p at @p run tp @s ~10 ~ ~ 0 0");
+		context.waitTicks(40);
+		double groundY = context.computeOnClient(client -> client.player.getY());
+		context.getInput().holdKeyFor(options -> options.keyJump, 2);
+		double highest = groundY;
+		for (int tick = 0; tick < 8; tick++) {
+			context.waitTick();
+			highest = Math.max(highest, context.computeOnClient(client -> client.player.getY()));
+		}
+		check(highest - groundY > 0.5, "tapping jump should still jump, rose " + (highest - groundY));
+		context.waitTicks(20);
+	}
+
 	private static void floatQuirk(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
 		// From 6 blocks up, hold the key and stay put; let go and drop.
 		command(singleplayer, "execute as @p at @p run tp @s ~ ~6 ~");
@@ -433,6 +496,72 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		boolean farHoled = singleplayer.getServer().computeOnServer(server -> server.overworld().getBlockState(wallCenter.south(35)).isAir());
 		check(farHoled, "a 100% Smash should tunnel through a wall 40 blocks away too");
 		camera(context, CameraType.FIRST_PERSON);
+	}
+
+	private static void mountainSmash(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Find real mountains, stand 40 blocks off on the lowest side, and punch into the peak.
+		command(singleplayer, "effect give @p minecraft:resistance 600 4 true");
+		command(singleplayer, "time set noon");
+		selectSlot(context, 0);
+		BlockPos peak = singleplayer.getServer().computeOnServer(server -> {
+			var found = server.overworld().findClosestBiome3d(biome -> biome.is(Biomes.JAGGED_PEAKS) || biome.is(Biomes.STONY_PEAKS)
+				|| biome.is(Biomes.FROZEN_PEAKS), player(server).blockPosition(), 6400, 32, 64);
+			return found == null ? null : found.getFirst();
+		});
+		check(peak != null, "there should be mountains to punch");
+		BlockPos stand = singleplayer.getServer().computeOnServer(server -> {
+			ServerLevel level = server.overworld();
+			BlockPos best = null;
+			for (Direction side : Direction.Plane.HORIZONTAL) {
+				BlockPos spot = peak.relative(side, 40);
+				BlockPos surface = spot.atY(surfaceY(level, spot));
+				if (best == null || surface.getY() < best.getY()) {
+					best = surface;
+				}
+			}
+			return best;
+		});
+		int peakTop = singleplayer.getServer().computeOnServer(server -> surfaceY(server.overworld(), peak));
+		Vec3 target = new Vec3(peak.getX() + 0.5, peakTop - 8, peak.getZ() + 0.5);
+		command(singleplayer, "tp @p " + stand.getX() + " " + stand.getY() + " " + stand.getZ());
+		command(singleplayer, "execute as @p at @p anchored eyes run tp @s ~ ~ ~ facing " + target.x + " " + target.y + " " + target.z);
+		singleplayer.getClientLevel().waitForChunksRender();
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(20);
+		context.takeScreenshot("mountain-before");
+
+		Vec3 eye = singleplayer.getServer().computeOnServer(server -> player(server).getEyePosition());
+		int solidBefore = solidAlong(singleplayer, eye, target);
+		check(solidBefore > 5, "the punch line should run through the mountain, only " + solidBefore + " solid blocks");
+		context.getInput().holdKeyFor(DekuModClient.SMASH_KEY, 2);
+		context.waitTicks(8);
+		context.takeScreenshot("mountain-smash");
+		context.waitTicks(30);
+		context.takeScreenshot("mountain-tunnel");
+		int solidAfter = solidAlong(singleplayer, eye, target);
+		check(solidAfter < solidBefore / 3, "a 100% Smash should tunnel through the mountain: " + solidBefore + " -> " + solidAfter);
+		camera(context, CameraType.FIRST_PERSON);
+	}
+
+	/** Top of the ground at a spot, generating its chunk first (unloaded chunks report the bottom of the world). */
+	private static int surfaceY(ServerLevel level, BlockPos pos) {
+		level.getChunk(pos.getX() >> 4, pos.getZ() >> 4);
+		return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos.getX(), pos.getZ());
+	}
+
+	/** Solid blocks on the straight line from one point to another, sampled every half block. */
+	private static int solidAlong(TestSingleplayerContext singleplayer, Vec3 from, Vec3 to) {
+		return singleplayer.getServer().computeOnServer(server -> {
+			Set<BlockPos> solid = new HashSet<>();
+			double length = from.distanceTo(to);
+			for (double distance = 2; distance <= length; distance += 0.5) {
+				BlockPos pos = BlockPos.containing(from.add(to.subtract(from).normalize().scale(distance)));
+				if (!server.overworld().getBlockState(pos).isAir()) {
+					solid.add(pos);
+				}
+			}
+			return solid.size();
+		});
 	}
 
 	private static float dangerLevel(ClientGameTestContext context) {

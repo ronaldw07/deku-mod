@@ -12,6 +12,7 @@ public final class Cooldowns {
 		SMOKESCREEN("Smokescreen", 100),
 		FLOAT("Float", 0),
 		BLACKWHIP("Blackwhip", 20),
+		LAUNCH("Launch", 40),
 		DANGER_SENSE("Danger Sense", 0),
 		AP_SHOT("AP Shot", 20),
 		FLIGHT("Explosion Flight", 0),

@@ -31,6 +31,11 @@ final class PowerHud {
 			y += LINE_HEIGHT;
 		}
 
+		if (LaunchClient.charging()) {
+			graphics.centeredText(Minecraft.getInstance().font, "Launch " + LaunchClient.charge() + "%", x, y, COWLING_COLOR);
+			y += LINE_HEIGHT;
+		}
+
 		if (ExplosionClient.armsCrossed()) {
 			graphics.centeredText(Minecraft.getInstance().font, "Ground Blast " + ExplosionClient.groundBlastCharge() + "%", x, y,
 				GROUND_BLAST_COLOR);

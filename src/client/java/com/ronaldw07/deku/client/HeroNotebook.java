@@ -25,7 +25,8 @@ final class HeroNotebook {
 				Hold V: charge Smash, let go to throw
 				Z: Smokescreen
 				Hold R, or double-tap and hold space: Float
-				B: Blackwhip"""),
+				B: Blackwhip
+				Hold space on the ground: crouch and charge, let go to launch toward your crosshair"""),
 			page("One For All tips", """
 				Smash locks onto the mob nearest your crosshair.
 

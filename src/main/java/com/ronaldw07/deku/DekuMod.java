@@ -8,6 +8,7 @@ import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.ExplosionPayload;
 import com.ronaldw07.deku.network.FloatPayload;
+import com.ronaldw07.deku.network.LaunchPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
@@ -53,6 +54,10 @@ public class DekuMod implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(FloatPayload.TYPE, FloatPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(FloatPayload.TYPE,
 			(payload, context) -> FloatQuirk.apply(context.player(), payload.active()));
+
+		PayloadTypeRegistry.serverboundPlay().register(LaunchPayload.TYPE, LaunchPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(LaunchPayload.TYPE,
+			(payload, context) -> Launch.perform(context.player(), payload.charge()));
 
 		PayloadTypeRegistry.serverboundPlay().register(BlackwhipPayload.TYPE, BlackwhipPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(BlackwhipPayload.TYPE, (payload, context) -> Blackwhip.lash(context.player()));

@@ -44,6 +44,7 @@ final class ControlsHud {
 		new Row(Ability.SMOKESCREEN, () -> key(DekuModClient.SMOKESCREEN_KEY)),
 		new Row(Ability.FLOAT, () -> hold(DekuModClient.FLOAT_KEY).copy().append(" / ").append(doubleTap())),
 		new Row(Ability.BLACKWHIP, () -> key(DekuModClient.BLACKWHIP_KEY)),
+		new Row(Ability.LAUNCH, () -> hold(Minecraft.getInstance().options.keyJump)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private static final Panel EXPLOSION = new Panel("Explosion", EXPLOSION_COLOR, List.of(

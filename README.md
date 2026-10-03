@@ -12,6 +12,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Z: Smokescreen
 - Hold R, or double-tap and hold space: Float
 - B: Blackwhip
+- Hold space on the ground: crouch and charge, release to launch toward the crosshair
 - K: settings (power, ramp-up and charge times, Danger Sense, cooldowns on/off)
 
 ## Explosion (slot 2)
