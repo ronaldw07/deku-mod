@@ -54,6 +54,7 @@ public final class SmashClient {
 				ClientPlayNetworking.send(new SmashPayload(Math.max(1, (int) Math.round(charge)), DekuSettings.get().smashMaxRange()));
 			}
 			Cooldowns.start(Cooldowns.Ability.SMASH);
+			PunchFx.start(player, charge / 100.0);
 			Poses.play(Poses.Pose.PUNCH, PUNCH_POSE_TICKS);
 			reset();
 		}

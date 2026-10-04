@@ -60,6 +60,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FaJinFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashChargeFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(PunchFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GearshiftClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(DecayClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
