@@ -51,6 +51,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingAura::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(FaJinFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
@@ -108,6 +109,7 @@ public class DekuModClient implements ClientModInitializer {
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
 			SMASH_KEY.isDown(), COWLING_KEY.isDown(), countClicks(CLUSTER_KEY) > 0);
 		ExplosionFx.tick(client.level);
+		FaJinFx.tick(player);
 
 		DangerSenseClient.tick(player, countClicks(DANGER_SENSE_KEY) % 2 == 1);
 	}

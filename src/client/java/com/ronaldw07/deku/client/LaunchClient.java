@@ -24,8 +24,8 @@ public final class LaunchClient {
 	private static final int FULL_CHARGE_TICKS = 20;
 	private static final int DOUBLE_TAP_TICKS = 7;
 	private static final int CHARGE_SOUND_INTERVAL = 6;
-	private static final double MIN_SPEED = 1.5;
-	private static final double EXTRA_SPEED = 3.0;
+	private static final double MIN_SPEED = 2.5;
+	private static final double EXTRA_SPEED = 6.0;
 	private static final double LIFT = 0.4;
 	private static final int MIN_FLIGHT_TICKS = 3;
 	private static final int MAX_FLIGHT_TICKS = 60;
@@ -121,6 +121,7 @@ public final class LaunchClient {
 			ClientPlayNetworking.send(new LaunchPayload(charge()));
 		}
 		Cooldowns.start(Cooldowns.Ability.LAUNCH);
+		FaJinFx.burst(player);
 		flightTicks = 1;
 	}
 

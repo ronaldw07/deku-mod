@@ -32,14 +32,14 @@ final class ExplosionFx {
 	private static final double RING_GROWTH = 1.8;
 	private static final int MAX_FLAMES = 160;
 	// Howitzer Impact is in a league of its own: it lasts longer, and its shockwave races
-	// out to the edge of its 200-block reach, with a second ring chasing the first.
+	// out to the edge of its 400-block reach, with a second ring chasing the first.
 	private static final int HOWITZER_LIFETIME_TICKS = 40;
-	private static final double HOWITZER_SHOCKWAVE_RADIUS = 200.0;
+	private static final double HOWITZER_SHOCKWAVE_RADIUS = 400.0;
 	private static final double SECOND_RING_FRACTION = 0.55;
 	private static final double HOWITZER_RAY_REACH = 2.5;
 	private static final int HOWITZER_SPARKS = 200;
-	private static final int HOWITZER_SMOKE_COLUMN = 90;
-	private static final double HOWITZER_COLUMN_HEIGHT = 40.0;
+	private static final int HOWITZER_SMOKE_COLUMN = 160;
+	private static final double HOWITZER_COLUMN_HEIGHT = 90.0;
 
 	// Fireball volume: big explosion puffs filling the blast sphere.
 	private static final int MAX_FIREBALL_PUFFS = 40;

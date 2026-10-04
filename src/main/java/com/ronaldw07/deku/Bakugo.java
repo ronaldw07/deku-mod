@@ -36,19 +36,19 @@ public final class Bakugo {
 	private static final double HOWITZER_REACH = 1.5;
 	// Howitzer Impact: a huge core blast, two rings of blasts rolling outward from it, and a
 	// shockwave that throws everything within SHOCKWAVE_RANGE and badly hurts anything close.
-	private static final float HOWITZER_CORE_RADIUS = 18.0f;
-	private static final int HOWITZER_CORE_DEBRIS = 220;
-	private static final double[] HOWITZER_RING_DISTANCES = {24, 42};
-	private static final int[] HOWITZER_RING_BLASTS = {8, 10};
-	private static final float[] HOWITZER_RING_RADII = {11.0f, 9.0f};
+	private static final float HOWITZER_CORE_RADIUS = 36.0f;
+	private static final int HOWITZER_CORE_DEBRIS = 300;
+	private static final double[] HOWITZER_RING_DISTANCES = {48, 84};
+	private static final int[] HOWITZER_RING_BLASTS = {12, 16};
+	private static final float[] HOWITZER_RING_RADII = {22.0f, 18.0f};
 	// Blasts stacked above the core, so the explosion towers instead of just spreading.
-	private static final double[] HOWITZER_COLUMN_HEIGHTS = {14, 28, 42};
-	private static final float[] HOWITZER_COLUMN_RADII = {14.0f, 11.0f, 8.0f};
+	private static final double[] HOWITZER_COLUMN_HEIGHTS = {28, 56, 84};
+	private static final float[] HOWITZER_COLUMN_RADII = {28.0f, 22.0f, 16.0f};
 	private static final int HOWITZER_RING_DEBRIS = 8;
 	private static final int TICKS_PER_RING = 3;
-	private static final double SHOCKWAVE_RANGE = 200.0;
+	private static final double SHOCKWAVE_RANGE = 400.0;
 	private static final double SHOCKWAVE_MAX_PUSH = 5.0;
-	private static final double SHOCKWAVE_DAMAGE_RANGE = 60.0;
+	private static final double SHOCKWAVE_DAMAGE_RANGE = 120.0;
 	private static final float SHOCKWAVE_MAX_DAMAGE = 80.0f;
 	// The ground blast: rows of explosions fanning out in front of the player, one row a tick.
 	// Holding C longer adds rows, widens the fan and grows each blast.

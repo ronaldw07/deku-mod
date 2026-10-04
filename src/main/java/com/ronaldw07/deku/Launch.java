@@ -16,18 +16,18 @@ import net.minecraft.world.phys.Vec3;
  * trails behind them for the first stretch of the flight.
  */
 public final class Launch {
-	private static final float MIN_LIFTOFF_RADIUS = 2.5f;
-	private static final float EXTRA_LIFTOFF_RADIUS = 4.5f;
-	private static final int MAX_LIFTOFF_DEBRIS = 40;
-	private static final double MIN_SHOCKWAVE_RANGE = 8.0;
-	private static final double EXTRA_SHOCKWAVE_RANGE = 16.0;
-	private static final double SHOCKWAVE_MAX_PUSH = 2.5;
-	private static final float SHOCKWAVE_MAX_DAMAGE = 12.0f;
+	private static final float MIN_LIFTOFF_RADIUS = 4.0f;
+	private static final float EXTRA_LIFTOFF_RADIUS = 8.0f;
+	private static final int MAX_LIFTOFF_DEBRIS = 80;
+	private static final double MIN_SHOCKWAVE_RANGE = 12.0;
+	private static final double EXTRA_SHOCKWAVE_RANGE = 28.0;
+	private static final double SHOCKWAVE_MAX_PUSH = 3.5;
+	private static final float SHOCKWAVE_MAX_DAMAGE = 20.0f;
 	private static final int RING_POINTS = 48;
 	private static final double RING_SPEED = 1.2;
 	private static final int LIFTOFF_BOLTS = 10;
 	private static final double LIFTOFF_BOLT_LENGTH = 5.0;
-	private static final int TRAIL_TICKS = 25;
+	private static final int TRAIL_TICKS = 40;
 	private static final int TRAIL_BOLTS = 3;
 	private static final double TRAIL_SPREAD = 0.6;
 
@@ -39,8 +39,9 @@ public final class Launch {
 		ServerLevel level = player.level();
 		Vec3 feet = player.position();
 
-		Blasts.blast(player, feet, MIN_LIFTOFF_RADIUS + EXTRA_LIFTOFF_RADIUS * (float) power, Blasts.sparing(player),
-			(int) (MAX_LIFTOFF_DEBRIS * power));
+		float radius = MIN_LIFTOFF_RADIUS + EXTRA_LIFTOFF_RADIUS * (float) power;
+		Blasts.blast(player, feet, radius, Blasts.sparing(player), (int) (MAX_LIFTOFF_DEBRIS * power));
+		Blasts.carve(level, feet, radius, 0);
 		shockwave(player, feet, MIN_SHOCKWAVE_RANGE + EXTRA_SHOCKWAVE_RANGE * power);
 		Smash.lightningBurst(level, feet.add(0, 1, 0), LIFTOFF_BOLTS, LIFTOFF_BOLT_LENGTH * (0.5 + power), 1.0);
 		trail(player, player.getBoundingBox().getCenter(), TRAIL_TICKS);

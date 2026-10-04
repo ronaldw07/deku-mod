@@ -42,6 +42,8 @@ public final class Blasts {
 	private static final double DEBRIS_EXTRA_SPEED = 0.8;
 	private static final int DEBRIS_ATTEMPTS_PER_BLOCK = 4;
 	private static final int FIRE_DELAY_TICKS = 4;
+	private static final int CARVE_AT_ONCE_RADIUS = 12;
+	private static final int CARVE_LAYERS_PER_TICK = 3; // each way from the middle
 
 	private record Scheduled(int runAt, Runnable action) {
 	}
@@ -104,19 +106,38 @@ public final class Blasts {
 	 * and leaves a few fires burning on its floor. Fluids and block entities are left alone.
 	 */
 	public static void carve(ServerLevel level, Vec3 center, float radius, int fires) {
-		BlockPos middle = BlockPos.containing(center);
+		int reach = (int) Math.ceil(radius);
+		// Huge craters are cleared a few layers a tick, growing up and down from the middle,
+		// so the game doesn't freeze clearing them all at once.
+		boolean spread = reach > CARVE_AT_ONCE_RADIUS;
+		for (int dy = -reach; dy <= reach; dy++) {
+			int layer = dy;
+			if (spread) {
+				later(level.getServer(), Math.abs(dy) / CARVE_LAYERS_PER_TICK, () -> carveLayer(level, center, radius, layer));
+			} else {
+				carveLayer(level, center, radius, layer);
+			}
+		}
+		// A beat later, so blasts landing right after this one don't snuff the fires out.
+		int lastLayerTick = spread ? reach / CARVE_LAYERS_PER_TICK : 0;
+		later(level.getServer(), lastLayerTick + FIRE_DELAY_TICKS, () -> light(level, center, radius, fires));
+	}
+
+	/** Clears one horizontal slice of the sphere, dy blocks above or below its middle. */
+	private static void carveLayer(ServerLevel level, Vec3 center, float radius, int dy) {
+		BlockPos middle = BlockPos.containing(center).above(dy);
 		int reach = (int) Math.ceil(radius);
 		double radiusSqr = radius * radius;
-		for (BlockPos pos : BlockPos.betweenClosed(middle.offset(-reach, -reach, -reach), middle.offset(reach, reach, reach))) {
+		for (BlockPos pos : BlockPos.betweenClosed(middle.offset(-reach, 0, -reach), middle.offset(reach, 0, reach))) {
+			if (Vec3.atCenterOf(pos).distanceToSqr(center) > radiusSqr) {
+				continue;
+			}
 			BlockState state = level.getBlockState(pos);
-			if (Vec3.atCenterOf(pos).distanceToSqr(center) > radiusSqr || state.isAir() || state.hasBlockEntity()
-					|| !state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0) {
+			if (state.isAir() || state.hasBlockEntity() || !state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0) {
 				continue;
 			}
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
 		}
-		// A beat later, so blasts landing right after this one don't snuff the fires out.
-		later(level.getServer(), FIRE_DELAY_TICKS, () -> light(level, center, radius, fires));
 	}
 
 	/** Sets fires on open floor at random spots in the crater. */
