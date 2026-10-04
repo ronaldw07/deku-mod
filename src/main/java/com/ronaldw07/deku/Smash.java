@@ -103,7 +103,7 @@ public final class Smash {
 		float tunnelRadius = (float) (Mth.lerp(power, MIN_TUNNEL_RADIUS, MAX_TUNNEL_RADIUS) + FULL_POWER_EXTRA_TUNNEL_RADIUS * fullPower);
 		tunnel(player, eye, aim, eye.distanceTo(end), tunnelRadius, percent >= 100);
 
-		sendLightning(level, eye.add(aim.scale(LIGHTNING_START)), end, power);
+		sendLightning(level, eye.add(aim.scale(LIGHTNING_START)), end, power, true);
 		showBlast(level, player, eye, aim, range, power);
 	}
 
@@ -163,7 +163,12 @@ public final class Smash {
 	}
 
 	static void sendLightning(ServerLevel level, Vec3 from, Vec3 to, double power) {
-		SmashFxPayload fx = new SmashFxPayload(from, to, (float) power);
+		sendLightning(level, from, to, power, false);
+	}
+
+	/** Heavy lightning is for the punch itself; see SmashFxPayload. */
+	static void sendLightning(ServerLevel level, Vec3 from, Vec3 to, double power, boolean heavy) {
+		SmashFxPayload fx = new SmashFxPayload(from, to, (float) power, heavy);
 		for (ServerPlayer viewer : PlayerLookup.around(level, from, FX_VIEW_DISTANCE)) {
 			if (ServerPlayNetworking.canSend(viewer, SmashFxPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);

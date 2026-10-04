@@ -25,8 +25,8 @@ final class FaJinFx {
 	private static final double COIL_STEP = 0.09;
 	private static final double COIL_TURN = 0.7; // radians per step
 	private static final double COIL_JAG = 0.05;
-	private static final int MIN_COILS = 2;
-	private static final int EXTRA_COILS = 4;
+	private static final int MIN_COILS = 1;
+	private static final int EXTRA_COILS = 2;
 	private static final float MIN_COIL_WIDTH = 0.5f;
 	private static final float EXTRA_COIL_WIDTH = 1.2f;
 	private static final float MAX_GLOW_WIDTH = 3.0f;
@@ -35,11 +35,11 @@ final class FaJinFx {
 	private static final DustParticleOptions EMBER = new DustParticleOptions(0xFF1010, 1.2f);
 	// Flight: bolts streaming back along the body from the hips.
 	private static final double FLIGHT_LEG_LENGTH = 1.4;
-	private static final int FLIGHT_BOLTS = 3;
+	private static final int FLIGHT_BOLTS = 1;
 	private static final double FLIGHT_JAG = 0.15;
 	// Takeoff burst.
 	private static final int BURST_TICKS = 10;
-	private static final int BURST_RAYS = 18;
+	private static final int BURST_RAYS = 10;
 	private static final double MIN_BURST_LENGTH = 2.5;
 	private static final double EXTRA_BURST_LENGTH = 3.0;
 

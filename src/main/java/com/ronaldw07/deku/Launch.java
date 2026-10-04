@@ -25,10 +25,10 @@ public final class Launch {
 	private static final float SHOCKWAVE_MAX_DAMAGE = 20.0f;
 	private static final int RING_POINTS = 48;
 	private static final double RING_SPEED = 1.2;
-	private static final int LIFTOFF_BOLTS = 10;
+	private static final int LIFTOFF_BOLTS = 6;
 	private static final double LIFTOFF_BOLT_LENGTH = 5.0;
-	private static final int TRAIL_TICKS = 40;
-	private static final int TRAIL_BOLTS = 3;
+	private static final int TRAIL_TICKS = 20;
+	private static final int TRAIL_BOLTS = 1;
 	private static final double TRAIL_SPREAD = 0.6;
 
 	private Launch() {

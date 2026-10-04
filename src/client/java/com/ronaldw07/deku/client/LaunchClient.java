@@ -151,7 +151,7 @@ public final class LaunchClient {
 		Vec3 back = look.scale(-1);
 		for (int side = -1; side <= 1; side += 2) {
 			Vec3 hand = player.position().add(0, HAND_HEIGHT, 0).add(right.scale(side * HAND_SIDE));
-			SmashLightning.add(new SmashFxPayload(hand, hand.add(back.scale(FLICK_BOLT_LENGTH)), 0.4f));
+			SmashLightning.add(new SmashFxPayload(hand, hand.add(back.scale(FLICK_BOLT_LENGTH)), 0.4f, false));
 			for (int i = 0; i < FLICK_PUFFS; i++) {
 				Vec3 v = back.scale(0.4 + player.getRandom().nextDouble() * 0.3);
 				player.level().addParticle(ParticleTypes.CLOUD, hand.x, hand.y, hand.z, v.x, v.y, v.z);

@@ -58,7 +58,7 @@ final class CowlingFx {
 		for (int i = 0; i < BURST_BOLTS; i++) {
 			Vec3 direction = LightningDraw.randomDirection(random);
 			double length = MIN_BURST_LENGTH + random.nextDouble() * EXTRA_BURST_LENGTH;
-			SmashLightning.add(new SmashFxPayload(chest, chest.add(direction.scale(length)), 1f));
+			SmashLightning.add(new SmashFxPayload(chest, chest.add(direction.scale(length)), 1f, false));
 		}
 
 		Vec3 feet = player.position().add(0, 0.3, 0);
