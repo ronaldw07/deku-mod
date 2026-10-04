@@ -13,11 +13,11 @@ import net.minecraft.world.phys.Vec3;
  * where you are.
  */
 public final class UnitedStatesClient {
-	private static final double LAUNCH_SPEED = 2.6;
-	private static final int MAX_RISE_TICKS = 40;
+	private static final double LAUNCH_SPEED = 4.0;
+	private static final int MAX_RISE_TICKS = 60;
 	private static final int WIND_UP_TICKS = 20;
 	private static final int WIND_UP_SOUND_INTERVAL = 5;
-	private static final double DIVE_SPEED = 4.0;
+	private static final double DIVE_SPEED = 6.0;
 	private static final double DIVE_STEER = 0.3; // how much the dive follows where you look
 	private static final int MAX_DIVE_TICKS = 100;
 	private static final int LANDING_POSE_TICKS = 12;

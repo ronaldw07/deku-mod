@@ -17,7 +17,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Space in the air: flick a blast of air to push yourself where you look; hold to keep flicking
 - X: Shoot Style, a St. Louis Smash kick that throws a crescent of wind (slices terrain from 50%)
 - Y: Delaware Smash, a finger flick that fires an air bullet through every mob in its line, bursting into a small crater
-- U: United States of Smash, rocket into the sky and dive fist first: a huge crater with a ring cut around it, and a tornado that spins in the middle for a minute
+- U: United States of Smash, rocket into the sky and dive fist first: a crater 240 blocks across with a ring cut around it, and a 150 block tornado that spins in the middle for a minute
 - G: Manchester Smash, leap, flip and axe kick the ground into a crater and shockwave
 - N: Gearshift on/off, shifts up to gear 5 the longer you keep moving
 - K: settings (power, ramp-up and charge times, Danger Sense, cooldowns on/off)

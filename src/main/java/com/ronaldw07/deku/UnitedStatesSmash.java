@@ -1,7 +1,10 @@
 package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.TornadoFxPayload;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +23,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -31,31 +36,35 @@ import net.minecraft.world.phys.Vec3;
  * in the middle for a full minute, sucking up mobs, items and blocks.
  */
 public final class UnitedStatesSmash {
-	private static final float MIN_CRATER = 14.0f;
-	private static final float EXTRA_CRATER = 16.0f; // 30 at 100%
+	private static final double MIN_CRATER = 70.0;
+	private static final double EXTRA_CRATER = 80.0; // 150 at 100%
 	// The carving sphere sits this far up (as a share of its radius), so the hole is a wide, shallow bowl.
 	private static final double BOWL_LIFT = 0.6;
-	private static final float BLAST_RADIUS = 10.0f;
-	private static final int BLAST_DEBRIS = 200;
+	// The crater opens up from the middle outward, a ring of columns at a time, with a budget of
+	// blocks per tick so the game keeps running while hundreds of thousands of blocks go.
+	private static final int CRATER_BLOCKS_PER_TICK = 20000;
+	private static final float BLAST_RADIUS = 25.0f;
+	private static final int BLAST_DEBRIS = 400;
 	// The signature ring: a trench circling the crater, a bit beyond its rim.
 	private static final double RING_SCALE = 1.5; // ring radius, relative to where the bowl meets the ground
-	private static final float RING_WIDTH = 2.0f;
-	private static final double RING_SPACING = 1.5;
-	private static final double RING_BLOCKS_PER_TICK = 4.0;
-	private static final double MIN_SHOCKWAVE = 20.0;
-	private static final double EXTRA_SHOCKWAVE = 40.0;
-	private static final float SHOCKWAVE_DAMAGE = 40.0f;
-	private static final double SHOCKWAVE_PUSH = 5.0;
-	private static final int HEAVY_BOLTS = 12;
-	private static final double HEAVY_BOLT_LENGTH = 24.0;
-	private static final int DUST_RING_POINTS = 128;
-	private static final double FX_VIEW_DISTANCE = 256;
+	private static final float RING_WIDTH = 5.0f;
+	private static final double RING_SPACING = 3.0;
+	private static final int RING_TICKS = 60; // how long the ring takes to race all the way around
+	private static final double MIN_SHOCKWAVE = 100.0;
+	private static final double EXTRA_SHOCKWAVE = 200.0;
+	private static final float SHOCKWAVE_DAMAGE = 200.0f;
+	private static final double SHOCKWAVE_PUSH = 8.0;
+	private static final int EXPLOSIONS = 12;
+	private static final int HEAVY_BOLTS = 20;
+	private static final double HEAVY_BOLT_LENGTH = 60.0;
+	private static final int DUST_RING_POINTS = 160;
+	private static final double FX_VIEW_DISTANCE = 384;
 	// Tornado.
 	private static final int TORNADO_TICKS = 1200; // a full minute
-	private static final double TORNADO_REACH = 28.0;
-	private static final double TORNADO_HEIGHT = 70.0;
-	private static final double FUNNEL_BASE = 2.0;
-	private static final double FUNNEL_FLARE = 0.3; // funnel widens this much per block of height
+	private static final double TORNADO_REACH = 80.0;
+	private static final double TORNADO_HEIGHT = 150.0;
+	private static final double FUNNEL_BASE = 4.0;
+	private static final double FUNNEL_FLARE = 0.35; // funnel widens this much per block of height
 	private static final double PULL = 0.08;
 	private static final double EXTRA_PULL = 0.12;
 	private static final double SPIN = 0.25;
@@ -66,14 +75,22 @@ public final class UnitedStatesSmash {
 	private static final double DRAG = 0.8;
 	private static final int DAMAGE_INTERVAL = 20;
 	private static final float TORNADO_DAMAGE = 2.0f;
-	private static final int DEBRIS_INTERVAL = 2;
-	private static final double DEBRIS_REACH = 10.0;
+	private static final int DEBRIS_PER_TICK = 2;
+	private static final double DEBRIS_REACH = 25.0;
 	private static final int SOUND_INTERVAL = 40;
 
 	private record Tornado(ResourceKey<Level> dimension, UUID owner, Vec3 base, long endTick) {
 	}
 
+	/** One column of the crater still to clear, from bottom to top, ordered by distance from the middle. */
+	private record Column(int x, int z, int bottom, int top, double distance) {
+	}
+
+	private record Crater(ResourceKey<Level> dimension, Deque<Column> columns) {
+	}
+
 	private static final List<Tornado> tornadoes = new ArrayList<>();
+	private static final List<Crater> craters = new ArrayList<>();
 
 	private UnitedStatesSmash() {
 	}
@@ -82,10 +99,10 @@ public final class UnitedStatesSmash {
 		double power = Mth.clamp(percent, 1, 100) / 100.0;
 		ServerLevel level = player.level();
 		Vec3 feet = player.position();
-		float crater = (float) (MIN_CRATER + EXTRA_CRATER * power);
+		double crater = MIN_CRATER + EXTRA_CRATER * power;
 
 		Blasts.blast(player, feet, BLAST_RADIUS, Blasts.sparing(player), BLAST_DEBRIS);
-		Blasts.carve(level, feet.add(0, crater * BOWL_LIFT, 0), crater, 0);
+		bowl(level, feet, crater);
 		double rim = crater * Math.sqrt(1 - BOWL_LIFT * BOWL_LIFT);
 		ring(player, feet, rim * RING_SCALE);
 		shockwave(player, feet, MIN_SHOCKWAVE + EXTRA_SHOCKWAVE * power);
@@ -102,14 +119,67 @@ public final class UnitedStatesSmash {
 		}
 	}
 
-	/** Cuts the ring trench, racing around and outward from the impact. */
+	/** Queues every column of the bowl, nearest the middle first. */
+	private static void bowl(ServerLevel level, Vec3 feet, double radius) {
+		double centerY = feet.y + radius * BOWL_LIFT;
+		int reach = (int) Math.ceil(radius);
+		int middleX = Mth.floor(feet.x);
+		int middleZ = Mth.floor(feet.z);
+		List<Column> columns = new ArrayList<>();
+		for (int dx = -reach; dx <= reach; dx++) {
+			for (int dz = -reach; dz <= reach; dz++) {
+				double distance = Math.sqrt(dx * dx + dz * dz);
+				if (distance > radius) {
+					continue;
+				}
+				double half = Math.sqrt(radius * radius - distance * distance);
+				int bottom = Math.max(level.getMinY(), Mth.floor(centerY - half));
+				if (bottom > feet.y + 1) {
+					continue; // the sphere doesn't reach the ground this far out
+				}
+				columns.add(new Column(middleX + dx, middleZ + dz, bottom, Mth.floor(centerY + half), distance));
+			}
+		}
+		columns.sort(Comparator.comparingDouble(Column::distance));
+		craters.add(new Crater(level.dimension(), new ArrayDeque<>(columns)));
+	}
+
+	/** Clears columns of a crater until this tick's block budget runs out. Returns false when it's done. */
+	private static boolean dig(ServerLevel level, Crater crater) {
+		int cleared = 0;
+		while (!crater.columns().isEmpty() && cleared < CRATER_BLOCKS_PER_TICK) {
+			Column column = crater.columns().poll();
+			BlockPos bottom = new BlockPos(column.x(), column.bottom(), column.z());
+			if (!level.isLoaded(bottom)) {
+				continue; // never load or generate terrain just to blow it up
+			}
+			// Nothing to clear above the highest block in this column.
+			int top = Math.min(column.top(), level.getHeight(Heightmap.Types.WORLD_SURFACE, column.x(), column.z()));
+			for (int y = column.bottom(); y <= top; y++) {
+				BlockPos pos = new BlockPos(column.x(), y, column.z());
+				BlockState state = level.getBlockState(pos);
+				if (state.isAir() || state.hasBlockEntity() || state.getDestroySpeed(level, pos) < 0) {
+					continue;
+				}
+				level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+				cleared++;
+			}
+		}
+		return !crater.columns().isEmpty();
+	}
+
+	/** Cuts the ring trench, racing around the crater. */
 	private static void ring(ServerPlayer player, Vec3 center, double radius) {
 		MinecraftServer server = player.level().getServer();
 		int points = (int) Math.ceil(Math.PI * 2 * radius / RING_SPACING);
 		for (int i = 0; i < points; i++) {
 			double angle = Math.PI * 2 * i / points;
 			Vec3 at = center.add(Math.cos(angle) * radius, -1, Math.sin(angle) * radius);
-			Blasts.later(server, (int) (radius / RING_BLOCKS_PER_TICK), () -> Blasts.carve(player.level(), at, RING_WIDTH, 0));
+			Blasts.later(server, i * RING_TICKS / points, () -> {
+				if (player.level().isLoaded(BlockPos.containing(at))) {
+					Blasts.carve(player.level(), at, RING_WIDTH, 0);
+				}
+			});
 		}
 	}
 
@@ -129,7 +199,7 @@ public final class UnitedStatesSmash {
 
 	private static void show(ServerLevel level, Vec3 center, double rim) {
 		RandomSource random = level.getRandom();
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < EXPLOSIONS; i++) {
 			Vec3 at = center.add((random.nextDouble() * 2 - 1) * rim * 0.5, random.nextDouble() * 4, (random.nextDouble() * 2 - 1) * rim * 0.5);
 			level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, at.x, at.y, at.z, 1, 0, 0, 0, 0);
 		}
@@ -138,7 +208,7 @@ public final class UnitedStatesSmash {
 			Vec3 out = new Vec3(Math.cos(angle), 0, Math.sin(angle));
 			Vec3 at = center.add(out.scale(3)).add(0, 0.5, 0);
 			// Count 0 makes the particle fly along (x, y, z) offset at the given speed.
-			level.sendParticles(ParticleTypes.CLOUD, at.x, at.y, at.z, 0, out.x, 0.05, out.z, 2.0);
+			level.sendParticles(ParticleTypes.CLOUD, at.x, at.y, at.z, 0, out.x, 0.05, out.z, 4.0);
 			if (i % 4 == 0) {
 				level.sendParticles(ParticleTypes.GUST, at.x, at.y, at.z, 1, 0, 0, 0, 0);
 			}
@@ -146,14 +216,19 @@ public final class UnitedStatesSmash {
 		Vec3 up = center.add(0, 1, 0);
 		for (int i = 0; i < HEAVY_BOLTS; i++) {
 			double angle = Math.PI * 2 * i / HEAVY_BOLTS;
-			Vec3 tip = up.add(Math.cos(angle) * HEAVY_BOLT_LENGTH, random.nextDouble() * 8, Math.sin(angle) * HEAVY_BOLT_LENGTH);
+			Vec3 tip = up.add(Math.cos(angle) * HEAVY_BOLT_LENGTH, random.nextDouble() * 20, Math.sin(angle) * HEAVY_BOLT_LENGTH);
 			Smash.sendLightning(level, up, tip, 1.0, true);
 		}
-		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 6.0f, 0.5f);
-		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, 6.0f, 0.4f);
+		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 16.0f, 0.4f);
+		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, 16.0f, 0.3f);
 	}
 
 	public static void tick(MinecraftServer server) {
+		craters.removeIf(crater -> {
+			ServerLevel level = server.getLevel(crater.dimension());
+			return level == null || !dig(level, crater);
+		});
+
 		Iterator<Tornado> iterator = tornadoes.iterator();
 		while (iterator.hasNext()) {
 			Tornado tornado = iterator.next();
@@ -197,7 +272,7 @@ public final class UnitedStatesSmash {
 			}
 		}
 
-		if (age % DEBRIS_INTERVAL == 0) {
+		for (int i = 0; i < DEBRIS_PER_TICK; i++) {
 			rip(level, base);
 		}
 		if (age % SOUND_INTERVAL == 0) {

@@ -14,17 +14,18 @@ import net.minecraft.world.phys.Vec3;
  * toward the top, with dust churning around its foot. Shown from far away.
  */
 final class TornadoFx {
-	private static final double HEIGHT = 70.0;
-	private static final double FUNNEL_BASE = 2.0;
-	private static final double FUNNEL_FLARE = 0.3;
-	private static final double RING_SPACING = 1.5; // blocks of height between rings of particles
-	private static final int PER_RING = 3;
+	private static final double HEIGHT = 150.0;
+	private static final double FUNNEL_BASE = 4.0;
+	private static final double FUNNEL_FLARE = 0.35;
+	private static final double RING_SPACING = 2.0; // blocks of height between rings of particles
+	private static final int MIN_PER_RING = 3;
+	private static final double BLOCKS_PER_PUFF = 8.0; // wider rings get more puffs, so the funnel stays solid
 	private static final double TWIST = 0.15; // radians of turn per block of height
 	private static final double SPIN_SPEED = 0.35; // radians per tick
 	private static final double SWIRL_SPEED = 0.4;
 	private static final double RISE_SPEED = 0.1;
-	private static final int DUST_PER_TICK = 8;
-	private static final double DUST_REACH = 10.0;
+	private static final int DUST_PER_TICK = 16;
+	private static final double DUST_REACH = 25.0;
 	private static final int FADE_TICKS = 40; // thins out over its last two seconds
 
 	private record Tornado(Vec3 base, long startTick, long endTick) {
@@ -60,11 +61,12 @@ final class TornadoFx {
 			double spin = (now - tornado.startTick()) * SPIN_SPEED;
 			for (double height = 0; height < HEIGHT; height += RING_SPACING) {
 				double radius = FUNNEL_BASE + height * FUNNEL_FLARE;
-				for (int i = 0; i < PER_RING; i++) {
+				int perRing = MIN_PER_RING + (int) (Math.PI * 2 * radius / BLOCKS_PER_PUFF);
+				for (int i = 0; i < perRing; i++) {
 					if (random.nextDouble() > fade) {
 						continue;
 					}
-					double angle = spin + height * TWIST + Math.PI * 2 * i / PER_RING + random.nextDouble() * 0.5;
+					double angle = spin + height * TWIST + Math.PI * 2 * i / perRing + random.nextDouble() * 0.5;
 					funnelPuff(level, tornado.base(), radius, height, angle);
 				}
 			}
