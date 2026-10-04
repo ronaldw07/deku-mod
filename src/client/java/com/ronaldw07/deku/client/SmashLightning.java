@@ -26,14 +26,19 @@ final class SmashLightning {
 	}
 
 	private static final Style LIGHT = new Style(8, 2, 6, 0.25, 2f, false);
-	private static final Style HEAVY = new Style(14, 5, 14, 0.45, 3f, true);
+	private static final Style HEAVY = new Style(18, 8, 22, 0.6, 3.5f, true);
 
 	// Arcs: bolts leaping sideways off the punch, longer at higher power.
-	private static final int MIN_ARCS = 6;
-	private static final int MAX_ARCS = 24;
+	private static final int MIN_ARCS = 12;
+	private static final int MAX_ARCS = 44;
 	private static final double MIN_ARC_LENGTH = 1.5;
-	private static final double MAX_ARC_LENGTH = 6.0;
+	private static final double MAX_ARC_LENGTH = 9.0;
 	private static final int ARC_STEPS = 6;
+	private static final double BLOCKS_PER_EXTRA_ARC = 6.0; // long punches get more arcs so the whole path crackles
+	private static final int MAX_ARCS_ON_LONG_PUNCH = 120;
+	// A drawing budget: long punches thin out their main bolts instead of drawing thousands of segments.
+	private static final int MAX_BOLT_SEGMENTS = 3000;
+	private static final int MIN_BOLTS_ON_LONG_PUNCH = 4;
 
 	private record Blast(Vec3 from, Vec3 to, float power, Style style, long startTick) {
 	}
@@ -85,6 +90,7 @@ final class SmashLightning {
 		Vec3 path = to.subtract(from);
 		int steps = Math.max(2, (int) Math.ceil(path.length() / SEGMENT_LENGTH));
 		int bolts = style.minBolts() + (int) Math.round(power * (style.maxBolts() - style.minBolts()));
+		bolts = Math.min(bolts, Math.max(MIN_BOLTS_ON_LONG_PUNCH, MAX_BOLT_SEGMENTS / steps));
 		double jag = Mth.lerp(power, MIN_JAG, MAX_JAG);
 		List<Segment> segments = new ArrayList<>();
 
@@ -96,7 +102,12 @@ final class SmashLightning {
 				segments.add(new Segment(previous, next));
 
 				if (random.nextDouble() < style.branchChance()) {
-					segments.add(new Segment(next, next.add(LightningDraw.randomDirection(random).scale(jag * 1.5))));
+					Vec3 fork = next.add(LightningDraw.randomDirection(random).scale(jag * 1.5));
+					segments.add(new Segment(next, fork));
+					if (style.arcs()) {
+						// Heavy bolts fork again, so they look torn rather than drawn.
+						segments.add(new Segment(fork, fork.add(LightningDraw.randomDirection(random).scale(jag))));
+					}
 				}
 				previous = next;
 			}
@@ -108,7 +119,7 @@ final class SmashLightning {
 	private static List<Segment> buildArcs(Vec3 from, Vec3 to, double power, long seed) {
 		RandomSource random = RandomSource.create(seed ^ 0x5DEECE66DL);
 		Vec3 path = to.subtract(from);
-		int arcs = MIN_ARCS + (int) Math.round(power * (MAX_ARCS - MIN_ARCS));
+		int arcs = Math.min(MAX_ARCS_ON_LONG_PUNCH, MIN_ARCS + (int) Math.round(power * (MAX_ARCS - MIN_ARCS)) + (int) (path.length() / BLOCKS_PER_EXTRA_ARC));
 		double length = Mth.lerp(power, MIN_ARC_LENGTH, MAX_ARC_LENGTH);
 		double jag = Mth.lerp(power, MIN_JAG, MAX_JAG);
 		List<Segment> segments = new ArrayList<>();

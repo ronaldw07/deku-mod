@@ -42,9 +42,9 @@ public final class Smash {
 	private static final int MAX_EXTRA_PUFFS = 4;
 	private static final double WIND_SPREAD = 0.5; // sideways reach per block of distance, at 100%
 	// Lightning bursts dotted along a long punch's path.
-	private static final double PATH_BURST_SPACING = 20.0;
-	private static final int PATH_BURST_BOLTS = 4;
-	private static final double PATH_BURST_LENGTH = 4.0;
+	private static final double PATH_BURST_SPACING = 8.0;
+	private static final int PATH_BURST_BOLTS = 7;
+	private static final double PATH_BURST_LENGTH = 6.0;
 	private static final double LOCK_ON_COS = 0.6; // locks onto targets up to about 53 degrees off the crosshair
 	private static final double POINT_BLANK = 1.0;
 	// Effects start a little way out so they don't cover the screen in first person.
@@ -69,10 +69,10 @@ public final class Smash {
 	private static final double IMPACT_CRATER_SCALE = 1.6; // crater radius, relative to the tunnel's
 	private static final float IMPACT_RADIUS = 12.0f;
 	private static final int IMPACT_DEBRIS = 120;
-	private static final int IMPACT_BOLTS = 8;
-	private static final double IMPACT_BOLT_LENGTH = 6.0;
-	private static final int HIT_BOLTS = 3;
-	private static final double HIT_BOLT_LENGTH = 2.5;
+	private static final int IMPACT_BOLTS = 20;
+	private static final double IMPACT_BOLT_LENGTH = 10.0;
+	private static final int HIT_BOLTS = 6;
+	private static final double HIT_BOLT_LENGTH = 4.0;
 
 	private Smash() {
 	}
