@@ -9,7 +9,9 @@ import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DangerPayload;
+import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
+import com.ronaldw07.deku.network.SlashFxPayload;
 import com.ronaldw07.deku.network.FireballFlightPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.ShootStylePayload;
@@ -54,6 +56,7 @@ public class DekuModClient implements ClientModInitializer {
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("power"), PowerHud::extract);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("danger_sense"), DangerSenseHud::extract);
 		HudElementRegistry.attachElementBefore(VanillaHudElements.HOTBAR, DekuMod.id("blast_flash"), ScreenShake::extractFlash);
+		HudElementRegistry.attachElementBefore(VanillaHudElements.HOTBAR, DekuMod.id("domain_darkness"), DomainFx::extractOverlay);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, DekuMod.id("controls"), ControlsHud::extract);
 		ClientPlayNetworking.registerGlobalReceiver(DangerPayload.TYPE, (payload, context) -> DangerSenseClient.receive(payload, context.player()));
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingLightning::render);
@@ -66,6 +69,8 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballChargeFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballFlightFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GojoFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(SlashFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(DomainFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SpinFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GearshiftClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(DecayClient::render);
@@ -73,6 +78,8 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
 		ClientPlayNetworking.registerGlobalReceiver(ExplosionFxPayload.TYPE, (payload, context) -> ExplosionFx.add(payload));
+		ClientPlayNetworking.registerGlobalReceiver(SlashFxPayload.TYPE, (payload, context) -> SlashFx.add(payload));
+		ClientPlayNetworking.registerGlobalReceiver(DomainPayload.TYPE, (payload, context) -> DomainFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(FireballFlightPayload.TYPE, (payload, context) -> FireballFlightFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(BlackwhipFxPayload.TYPE, (payload, context) -> BlackwhipTendrils.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(SmashFxPayload.TYPE, (payload, context) -> SmashLightning.add(payload));
@@ -114,6 +121,7 @@ public class DekuModClient implements ClientModInitializer {
 		boolean explosion = player != null && DekuItems.isHolding(player, DekuItems.EXPLOSION);
 		boolean decay = player != null && DekuItems.isHolding(player, DekuItems.DECAY);
 		boolean gojo = player != null && DekuItems.isHolding(player, DekuItems.GOJO);
+		boolean sukuna = player != null && DekuItems.isHolding(player, DekuItems.SUKUNA);
 		boolean halfColdHalfHot = player != null && DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT);
 		int cowlingClicks = countClicks(COWLING_KEY);
 		int smashClicks = countClicks(SMASH_KEY);
@@ -160,6 +168,9 @@ public class DekuModClient implements ClientModInitializer {
 		GojoClient.tick(player, gojo, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
 			gojo && smokescreenClicks % 2 == 1);
 		GojoFx.tick(player);
+		SukunaClient.tick(player, sukuna, client.options.keyUse.isDown(), sukuna && smashClicks > 0, sukuna && cowlingClicks > 0);
+		SlashFx.tick(client.level);
+		DomainFx.tick(client.level);
 		TornadoFx.tick(client.level);
 		ExplosionFx.tick(client.level);
 		FaJinFx.tick(player);

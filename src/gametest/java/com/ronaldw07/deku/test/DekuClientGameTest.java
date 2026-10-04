@@ -5,6 +5,7 @@ import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
 import com.ronaldw07.deku.Smokescreen;
+import com.ronaldw07.deku.Sukuna;
 import com.ronaldw07.deku.client.Cooldowns;
 import com.ronaldw07.deku.client.DangerSenseClient;
 import com.ronaldw07.deku.client.DekuModClient;
@@ -96,6 +97,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
+			}
+			if (wanted("sukuna")) {
+				sukuna(context, singleplayer);
 			}
 			if (wanted("smokescreenHold")) {
 				smokescreenHold(context, singleplayer);
@@ -471,6 +475,74 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(erased, "Hollow Purple should erase the wall in its path at " + wall);
 		context.waitTicks(25);
 		context.takeScreenshot("gojo-purple-end");
+	}
+
+	private static void sukuna(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Sukuna: Dismantle cuts through a wall and a pig, Cleave takes a big bite out of a pig, Domain Expansion shreds a husk and the terrain.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 2600 -59 2600 0 0");
+		context.waitTicks(40);
+		selectSlot(context, 6);
+		check(context.computeOnClient(client -> DekuItems.isHolding(client.player, DekuItems.SUKUNA)), "slot 7 should hold Sukuna");
+		command(singleplayer, "execute at @p run fill ~-6 ~ ~14 ~6 ~7 ~14 minecraft:stone");
+		command(singleplayer, "execute at @p run summon minecraft:pig ~ ~ ~8 {NoAI:1b}");
+		BlockPos wall = singleplayer.getServer().computeOnServer(server -> BlockPos.containing(player(server).getEyePosition()).south(14));
+		context.getInput().holdKeyFor(options -> options.keyUse, 2);
+		context.waitTicks(12);
+		context.takeScreenshot("sukuna-dismantle");
+		int cut = singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			for (BlockPos pos : BlockPos.betweenClosed(wall.offset(-6, -3, 0), wall.offset(6, 4, 0))) {
+				count += server.overworld().getBlockState(pos).isAir() ? 1 : 0;
+			}
+			return count;
+		});
+		check(cut > 20, "Dismantle should cut the wall, only " + cut + " blocks gone");
+		boolean pigHurt = singleplayer.getServer().computeOnServer(server -> {
+			var pigs = server.overworld().getEntities(EntityTypes.PIG, pig -> true);
+			return pigs.isEmpty() || pigs.getFirst().getHealth() < pigs.getFirst().getMaxHealth();
+		});
+		check(pigHurt, "Dismantle should hurt the pig in front");
+
+		command(singleplayer, "kill @e[type=minecraft:pig]");
+		command(singleplayer, "execute at @p run summon minecraft:iron_golem ~ ~ ~9 {NoAI:1b}");
+		context.waitTicks(40);
+		command(singleplayer, "execute as @p at @p anchored eyes run tp @s ~ ~ ~ facing entity @e[type=minecraft:iron_golem,limit=1] eyes");
+		context.waitTicks(3);
+		context.getInput().pressKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(4);
+		context.takeScreenshot("sukuna-cleave");
+		float golemHealth = singleplayer.getServer().computeOnServer(server -> golem(server).getHealth());
+		check(golemHealth < 75, "Cleave should take a big bite out of the golem, health " + golemHealth);
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+
+		// C: Domain Expansion.
+		command(singleplayer, "execute as @p run tp @s 2600 -59 2600 0 0");
+		context.waitTicks(10);
+		command(singleplayer, "execute at @p run fill ~-12 ~ ~12 ~12 ~10 ~40 minecraft:stone");
+		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~8 {NoAI:1b}");
+		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.waitTicks(40);
+		context.takeScreenshot("sukuna-domain");
+		check(singleplayer.getServer().computeOnServer(server -> Sukuna.domainOpen(player(server).getUUID())), "C should open the Domain");
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(40);
+		context.takeScreenshot("sukuna-domain-slashing");
+		context.waitTicks(80);
+		boolean huskDead = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> husk.isAlive()).isEmpty());
+		check(huskDead, "the Domain should shred the husk inside it");
+		int shredded = singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			BlockPos at = player(server).blockPosition();
+			for (BlockPos pos : BlockPos.betweenClosed(at.offset(-12, 0, 12), at.offset(12, 10, 40))) {
+				count += server.overworld().getBlockState(pos).isAir() ? 1 : 0;
+			}
+			return count;
+		});
+		check(shredded > 400, "the Domain's slashes should cut the stone block apart, only " + shredded + " blocks gone");
+		context.waitTicks(100);
+		check(!singleplayer.getServer().computeOnServer(server -> Sukuna.domainOpen(player(server).getUUID())), "the Domain should close after ten seconds");
+		camera(context, CameraType.FIRST_PERSON);
 	}
 
 	private static void poses(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

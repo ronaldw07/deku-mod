@@ -65,6 +65,10 @@ final class HeroNotebook {
 				Hold V: Red, charge, then burst everything away
 				Hold X: Hollow Purple, charge until the orbs fuse, then let go to erase everything in a line
 				Z: Infinity on/off"""),
+			page("Sukuna", """
+				Right-click: Dismantle, a flurry of slashes
+				V: Cleave, one heavy cut on your target
+				C: Domain Expansion, a dome where endless slashes shred everything for 10 seconds"""),
 			page("Decay", """
 				Right-click: decay what you touch. It crumbles and the decay spreads through everything connected to it.
 

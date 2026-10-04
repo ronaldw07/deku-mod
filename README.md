@@ -56,6 +56,12 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Hold X: Hollow Purple, a blue and a red orb draw together over 3 seconds into a purple orb; let go and it erases everything in a line 150 blocks long, then collapses
 - Z: Infinity on/off, nothing that touches you can hurt you and anything close is pushed away
 
+## Sukuna (slot 7)
+
+- Right-click: Dismantle, a flurry of slashes ahead that cut through blocks and anything living
+- V: Cleave, one heavy cut on whatever the crosshair is on, a third of a mob's health on top of the hit
+- C: Domain Expansion (Malevolent Shrine), a 60 block dome with a floating shrine; for 10 seconds endless slashes shred the terrain and everything inside it
+
 ## Danger Sense
 
 Always on with any item; H toggles it. Yellow lightning on screen shows where danger is coming from.

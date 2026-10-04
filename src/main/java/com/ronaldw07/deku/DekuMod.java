@@ -8,7 +8,9 @@ import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionCowlingPayload;
+import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.JujutsuPayload;
+import com.ronaldw07.deku.network.SlashFxPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.FireballFlightPayload;
 import com.ronaldw07.deku.network.ExplosionPayload;
@@ -151,8 +153,15 @@ public class DekuMod implements ModInitializer {
 
 		PayloadTypeRegistry.serverboundPlay().register(JujutsuPayload.TYPE, JujutsuPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(JujutsuPayload.TYPE,
-			(payload, context) -> Gojo.handle(context.player(), payload.move(), payload.active(), payload.charge()));
+			(payload, context) -> {
+				Gojo.handle(context.player(), payload.move(), payload.active(), payload.charge());
+				Sukuna.handle(context.player(), payload.move());
+			});
+		PayloadTypeRegistry.clientboundPlay().register(SlashFxPayload.TYPE, SlashFxPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DomainPayload.TYPE, DomainPayload.CODEC);
 		ServerTickEvents.END_SERVER_TICK.register(Gojo::tick);
+		ServerTickEvents.END_SERVER_TICK.register(Sukuna::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Sukuna.forget(handler.player));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Gojo.forget(handler.player));
 
 		LOGGER.info("One For All loaded");
