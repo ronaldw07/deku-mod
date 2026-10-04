@@ -41,7 +41,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 ## Half Cold Half Hot (slot 5)
 
 - Right-click: a glacier of ice spikes races along the ground, freezing and trapping mobs
-- Hold V: flamethrower, which sets mobs and the ground on fire and melts ice
+- Hold V: flamethrower, a 30 block cone of fire that burns and shoves mobs, sets the ground ablaze and melts ice
 - C: a giant wall of ice erupts ahead
 - X: Flashfreeze Heatwave, a block of ice blown apart by a blast of heat
 

@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -48,14 +49,20 @@ public final class HalfColdHalfHot {
 	private static final int WALL_JAG = 6;
 	private static final int WALL_LAYERS_PER_TICK = 3;
 	// Flamethrower.
-	private static final double FLAME_RANGE = 14.0;
-	private static final double FLAME_CONE_COS = 0.85;
-	private static final int FLAME_PARTICLES = 10;
-	private static final int FIRE_TICKS = 100;
-	private static final int FLAME_DAMAGE_INTERVAL = 10;
-	private static final float FLAME_DAMAGE = 4.0f;
-	private static final int IGNITE_INTERVAL = 4;
-	private static final int FLAME_SOUND_INTERVAL = 6;
+	private static final double FLAME_RANGE = 30.0;
+	private static final double FLAME_CONE_COS = 0.8; // about 37 degrees either side of the aim
+	private static final int FLAME_STREAM = 40;
+	private static final double FLAME_SPREAD = 0.35;
+	private static final double FLAME_SPEED = 1.4;
+	private static final double FLAME_BILLOW_SPACING = 2.5;
+	private static final int FLAME_PER_BILLOW = 8;
+	private static final double FLAME_PUSH = 0.12;
+	private static final int FIRE_TICKS = 200;
+	private static final int FLAME_DAMAGE_INTERVAL = 2;
+	private static final float FLAME_DAMAGE = 3.0f; // every other tick: 30 a second
+	private static final int IGNITE_INTERVAL = 2;
+	private static final int IGNITE_SPOTS = 3;
+	private static final int FLAME_SOUND_INTERVAL = 4;
 	// Flashfreeze Heatwave.
 	private static final double HEATWAVE_DISTANCE = 10.0;
 	private static final int HEATWAVE_ICE_RADIUS = 4;
@@ -240,24 +247,35 @@ public final class HalfColdHalfHot {
 		});
 	}
 
-	/** One tick of the flamethrower: a cone of fire that sets mobs and the ground ablaze and melts ice. */
+	/**
+	 * One tick of the flamethrower: a roaring cone of fire that burns and shoves everything in
+	 * it, sets the ground ablaze in several places at once, and melts ice.
+	 */
 	private static void flame(ServerPlayer player) {
 		ServerLevel level = player.level();
 		RandomSource random = level.getRandom();
 		Vec3 eye = player.getEyePosition();
 		Vec3 look = player.getLookAngle();
-		for (int i = 0; i < FLAME_PARTICLES; i++) {
-			double distance = 1 + random.nextDouble() * FLAME_RANGE * 0.3;
-			Vec3 spread = new Vec3(random.nextDouble() - 0.5, random.nextDouble() - 0.5, random.nextDouble() - 0.5).scale(0.3);
-			Vec3 at = eye.add(look.scale(distance)).add(spread);
-			Vec3 velocity = look.add(spread.scale(0.6)).normalize();
+
+		// A fast stream of fire along the aim, fanning out with distance.
+		for (int i = 0; i < FLAME_STREAM; i++) {
+			Vec3 spread = new Vec3(random.nextDouble() - 0.5, random.nextDouble() - 0.5, random.nextDouble() - 0.5).scale(FLAME_SPREAD);
+			Vec3 at = eye.add(look.scale(1 + random.nextDouble() * 2));
+			Vec3 velocity = look.add(spread).normalize();
 			// Count 0 makes the particle fly along (x, y, z) offset at the given speed.
-			level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 0, velocity.x, velocity.y, velocity.z, 0.7);
+			level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 0, velocity.x, velocity.y, velocity.z, FLAME_SPEED);
 		}
-		if (player.tickCount % 2 == 0) {
-			Vec3 at = eye.add(look.scale(2));
-			level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y, at.z, 0, look.x, look.y, look.z, 0.3);
+		// Billows of fire along the whole length, wider the further out.
+		for (double distance = 2; distance <= FLAME_RANGE; distance += FLAME_BILLOW_SPACING) {
+			Vec3 at = eye.add(look.scale(distance));
+			double width = distance * 0.18;
+			level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, FLAME_PER_BILLOW, width, width, width, 0.05);
+			if (random.nextInt(3) == 0) {
+				level.sendParticles(ParticleTypes.LAVA, at.x, at.y, at.z, 1, width, width, width, 0);
+			}
 		}
+		Vec3 far = eye.add(look.scale(FLAME_RANGE * 0.7));
+		level.sendParticles(ParticleTypes.LARGE_SMOKE, far.x, far.y + 1, far.z, 3, 2, 1, 2, 0.02);
 
 		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(eye, eye).inflate(FLAME_RANGE),
 				entity -> entity != player && entity.isAlive())) {
@@ -266,28 +284,42 @@ public final class HalfColdHalfHot {
 				continue;
 			}
 			entity.setRemainingFireTicks(FIRE_TICKS);
+			entity.push(look.scale(FLAME_PUSH));
+			entity.hurtMarked = true;
 			if (player.tickCount % FLAME_DAMAGE_INTERVAL == 0) {
+				entity.invulnerableTime = 0; // a steady stream of fire, not one hit swallowed by flinch time
 				entity.hurtServer(level, player.damageSources().playerAttack(player), FLAME_DAMAGE);
 			}
 		}
 
-		if (player.tickCount % IGNITE_INTERVAL == 0 && Aim.trace(player, FLAME_RANGE) instanceof BlockHitResult hit
-				&& hit.getType() == HitResult.Type.BLOCK) {
-			BlockPos pos = hit.getBlockPos();
-			BlockState state = level.getBlockState(pos);
-			if (state.is(Blocks.ICE) || state.is(Blocks.PACKED_ICE) || state.is(Blocks.SNOW) || state.is(Blocks.SNOW_BLOCK)) {
-				level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-				level.sendParticles(ParticleTypes.CLOUD, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.02);
-			} else {
-				BlockPos above = pos.relative(hit.getDirection());
-				BlockState fire = BaseFireBlock.getState(level, above);
-				if (level.getBlockState(above).isAir() && fire.canSurvive(level, above)) {
-					level.setBlockAndUpdate(above, fire);
+		if (player.tickCount % IGNITE_INTERVAL == 0) {
+			for (int i = 0; i < IGNITE_SPOTS; i++) {
+				Vec3 spread = new Vec3(random.nextDouble() - 0.5, random.nextDouble() - 0.5, random.nextDouble() - 0.5).scale(0.5);
+				Vec3 end = eye.add(look.add(spread).normalize().scale(FLAME_RANGE));
+				BlockHitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+				if (hit.getType() == HitResult.Type.BLOCK) {
+					scorch(level, hit);
 				}
 			}
 		}
 		if (player.tickCount % FLAME_SOUND_INTERVAL == 0) {
-			level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.FLAME, SoundSource.PLAYERS, 1.0f, 0.9f);
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.FLAME, SoundSource.PLAYERS, 2.0f, 0.8f);
+		}
+	}
+
+	/** Melts ice and snow where the fire lands, or sets the spot alight. */
+	private static void scorch(ServerLevel level, BlockHitResult hit) {
+		BlockPos pos = hit.getBlockPos();
+		BlockState state = level.getBlockState(pos);
+		if (state.is(Blocks.ICE) || state.is(Blocks.PACKED_ICE) || state.is(Blocks.SNOW) || state.is(Blocks.SNOW_BLOCK)) {
+			level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+			level.sendParticles(ParticleTypes.CLOUD, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.02);
+			return;
+		}
+		BlockPos above = pos.relative(hit.getDirection());
+		BlockState fire = BaseFireBlock.getState(level, above);
+		if (level.getBlockState(above).isAir() && fire.canSurvive(level, above)) {
+			level.setBlockAndUpdate(above, fire);
 		}
 	}
 
