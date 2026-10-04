@@ -32,7 +32,7 @@ final class HeroNotebook {
 			page("Shoot Style", """
 				X: St. Louis Smash, a kick that throws a crescent of wind. At half power and up it slices through terrain.
 
-				Y: Delaware Smash, a finger flick that fires a small air bullet at the mob nearest your crosshair.
+				Y: Delaware Smash, a finger flick. The air bullet hits every mob in its line and bursts where it lands.
 
 				G: Manchester Smash. Leap, flip and axe kick the ground. In the air it dives straight down.
 
