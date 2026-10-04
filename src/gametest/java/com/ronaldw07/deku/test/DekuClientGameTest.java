@@ -10,6 +10,7 @@ import com.ronaldw07.deku.client.DangerSenseClient;
 import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.ExplosionClient;
+import com.ronaldw07.deku.client.ExplosionCowlingClient;
 import com.ronaldw07.deku.client.FullCowlingClient;
 import com.ronaldw07.deku.client.LaunchClient;
 import com.ronaldw07.deku.client.ScreenShake;
@@ -567,6 +568,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		camera(context, CameraType.FIRST_PERSON);
 		clusterBomb(context, singleplayer);
 		crater(context, singleplayer);
+		explosionCowling(context, singleplayer);
 	}
 
 	private static void clusterBomb(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
@@ -628,6 +630,40 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		});
 		check(scorched > 0, "the AP Shot crater's rim should be scorched, found " + scorched + " burnt blocks");
 		context.takeScreenshot("crater-scorched");
+	}
+
+	private static void explosionCowling(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Z lights the Explosion Cowling, and a big AP Shot then digs a bigger crater than the same shot without it.
+		int plain = dugBySmallShot(context, singleplayer, 600);
+		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.waitTicks(5);
+		check(context.computeOnClient(client -> ExplosionCowlingClient.active()), "pressing Z with Explosion should light the Cowling");
+		camera(context, CameraType.THIRD_PERSON_FRONT);
+		context.waitTicks(10);
+		context.takeScreenshot("explosion-cowling");
+		camera(context, CameraType.FIRST_PERSON);
+		int boosted = dugBySmallShot(context, singleplayer, 800);
+		check(boosted > plain, "the Cowling should make blasts bigger, dug " + plain + " blocks without it and " + boosted + " with it");
+		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.waitTicks(5);
+		check(!context.computeOnClient(client -> ExplosionCowlingClient.active()), "pressing Z again should put the Cowling out");
+	}
+
+	/** Fires a big AP Shot at fresh ground and counts the ground blocks it removed. */
+	private static int dugBySmallShot(ClientGameTestContext context, TestSingleplayerContext singleplayer, int x) {
+		command(singleplayer, "execute as @p run tp @s " + x + " -59 400 0 40");
+		context.waitTicks(30);
+		Vec3 hit = singleplayer.getServer().computeOnServer(server -> Aim.trace(player(server), 48).getLocation());
+		context.getInput().holdKeyFor(options -> options.keyUse, 2);
+		context.waitTicks(20);
+		return singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			BlockPos at = BlockPos.containing(hit);
+			for (BlockPos pos : BlockPos.betweenClosed(at.offset(-14, -4, -14), at.offset(14, 0, 14))) {
+				count += server.overworld().getBlockState(pos).isAir() ? 1 : 0;
+			}
+			return count;
+		});
 	}
 
 	private static void fullPowerSmashTunnel(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

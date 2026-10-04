@@ -61,6 +61,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(FaJinFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashChargeFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(PunchFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionCowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GearshiftClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(DecayClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
@@ -142,6 +143,7 @@ public class DekuModClient implements ClientModInitializer {
 		UnitedStatesClient.tick(player, oneForAll && usSmashClicks > 0);
 		GearshiftClient.tick(player, oneForAll && gearshiftClicks % 2 == 1, oneForAll);
 
+		ExplosionCowlingClient.tick(player, explosion, explosion && smokescreenClicks % 2 == 1);
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
 			SMASH_KEY.isDown(), COWLING_KEY.isDown(), clusterClicks > 0);
 		DecayClient.tick(player, decay, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),

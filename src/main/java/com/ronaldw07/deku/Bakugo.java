@@ -330,8 +330,9 @@ public final class Bakugo {
 	}
 
 	/** The same, and if scorchFires is above 0 the crater's rim is burnt black with that many extra fires. */
-	private static void blast(ServerPlayer owner, Vec3 center, float radius, int debris, Style style, Vec3 from, int scorchFires) {
+	private static void blast(ServerPlayer owner, Vec3 center, float baseRadius, int debris, Style style, Vec3 from, int scorchFires) {
 		ServerLevel level = owner.level();
+		float radius = ExplosionCowling.active(owner) ? baseRadius * ExplosionCowling.BLAST_BOOST : baseRadius;
 		Blasts.blast(owner, center, radius, Blasts.sparing(owner), debris);
 		int fires = (int) (radius / RADIUS_PER_FIRE);
 		Blasts.carve(level, center, radius, fires > 0 || level.getRandom().nextDouble() >= SMALL_BLAST_FIRE_CHANCE ? fires : 1);
