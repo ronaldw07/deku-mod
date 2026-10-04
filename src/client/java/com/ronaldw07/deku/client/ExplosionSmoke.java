@@ -1,0 +1,411 @@
+package com.ronaldw07.deku.client;
+
+import com.ronaldw07.deku.DekuParticles;
+import com.ronaldw07.deku.DekuSounds;
+import com.ronaldw07.deku.client.ExplosionFx.Blast;
+import com.ronaldw07.deku.network.ExplosionFxPayload.Style;
+import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.Particle;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * The particles of an Explosion blast, played out over time: a white-hot flash, a fireball that
+ * goes orange, red, then black, soot rolling up from it, secondary pops, burning chunks, a dust
+ * ring racing across the floor, and a mushroom column on the big ones. Howitzer Impact's core adds
+ * a huge column and falling ash. Every count is scaled by the particle detail setting and held
+ * to a per-tick budget so a barrage of bombs can't flood the game.
+ */
+final class ExplosionSmoke {
+	private static final int MAX_PARTICLES_PER_TICK = 900;
+	private static final int FIRE_TICKS = 6;
+	private static final int SMOKE_FIRST_TICK = 3;
+	private static final int SMOKE_LAST_TICK = 25;
+	private static final int CORE_FIRE_TICKS = 10;
+	private static final double CORE_FIRE_COUNT_SCALE = 2.0;
+
+	// Fireball and soot size and count per tick, relative to the blast's radius.
+	private static final int MAX_FIREBALLS_PER_TICK = 20;
+	private static final double FIREBALLS_PER_RADIUS = 1.5;
+	private static final int MAX_SOOT_PER_TICK = 14;
+	private static final double SOOT_PER_RADIUS = 0.8;
+	private static final float MIN_FIREBALL_SCALE = 1f;
+	private static final float MAX_FIREBALL_SCALE = 9f;
+	private static final float MAX_SOOT_SCALE = 14f;
+	private static final int FLASH_PUFFS = 6;
+	private static final double FIREBALL_SPREAD = 0.05;
+	private static final int MAX_FLAMES = 160;
+	private static final int MAX_EXPLOSION_PUFFS = 12;
+	private static final double EXPLOSION_PUFFS_PER_RADIUS = 2.0;
+
+	private static final int CLUSTER_EMBERS = 60;
+	private static final DustParticleOptions CLUSTER_RED = new DustParticleOptions(0xFF0000, 4.0f);
+	private static final DustParticleOptions CLUSTER_DARK_RED = new DustParticleOptions(0xC00000, 3.5f);
+
+	// Secondary pops: small blasts going off around the main one a few ticks later.
+	private static final double MIN_POP_RADIUS = 5.0;
+	private static final int FIRST_POP_TICK = 2;
+	private static final int POP_TICK_SPREAD = 8;
+	private static final double POP_RADIUS_SHARE = 0.35;
+	private static final double POP_SPREAD = 1.1;
+	private static final int MAX_POP_FIREBALLS = 8;
+	private static final int POP_SOOT = 3;
+	private static final float POP_VOLUME = 0.5f;
+
+	// Burning chunks flung out of the fireball, trailing fire and black smoke.
+	private static final double MIN_CHUNK_RADIUS = 5.0;
+	private static final int MAX_CHUNKS_PER_BLAST = 12;
+	private static final int MAX_LIVE_CHUNKS = 80;
+	private static final int CHUNK_TICKS = 14;
+	private static final double CHUNK_MIN_SPEED = 0.5;
+	private static final double CHUNK_EXTRA_SPEED = 0.6;
+	private static final double CHUNK_GRAVITY = 0.04;
+	private static final float CHUNK_SOOT_SCALE = 0.2f;
+
+	// The dust ring that races over the ground.
+	private static final double MIN_RING_RADIUS = 3.0;
+	private static final int RING_PUFFS = 36;
+	private static final double RING_START_SHARE = 0.5;
+	private static final double RING_MIN_SPEED = 0.5;
+	private static final double RING_SPEED_PER_RADIUS = 0.04;
+	private static final double GROUND_SEARCH_SHARE = 0.9;
+
+	// The mushroom column.
+	private static final double MAX_COLUMN_BLAST_RADIUS = 14.0;
+	private static final double MIN_COLUMN_RADIUS = 6.0;
+	private static final double COLUMN_HEIGHT_PER_RADIUS = 3.0;
+	private static final double COLUMN_STEM_SHARE = 0.22;
+	private static final double COLUMN_CAP_SHARE = 0.9;
+	private static final int COLUMN_RISE_TICKS = 20;
+	private static final int COLUMN_STEM_PUFFS = 6;
+	private static final int COLUMN_CAP_PUFFS = 8;
+	private static final double CORE_COLUMN_HEIGHT = 120.0;
+	private static final double CORE_STEM_RADIUS = 9.0;
+	private static final double CORE_CAP_RADIUS = 40.0;
+	private static final int CORE_RISE_TICKS = 45;
+	private static final int CORE_STEM_PUFFS = 30;
+	private static final int CORE_CAP_PUFFS = 24;
+	private static final double CAP_STARTS_AT = 0.6; // share of the rise
+	private static final double CAP_OUT_SPEED = 0.15;
+	private static final double CAP_UP_SPEED = 0.05;
+	private static final int CORE_MIN_LIFETIME = 300;
+	private static final int CORE_EXTRA_LIFETIME = 100;
+
+	// Howitzer core extras.
+	private static final int HOWITZER_SPARKS = 200;
+	private static final int ASH_TICKS = 200;
+	private static final int ASH_EVERY_TICKS = 2;
+	private static final int ASH_PER_BATCH = 14;
+	private static final double ASH_RANGE = 45.0;
+	private static final double ASH_MIN_HEIGHT = 4.0;
+	private static final double ASH_EXTRA_HEIGHT = 22.0;
+	private static final double ASH_FALL_SPEED = -0.06;
+	private static final double ASH_DRIFT = 0.02;
+	private static final double ASH_VIEW_DISTANCE = 300.0;
+
+	private record Pop(long at, Vec3 center, float radius) {
+	}
+
+	private record Chunk(Vec3 position, Vec3 velocity, int ticksLeft) {
+	}
+
+	private record Ash(Vec3 center, long startTick) {
+	}
+
+	private static List<Pop> pops = List.of();
+	private static List<Chunk> chunks = List.of();
+	private static Ash ash;
+	private static int budget;
+
+	private ExplosionSmoke() {
+	}
+
+	/** How many particles a base count becomes at the chosen detail. */
+	static int scaled(double base) {
+		return Math.max(1, (int) Math.round(base * DekuSettings.get().detailScale()));
+	}
+
+	/** How long a blast keeps emitting, in ticks. */
+	static int emitTicks(Blast blast) {
+		if (blast.style() == Style.HOWITZER_CORE) {
+			return CORE_RISE_TICKS + 1;
+		}
+		return hasColumn(blast) ? Math.max(SMOKE_LAST_TICK, COLUMN_RISE_TICKS) + 1 : SMOKE_LAST_TICK + 1;
+	}
+
+	/** Runs every client tick: resets the budget and moves chunks, pops and falling ash along. */
+	static void tick(ClientLevel level) {
+		budget = scaled(MAX_PARTICLES_PER_TICK);
+		if (level == null) {
+			pops = List.of();
+			chunks = List.of();
+			ash = null;
+			return;
+		}
+		long now = level.getGameTime();
+		List<Pop> due = pops.stream().filter(pop -> pop.at() <= now).toList();
+		pops = pops.stream().filter(pop -> pop.at() > now).toList();
+		due.forEach(pop -> pop(level, pop));
+		chunks = chunks.stream().map(chunk -> advance(level, chunk)).filter(chunk -> chunk.ticksLeft() > 0).toList();
+		fallAsh(level, now);
+	}
+
+	/** Plays what the blast does at this age; age 0 is the instant it goes off. */
+	static void emit(ClientLevel level, Blast blast, int age) {
+		RandomSource random = level.getRandom();
+		double share = share(blast.style());
+		boolean core = blast.style() == Style.HOWITZER_CORE;
+		if (age == 0) {
+			burst(level, blast, share, random);
+			scheduleExtras(blast, share);
+		}
+		if (age == 1 && blast.radius() >= MIN_RING_RADIUS && blast.style() != Style.SHOT) {
+			dustRing(level, blast, share, random);
+		}
+		if (age <= (core ? CORE_FIRE_TICKS : FIRE_TICKS)) {
+			fireball(level, blast, share * (core ? CORE_FIRE_COUNT_SCALE : 1), random);
+		}
+		if (age >= SMOKE_FIRST_TICK && age <= SMOKE_LAST_TICK) {
+			soot(level, blast, share, random);
+		}
+		if (hasColumn(blast)) {
+			column(level, blast, age, share, random);
+		}
+	}
+
+	private static double share(Style style) {
+		return switch (style) {
+			case SHOT -> 0.35;
+			case BIG_SHOT -> 0.8;
+			case GROUND -> 0.8;
+			case CLUSTER -> 0.6;
+			case HOWITZER -> 0.5;
+			case HOWITZER_RING -> 0.35;
+			case HOWITZER_CORE -> 1.0;
+		};
+	}
+
+	private static boolean hasColumn(Blast blast) {
+		return blast.style() == Style.HOWITZER_CORE
+			|| blast.style() == Style.BIG_SHOT && blast.radius() >= MIN_COLUMN_RADIUS && blast.radius() <= MAX_COLUMN_BLAST_RADIUS;
+	}
+
+	/** The instant of the blast: a white-hot flash, flames, sparks and a few leftover puffs. */
+	private static void burst(ClientLevel level, Blast blast, double share, RandomSource random) {
+		Vec3 c = blast.center();
+		float radius = blast.radius();
+		double spread = radius / 3.0;
+		for (int i = 0; i < scaled(FLASH_PUFFS * share); i++) {
+			spawn(level, DekuParticles.FIREBALL, c, Vec3.ZERO, radius * 0.9f / 4f);
+		}
+		int flames = scaled(Math.min(MAX_FLAMES, radius * radius * 8) * share);
+		for (int i = 0; i < flames; i++) {
+			Vec3 v = LightningDraw.randomDirection(random).scale((0.15 + random.nextDouble() * 0.3) * spread);
+			spawn(level, ParticleTypes.FLAME, c, v, 1f);
+		}
+		for (int i = 0; i < scaled(radius * 2 * share); i++) {
+			spawn(level, ParticleTypes.LAVA, c, Vec3.ZERO, 1f);
+		}
+		int puffs = (int) Math.min(MAX_EXPLOSION_PUFFS, radius * EXPLOSION_PUFFS_PER_RADIUS * share);
+		for (int i = 0; i < puffs; i++) {
+			spawn(level, ParticleTypes.EXPLOSION, c.add(inSphere(random, radius * 0.8)), Vec3.ZERO, 1f);
+		}
+		if (blast.style() == Style.CLUSTER) {
+			// Cluster bombs burn deep red: a ball of red embers filling the blast.
+			for (int i = 0; i < scaled(CLUSTER_EMBERS); i++) {
+				Vec3 at = c.add(inSphere(random, radius));
+				spawn(level, random.nextBoolean() ? CLUSTER_RED : CLUSTER_DARK_RED, at, at.subtract(c).scale(0.05), 1f);
+			}
+		}
+		if (blast.style() == Style.HOWITZER_CORE) {
+			spawn(level, ParticleTypes.EXPLOSION_EMITTER, c, Vec3.ZERO, 1f);
+			for (int i = 0; i < scaled(HOWITZER_SPARKS); i++) {
+				Vec3 v = LightningDraw.randomDirection(random).scale(0.6 + random.nextDouble() * 0.8);
+				spawn(level, ParticleTypes.FIREWORK, c, new Vec3(v.x, Math.abs(v.y), v.z), 1f);
+			}
+			ash = new Ash(c, blast.startTick());
+		}
+	}
+
+	/** A ball of fire inside the blast that cools from white to red to black as it rises. */
+	private static void fireball(ClientLevel level, Blast blast, double share, RandomSource random) {
+		float radius = blast.radius();
+		float size = Mth.clamp(0.6f + radius * 0.25f, MIN_FIREBALL_SCALE, MAX_FIREBALL_SCALE);
+		int count = scaled(Math.min(MAX_FIREBALLS_PER_TICK, radius * FIREBALLS_PER_RADIUS) * share);
+		for (int i = 0; i < count; i++) {
+			Vec3 at = blast.center().add(inSphere(random, radius * 0.7));
+			Vec3 v = at.subtract(blast.center()).scale(FIREBALL_SPREAD).add(0, 0.02, 0);
+			spawn(level, DekuParticles.FIREBALL, at, v, size);
+		}
+	}
+
+	/** Black smoke rolling up out of the fireball. */
+	private static void soot(ClientLevel level, Blast blast, double share, RandomSource random) {
+		float radius = blast.radius();
+		float size = Mth.clamp(0.5f + radius * 0.35f, 1f, MAX_SOOT_SCALE);
+		int count = scaled(Math.min(MAX_SOOT_PER_TICK, radius * SOOT_PER_RADIUS) * share);
+		for (int i = 0; i < count; i++) {
+			Vec3 at = blast.center().add(inSphere(random, radius * 0.6));
+			Vec3 v = new Vec3((random.nextDouble() - 0.5) * 0.04, 0.04 + random.nextDouble() * 0.05, (random.nextDouble() - 0.5) * 0.04);
+			spawn(level, DekuParticles.SOOT_SMOKE, at, v, size);
+		}
+	}
+
+	/** Queues the secondary pops and flings the burning chunks. */
+	private static void scheduleExtras(Blast blast, double share) {
+		RandomSource random = RandomSource.create(blast.startTick() * 31 + Double.hashCode(blast.center().x));
+		float radius = blast.radius();
+		boolean lightShot = blast.style() == Style.SHOT;
+		if (radius >= MIN_POP_RADIUS && !lightShot) {
+			List<Pop> queued = new ArrayList<>(pops);
+			int count = 2 + (int) Math.min(2, radius / 10);
+			for (int i = 0; i < count; i++) {
+				long at = blast.startTick() + FIRST_POP_TICK + random.nextInt(POP_TICK_SPREAD);
+				queued.add(new Pop(at, blast.center().add(inSphere(random, radius * POP_SPREAD)), radius * (float) POP_RADIUS_SHARE));
+			}
+			pops = List.copyOf(queued);
+		}
+		if (radius >= MIN_CHUNK_RADIUS && !lightShot) {
+			List<Chunk> flung = new ArrayList<>(chunks);
+			int count = scaled(Math.min(MAX_CHUNKS_PER_BLAST, radius) * share);
+			for (int i = 0; i < count; i++) {
+				Vec3 out = LightningDraw.randomDirection(random);
+				Vec3 v = new Vec3(out.x, Math.abs(out.y) + 0.4, out.z).normalize().scale(CHUNK_MIN_SPEED + random.nextDouble() * CHUNK_EXTRA_SPEED);
+				flung.add(new Chunk(blast.center(), v, CHUNK_TICKS));
+			}
+			chunks = List.copyOf(flung.subList(Math.max(0, flung.size() - MAX_LIVE_CHUNKS), flung.size()));
+		}
+	}
+
+	private static void pop(ClientLevel level, Pop pop) {
+		RandomSource random = level.getRandom();
+		float size = Mth.clamp(0.6f + pop.radius() * 0.25f, MIN_FIREBALL_SCALE, MAX_FIREBALL_SCALE);
+		for (int i = 0; i < scaled(Math.min(MAX_POP_FIREBALLS, pop.radius() + 3)); i++) {
+			spawn(level, DekuParticles.FIREBALL, pop.center().add(inSphere(random, pop.radius() * 0.5)),
+				new Vec3(0, 0.02, 0), size);
+		}
+		for (int i = 0; i < scaled(POP_SOOT); i++) {
+			spawn(level, DekuParticles.SOOT_SMOKE, pop.center().add(inSphere(random, pop.radius() * 0.5)),
+				new Vec3(0, 0.05, 0), Mth.clamp(0.5f + pop.radius() * 0.35f, 1f, MAX_SOOT_SCALE));
+		}
+		spawn(level, ParticleTypes.EXPLOSION, pop.center(), Vec3.ZERO, 1f);
+		level.playLocalSound(pop.center().x, pop.center().y, pop.center().z, DekuSounds.EXPLOSION_POP, SoundSource.BLOCKS,
+			POP_VOLUME, 0.5f + random.nextFloat() * 0.3f, false);
+	}
+
+	private static Chunk advance(ClientLevel level, Chunk chunk) {
+		spawn(level, ParticleTypes.FLAME, chunk.position(), Vec3.ZERO, 1f);
+		spawn(level, DekuParticles.SOOT_SMOKE, chunk.position(), new Vec3(0, 0.02, 0), CHUNK_SOOT_SCALE);
+		return new Chunk(chunk.position().add(chunk.velocity()), chunk.velocity().subtract(0, CHUNK_GRAVITY, 0), chunk.ticksLeft() - 1);
+	}
+
+	/** Black dust racing outward across the floor, if the blast is near one. */
+	private static void dustRing(ClientLevel level, Blast blast, double share, RandomSource random) {
+		BlockPos start = BlockPos.containing(blast.center());
+		int reach = (int) Math.ceil(blast.radius() * GROUND_SEARCH_SHARE) + 1;
+		for (int down = 0; down <= reach; down++) {
+			BlockPos pos = start.below(down);
+			if (level.getBlockState(pos).isAir()) {
+				continue;
+			}
+			float size = 1.5f + blast.radius() * 0.12f;
+			double speed = RING_MIN_SPEED + blast.radius() * RING_SPEED_PER_RADIUS;
+			for (int i = 0; i < scaled(RING_PUFFS * share); i++) {
+				double angle = random.nextDouble() * Math.PI * 2;
+				Vec3 out = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+				Vec3 at = new Vec3(blast.center().x, pos.getY() + 1.2, blast.center().z).add(out.scale(blast.radius() * RING_START_SHARE));
+				spawn(level, DekuParticles.SOOT_SMOKE, at, out.scale(speed).add(0, 0.02, 0), size);
+			}
+			return;
+		}
+	}
+
+	/** A rising stem of smoke with a wide flat cap, like a mushroom cloud. */
+	private static void column(ClientLevel level, Blast blast, int age, double share, RandomSource random) {
+		boolean core = blast.style() == Style.HOWITZER_CORE;
+		int rise = core ? CORE_RISE_TICKS : COLUMN_RISE_TICKS;
+		if (age > rise) {
+			return;
+		}
+		float radius = blast.radius();
+		double height = core ? CORE_COLUMN_HEIGHT : radius * COLUMN_HEIGHT_PER_RADIUS;
+		double stem = core ? CORE_STEM_RADIUS : radius * COLUMN_STEM_SHARE;
+		double cap = core ? CORE_CAP_RADIUS : radius * COLUMN_CAP_SHARE;
+		double progress = (double) age / rise;
+		double top = height * (1 - (1 - progress) * (1 - progress));
+		Vec3 c = blast.center();
+
+		for (int i = 0; i < scaled(core ? CORE_STEM_PUFFS : COLUMN_STEM_PUFFS); i++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double out = random.nextDouble() * stem;
+			Vec3 at = c.add(Math.cos(angle) * out, top * (0.2 + random.nextDouble() * 0.8), Math.sin(angle) * out);
+			column(level, at, new Vec3(0, 0.05 + random.nextDouble() * 0.1, 0), 1.5f + (float) stem * 0.25f, core, random);
+		}
+		if (progress >= CAP_STARTS_AT) {
+			for (int i = 0; i < scaled(core ? CORE_CAP_PUFFS : COLUMN_CAP_PUFFS); i++) {
+				double angle = random.nextDouble() * Math.PI * 2;
+				double out = cap * (0.5 + random.nextDouble() * 0.5);
+				Vec3 direction = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+				Vec3 at = c.add(direction.x * out * 0.3, top, direction.z * out * 0.3);
+				column(level, at, direction.scale(CAP_OUT_SPEED * out / cap * 2).add(0, CAP_UP_SPEED, 0), 2f + (float) cap * 0.1f, core, random);
+			}
+		}
+	}
+
+	private static void column(ClientLevel level, Vec3 at, Vec3 velocity, float size, boolean core, RandomSource random) {
+		Particle puff = spawn(level, DekuParticles.SOOT_SMOKE, at, velocity, size);
+		if (core && puff instanceof SmokePuffParticle soot) {
+			soot.setLifetimeTicks(CORE_MIN_LIFETIME + random.nextInt(CORE_EXTRA_LIFETIME));
+		}
+	}
+
+	/** Black ash drifting down around the player for several seconds after a Howitzer Impact. */
+	private static void fallAsh(ClientLevel level, long now) {
+		Minecraft minecraft = Minecraft.getInstance();
+		if (ash == null || minecraft.player == null) {
+			return;
+		}
+		long age = now - ash.startTick();
+		if (age >= ASH_TICKS) {
+			ash = null;
+			return;
+		}
+		Vec3 player = minecraft.player.position();
+		if (age % ASH_EVERY_TICKS != 0 || player.distanceTo(ash.center()) > ASH_VIEW_DISTANCE) {
+			return;
+		}
+		RandomSource random = level.getRandom();
+		for (int i = 0; i < scaled(ASH_PER_BATCH); i++) {
+			Vec3 at = player.add((random.nextDouble() * 2 - 1) * ASH_RANGE, ASH_MIN_HEIGHT + random.nextDouble() * ASH_EXTRA_HEIGHT,
+				(random.nextDouble() * 2 - 1) * ASH_RANGE);
+			spawn(level, DekuParticles.ASH_FLAKE, at,
+				new Vec3((random.nextDouble() - 0.5) * ASH_DRIFT, ASH_FALL_SPEED, (random.nextDouble() - 0.5) * ASH_DRIFT), 1f);
+		}
+	}
+
+	private static Vec3 inSphere(RandomSource random, double radius) {
+		return LightningDraw.randomDirection(random).scale(radius * Math.cbrt(random.nextDouble()));
+	}
+
+	/** Spawns one particle, resized by the factor, unless this tick's budget is spent. */
+	private static Particle spawn(ClientLevel level, ParticleOptions options, Vec3 at, Vec3 velocity, float scale) {
+		if (budget <= 0) {
+			return null;
+		}
+		budget--;
+		Particle particle = Minecraft.getInstance().particleEngine.createParticle(options, at.x, at.y, at.z, velocity.x, velocity.y, velocity.z);
+		if (particle != null && scale != 1f) {
+			particle.scale(scale);
+		}
+		return particle;
+	}
+}

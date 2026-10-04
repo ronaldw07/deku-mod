@@ -1,9 +1,11 @@
 package com.ronaldw07.deku.client;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 /** A big smoke puff that drifts out, slows to a stop, hangs, then fades; hot ones glow and darken as they cool. */
 final class SmokePuffParticle extends SingleQuadParticle {
@@ -33,6 +35,10 @@ final class SmokePuffParticle extends SingleQuadParticle {
 		{1.0f, 0.95f, 0.7f}, {1.0f, 0.45f, 0.1f}, {0.55f, 0.08f, 0.04f}, {0.08f, 0.07f, 0.07f},
 	};
 	private static final float GLOWS_UNTIL = 0.5f;
+	// Soot thins out close to the player, so standing in a blast's smoke doesn't black out the screen.
+	private static final double CLEAR_WITHIN = 3.0;
+	private static final double OPAQUE_BEYOND = 12.0;
+	private static final float CLEARED_ALPHA = 0.12f;
 
 	private final Look look;
 
@@ -68,9 +74,17 @@ final class SmokePuffParticle extends SingleQuadParticle {
 		}
 		int remaining = this.lifetime - this.age;
 		int fade = Math.min(look.fadeTicks(), this.lifetime / 2);
-		if (remaining < fade) {
-			this.setAlpha(look.startAlpha() * remaining / fade);
+		float alpha = remaining < fade ? look.startAlpha() * remaining / fade : look.startAlpha();
+		this.setAlpha(look == SOOT ? alpha * nearPlayerClearance() : alpha);
+	}
+
+	private float nearPlayerClearance() {
+		var player = Minecraft.getInstance().player;
+		if (player == null) {
+			return 1f;
 		}
+		double distance = player.getEyePosition().distanceTo(new Vec3(this.x, this.y, this.z));
+		return (float) Mth.clamp((distance - CLEAR_WITHIN) / (OPAQUE_BEYOND - CLEAR_WITHIN), CLEARED_ALPHA, 1.0);
 	}
 
 	private void heat(float life) {

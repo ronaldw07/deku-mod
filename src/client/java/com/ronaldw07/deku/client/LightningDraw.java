@@ -31,9 +31,9 @@ final class LightningDraw {
 
 	// Explosion palettes: orange-yellow fire, and the deep red of the ground blast.
 	static final Layer[] FIRE = {
-		new Layer(0.12f, 1.0f, 0.25f, 0.05f, 0.25f),
-		new Layer(0.06f, 1.0f, 0.55f, 0.1f, 0.5f),
-		new Layer(0.025f, 1.0f, 0.95f, 0.7f, 0.9f),
+		new Layer(0.12f, 1.0f, 0.18f, 0.02f, 0.25f),
+		new Layer(0.06f, 1.0f, 0.4f, 0.05f, 0.5f),
+		new Layer(0.025f, 1.0f, 0.85f, 0.5f, 0.9f),
 	};
 	// The cluster bomb's deep crimson: red all the way to the core.
 	static final Layer[] CRIMSON = {

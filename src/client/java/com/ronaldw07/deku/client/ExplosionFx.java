@@ -11,8 +11,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
@@ -30,34 +28,18 @@ final class ExplosionFx {
 	private static final int RAYS = 22;
 	private static final int RING_SEGMENTS = 40;
 	private static final double RING_GROWTH = 1.8;
-	private static final int MAX_FLAMES = 160;
 	// Howitzer Impact is in a league of its own: it lasts longer, and its shockwave races
 	// out to the edge of its 400-block reach, with a second ring chasing the first.
 	private static final int HOWITZER_LIFETIME_TICKS = 40;
 	private static final double HOWITZER_SHOCKWAVE_RADIUS = 400.0;
 	private static final double SECOND_RING_FRACTION = 0.55;
 	private static final double HOWITZER_RAY_REACH = 2.5;
-	private static final int HOWITZER_SPARKS = 200;
-	private static final int HOWITZER_SMOKE_COLUMN = 160;
-	private static final double HOWITZER_COLUMN_HEIGHT = 90.0;
 
-	// Fireball volume: big explosion puffs filling the blast sphere.
-	private static final int MAX_FIREBALL_PUFFS = 40;
-	private static final double PUFFS_PER_RADIUS = 2.0;
-	private static final int CLUSTER_EMBERS = 120;
-	private static final DustParticleOptions CLUSTER_RED = new DustParticleOptions(0xFF0000, 4.0f);
-	private static final DustParticleOptions CLUSTER_DARK_RED = new DustParticleOptions(0xC00000, 3.5f);
-	// Smoke hangs over every blast for a few seconds.
-	private static final int SMOKE_LINGER_TICKS = 100;
-	private static final float RADIUS_PER_SMOKE_PUFF = 4.0f;
-	private static final int SMOKE_EVERY_TICKS = 4;
-	private static final int MAX_LINGERING = 80;
-
-	private record Blast(Vec3 center, float radius, Style style, Vec3 from, long startTick) {
+	record Blast(Vec3 center, float radius, Style style, Vec3 from, long startTick) {
 	}
 
 	private static List<Blast> blasts = List.of();
-	private static List<Blast> smoking = List.of();
+	private static List<Blast> emitting = List.of();
 
 	private ExplosionFx() {
 	}
@@ -69,85 +51,22 @@ final class ExplosionFx {
 		}
 		Blast blast = new Blast(fx.center(), fx.radius(), fx.style(), fx.from(), level.getGameTime());
 		blasts = Stream.concat(blasts.stream(), Stream.of(blast)).toList();
-		smoking = Stream.concat(smoking.stream().skip(Math.max(0, smoking.size() - MAX_LINGERING + 1)), Stream.of(blast)).toList();
-		spawnParticles(level, blast);
+		emitting = Stream.concat(emitting.stream(), Stream.of(blast)).toList();
+		ExplosionSmoke.emit(level, blast, 0);
 	}
 
-	/** Keeps smoke rolling off recent blasts. */
+	/** Plays each blast's fireball and smoke over the ticks after it goes off. */
 	static void tick(ClientLevel level) {
+		ExplosionSmoke.tick(level);
 		if (level == null) {
-			smoking = List.of();
+			emitting = List.of();
 			return;
 		}
 		long now = level.getGameTime();
-		smoking = smoking.stream().filter(blast -> now - blast.startTick() < SMOKE_LINGER_TICKS).toList();
-		if (now % SMOKE_EVERY_TICKS != 0) {
-			return;
-		}
-		RandomSource random = level.getRandom();
-		for (Blast blast : smoking) {
-			for (int i = 0; i < Math.max(1, blast.radius() / RADIUS_PER_SMOKE_PUFF); i++) {
-				Vec3 at = blast.center().add(inSphere(random, blast.radius() * 0.7));
-				level.addAlwaysVisibleParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, true, at.x, at.y, at.z, 0, 0.01 + random.nextDouble() * 0.02, 0);
-			}
-		}
-	}
-
-	private static Vec3 inSphere(RandomSource random, double radius) {
-		return LightningDraw.randomDirection(random).scale(radius * Math.cbrt(random.nextDouble()));
-	}
-
-	private static void spawnParticles(ClientLevel level, Blast blast) {
-		RandomSource random = level.getRandom();
-		Vec3 c = blast.center();
-		double spread = blast.radius() / 3.0;
-		int flames = Math.min(MAX_FLAMES, (int) (blast.radius() * blast.radius() * 8));
-		for (int i = 0; i < flames; i++) {
-			Vec3 v = LightningDraw.randomDirection(random).scale((0.15 + random.nextDouble() * 0.3) * spread);
-			level.addParticle(ParticleTypes.FLAME, c.x, c.y, c.z, v.x, v.y, v.z);
-		}
-		for (int i = 0; i < blast.radius() * 3; i++) {
-			level.addParticle(ParticleTypes.LAVA, c.x, c.y, c.z, 0, 0, 0);
-		}
-		int puffs = (int) Math.min(MAX_FIREBALL_PUFFS, blast.radius() * PUFFS_PER_RADIUS);
-		for (int i = 0; i < puffs; i++) {
-			Vec3 at = c.add(inSphere(random, blast.radius() * 0.8));
-			level.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION, true, at.x, at.y, at.z, 0, 0, 0);
-			Vec3 v = at.subtract(c).scale(0.08);
-			level.addParticle(ParticleTypes.FLAME, at.x, at.y, at.z, v.x, v.y, v.z);
-		}
-		for (int i = 0; i < blast.radius() * 6; i++) {
-			Vec3 v = LightningDraw.randomDirection(random).scale(0.08 * spread);
-			level.addParticle(ParticleTypes.LARGE_SMOKE, c.x, c.y, c.z, v.x, v.y + 0.02, v.z);
-		}
-		if (blast.style() == Style.CLUSTER) {
-			// Cluster bombs burn deep red: a ball of red embers filling the blast.
-			for (int i = 0; i < CLUSTER_EMBERS; i++) {
-				Vec3 at = c.add(inSphere(random, blast.radius()));
-				Vec3 v = at.subtract(c).scale(0.05);
-				level.addAlwaysVisibleParticle(random.nextBoolean() ? CLUSTER_RED : CLUSTER_DARK_RED, true, at.x, at.y, at.z, v.x, v.y, v.z);
-			}
-		}
-		if (blast.style() == Style.HOWITZER) {
-			level.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION_EMITTER, true, c.x, c.y, c.z, 0, 0, 0);
-			for (int i = 0; i < HOWITZER_SPARKS; i++) {
-				Vec3 v = LightningDraw.randomDirection(random).scale(0.6 + random.nextDouble() * 0.8);
-				level.addAlwaysVisibleParticle(ParticleTypes.FIREWORK, true, c.x, c.y, c.z, v.x, Math.abs(v.y), v.z);
-			}
-			// A mushroom of smoke rising from ground zero.
-			for (int i = 0; i < HOWITZER_SMOKE_COLUMN; i++) {
-				double height = random.nextDouble() * HOWITZER_COLUMN_HEIGHT;
-				double spreadAtHeight = 1.5 + height * 0.3;
-				level.addAlwaysVisibleParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, true,
-					c.x + (random.nextDouble() - 0.5) * spreadAtHeight, c.y + height, c.z + (random.nextDouble() - 0.5) * spreadAtHeight,
-					0, 0.05 + random.nextDouble() * 0.1, 0);
-			}
-		}
-		if (blast.radius() >= 3) {
-			for (int i = 0; i < blast.radius() * 2; i++) {
-				Vec3 offset = LightningDraw.randomDirection(random).scale(random.nextDouble() * blast.radius() * 0.6);
-				level.addAlwaysVisibleParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, true,
-					c.x + offset.x, c.y + offset.y, c.z + offset.z, 0, 0.03, 0);
+		emitting = emitting.stream().filter(blast -> now - blast.startTick() < ExplosionSmoke.emitTicks(blast)).toList();
+		for (Blast blast : emitting) {
+			if (now > blast.startTick()) {
+				ExplosionSmoke.emit(level, blast, (int) (now - blast.startTick()));
 			}
 		}
 	}
@@ -173,7 +92,7 @@ final class ExplosionFx {
 				default -> LightningDraw.FIRE;
 			};
 			Vec3 center = blast.center().subtract(camera);
-			boolean howitzer = blast.style() == Style.HOWITZER;
+			boolean howitzer = isHowitzer(blast.style());
 			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS) * (howitzer ? HOWITZER_RAY_REACH : 1));
 			double progress = Math.min(1, age / lifetime * 1.5);
 			List<Segment> ring = new ArrayList<>(ring(center, howitzer
@@ -197,7 +116,12 @@ final class ExplosionFx {
 	}
 
 	private static int lifetime(Blast blast) {
-		return blast.style() == Style.HOWITZER ? HOWITZER_LIFETIME_TICKS : LIFETIME_TICKS;
+		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : LIFETIME_TICKS;
+	}
+
+	/** Howitzer Impact's core and its column blasts; the lighter ring blasts around it look like plain big shots. */
+	static boolean isHowitzer(Style style) {
+		return style == Style.HOWITZER || style == Style.HOWITZER_CORE;
 	}
 
 	private static boolean isShot(Blast blast) {

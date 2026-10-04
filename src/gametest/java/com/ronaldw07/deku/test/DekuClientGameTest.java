@@ -443,6 +443,8 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("ap-shot-big");
 		float golemHealth = singleplayer.getServer().computeOnServer(server -> golem(server).getHealth());
 		check(golemHealth < 100, "a big AP Shot should hurt the golem, health was " + golemHealth);
+		context.waitTicks(50);
+		context.takeScreenshot("ap-shot-smoke");
 		command(singleplayer, "kill @e[type=minecraft:iron_golem]");
 
 		// Hold right-click: rapid fire at untouched ground ahead blasts a hole in it.
@@ -506,6 +508,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(pigThrown > 3, "the Howitzer shockwave should throw a pig 60 blocks away, it moved " + pigThrown);
 		command(singleplayer, "kill @e[type=minecraft:pig]");
 		context.waitTicks(30);
+		context.takeScreenshot("howitzer-column");
+		context.waitTicks(60);
+		context.takeScreenshot("howitzer-smoke");
 
 		// Hold C: arms up in a cross, charging; let go and the ground ahead erupts and takes out a husk.
 		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 0");

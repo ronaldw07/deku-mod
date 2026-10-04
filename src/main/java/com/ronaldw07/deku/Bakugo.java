@@ -81,6 +81,7 @@ public final class Bakugo {
 	private static final double VORTEX_HEIGHT = 2.5;
 	private static final int SPIN_SOUND_INTERVAL = 10;
 	private static final double FX_VIEW_DISTANCE = 96;
+	private static final double CORE_FX_VIEW_DISTANCE = 300; // far enough to see and feel the Howitzer from a distance
 
 	private static final Set<UUID> flying = new HashSet<>();
 	private static final Set<UUID> spinning = new HashSet<>();
@@ -160,7 +161,7 @@ public final class Bakugo {
 		NoGravity.set(player, HOWITZER_ID, false);
 		ServerLevel level = player.level();
 		Vec3 center = player.position().add(0, 1, 0).add(player.getLookAngle().scale(HOWITZER_REACH));
-		blast(player, center, HOWITZER_CORE_RADIUS, HOWITZER_CORE_DEBRIS, Style.HOWITZER, center);
+		blast(player, center, HOWITZER_CORE_RADIUS, HOWITZER_CORE_DEBRIS, Style.HOWITZER_CORE, center);
 		shockwave(player, center);
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 4.0f, 0.5f);
 
@@ -178,7 +179,7 @@ public final class Bakugo {
 				for (int i = 0; i < blasts; i++) {
 					double angle = i * Math.PI * 2 / blasts;
 					Vec3 spot = center.add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
-					blast(player, spot, radius, HOWITZER_RING_DEBRIS, Style.BIG_SHOT, spot);
+					blast(player, spot, radius, HOWITZER_RING_DEBRIS, Style.HOWITZER_RING, spot);
 				}
 			});
 		}
@@ -313,7 +314,8 @@ public final class Bakugo {
 		int fires = (int) (radius / RADIUS_PER_FIRE);
 		Blasts.carve(level, center, radius, fires > 0 || level.getRandom().nextDouble() >= SMALL_BLAST_FIRE_CHANCE ? fires : 1);
 		ExplosionFxPayload fx = new ExplosionFxPayload(center, radius, style, from);
-		for (ServerPlayer viewer : PlayerLookup.around(level, center, FX_VIEW_DISTANCE)) {
+		double viewDistance = style == Style.HOWITZER_CORE ? CORE_FX_VIEW_DISTANCE : FX_VIEW_DISTANCE;
+		for (ServerPlayer viewer : PlayerLookup.around(level, center, viewDistance)) {
 			if (ServerPlayNetworking.canSend(viewer, ExplosionFxPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);
 			}
