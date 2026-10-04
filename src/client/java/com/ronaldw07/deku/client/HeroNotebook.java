@@ -54,7 +54,7 @@ final class HeroNotebook {
 				Tap right-click: big AP Shot
 				Hold right-click: rapid fire
 				Double-tap space, keep holding: fly (WASD to move)
-				Hold V: Howitzer Impact, let go to explode
+				Hold V: Howitzer Impact, hold longer for a bigger blast, let go to explode
 				Hold C: charge ground blast, let go
 				Hold X: Cluster Bomb, grow a fireball and throw it
 				Z: Explosion Cowling on/off, bigger blasts"""),

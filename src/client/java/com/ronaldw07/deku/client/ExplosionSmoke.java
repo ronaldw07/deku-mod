@@ -101,6 +101,24 @@ final class ExplosionSmoke {
 	private static final double CAP_THICKNESS_SHARE = 0.15;
 	private static final double CAP_DOME_SHARE = 0.45; // how high the cap bulges above the top of the stem, relative to its width
 	private static final int CORE_CAP_GLOW_PUFFS = 8;
+	private static final double STEM_FLARE = 2.5; // how much wider than the stem the cloud is at ground level, minus one
+
+	// A wide, billowing base of cloud around ground zero.
+	private static final int SKIRT_TICKS = 40;
+	private static final int SKIRT_PUFFS = 22;
+	private static final double SKIRT_RADIUS_SHARE = 0.75; // of the cap's radius
+	private static final double SKIRT_HEIGHT_SHARE = 0.06; // of the column's height
+	private static final double SKIRT_OUT_SPEED = 0.12;
+
+	// Rings of cloud racing out across the ground and around the stem, and jets of smoke streaking away from the blast.
+	private static final int RING_PUFFS_BASE = 44;
+	private static final double RING_SPEED_START = 1.0;
+	private static final double RING_SPEED_FADE_PER_RING = 0.15;
+	private static final int JET_TICKS = 4;
+	private static final int JETS_PER_TICK = 8;
+	private static final int PUFFS_PER_JET = 10;
+	private static final double JET_SPACING = 1.0;
+	private static final double JET_MAX_ELEVATION = 0.6; // radians above flat
 	private static final int CORE_STEM_PUFFS = 45;
 	private static final int CORE_CAP_PUFFS = 40;
 	private static final double CAP_STARTS_AT = 0.6; // share of the rise
@@ -188,6 +206,21 @@ final class ExplosionSmoke {
 		}
 		if (hasColumn(blast)) {
 			column(level, blast, age, share, random);
+		}
+		if (core) {
+			double bigness = Math.min(1, blast.radius() / FULL_CORE_RADIUS);
+			if (age >= 1 && age <= JET_TICKS) {
+				smokeJets(level, blast, bigness, random);
+			}
+			if (age <= SKIRT_TICKS) {
+				baseSkirt(level, blast, bigness, random);
+			}
+			if (age == 2 || age == 6 || age == 12 || age == 20) {
+				groundRing(level, blast, age, bigness, random);
+			}
+			if (age == 8 || age == 16 || age == 26) {
+				airRing(level, blast, age, bigness, random);
+			}
 		}
 	}
 
@@ -362,9 +395,12 @@ final class ExplosionSmoke {
 		int stemPuffs = core ? Math.max(MIN_CORE_STEM_PUFFS, (int) (CORE_STEM_PUFFS * bigness)) : COLUMN_STEM_PUFFS;
 		for (int i = 0; i < scaled(stemPuffs); i++) {
 			double angle = random.nextDouble() * Math.PI * 2;
-			double out = random.nextDouble() * stem;
-			Vec3 at = c.add(Math.cos(angle) * out, top * (0.2 + random.nextDouble() * 0.8), Math.sin(angle) * out);
-			column(level, at, new Vec3(0, 0.05 + random.nextDouble() * 0.1, 0), 1.5f + (float) stem * 0.25f, core, random);
+			double heightShare = random.nextDouble();
+			// The stem flares out wide at its foot, like the base of a nuclear cloud.
+			double flare = core ? 1 + STEM_FLARE * (1 - heightShare) * (1 - heightShare) : 1;
+			double out = random.nextDouble() * stem * flare;
+			Vec3 at = c.add(Math.cos(angle) * out, top * heightShare, Math.sin(angle) * out);
+			column(level, at, new Vec3(0, 0.05 + random.nextDouble() * 0.1, 0), 1.5f + (float) (stem * flare) * 0.25f, core, random);
 		}
 		if (progress >= CAP_STARTS_AT) {
 			// The cap is a dome of smoke on top of the stem, much wider than the stem itself.
@@ -386,6 +422,64 @@ final class ExplosionSmoke {
 					Vec3 at = c.add(Math.cos(angle) * out, top - cap * CAP_THICKNESS_SHARE, Math.sin(angle) * out);
 					spawn(level, DekuParticles.FIREBALL, at, new Vec3(0, CAP_UP_SPEED, 0), 1f + (float) cap * 0.12f);
 				}
+			}
+		}
+	}
+
+	/** Cloud rolling out of the ground all around the foot of the column. */
+	private static void baseSkirt(ClientLevel level, Blast blast, double bigness, RandomSource random) {
+		double baseRadius = blast.radius() * CORE_CAP_SHARE * SKIRT_RADIUS_SHARE;
+		double height = blast.radius() * CORE_HEIGHT_PER_RADIUS * SKIRT_HEIGHT_SHARE;
+		for (int i = 0; i < scaled(SKIRT_PUFFS * bigness + 3); i++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double out = baseRadius * Math.sqrt(random.nextDouble());
+			Vec3 direction = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+			Vec3 at = blast.center().add(direction.x * out, random.nextDouble() * height, direction.z * out);
+			column(level, at, direction.scale(SKIRT_OUT_SPEED).add(0, 0.02, 0), 2f + (float) baseRadius * 0.12f, true, random);
+		}
+	}
+
+	/** A ring of dark smoke and white vapour racing out along the ground, each ring slower than the last. */
+	private static void groundRing(ClientLevel level, Blast blast, int age, double bigness, RandomSource random) {
+		double speed = (RING_SPEED_START - RING_SPEED_FADE_PER_RING * ringIndex(age)) * (0.6 + blast.radius() * 0.02);
+		ring(level, new Vec3(blast.center().x, blast.center().y + 1, blast.center().z), blast.radius() * 0.4, speed, bigness, 2f + blast.radius() * 0.1f, random);
+	}
+
+	/** A ring of vapour expanding around the stem partway up, like the pressure rings on a nuclear cloud. */
+	private static void airRing(ClientLevel level, Blast blast, int age, double bigness, RandomSource random) {
+		double height = blast.radius() * CORE_HEIGHT_PER_RADIUS * (0.25 + 0.12 * ringIndex(age));
+		double speed = (RING_SPEED_START - RING_SPEED_FADE_PER_RING * ringIndex(age)) * 0.7 * (0.6 + blast.radius() * 0.02);
+		ring(level, blast.center().add(0, height, 0), blast.radius() * CORE_STEM_SHARE * 1.5, speed, bigness, 1.5f + blast.radius() * 0.06f, random);
+	}
+
+	private static int ringIndex(int age) {
+		return age / 8;
+	}
+
+	private static void ring(ClientLevel level, Vec3 center, double startRadius, double speed, double bigness, float size, RandomSource random) {
+		int puffs = scaled(RING_PUFFS_BASE * bigness + 10);
+		for (int i = 0; i < puffs; i++) {
+			double angle = Math.PI * 2 * i / puffs + random.nextDouble() * 0.1;
+			Vec3 out = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+			Vec3 at = center.add(out.scale(startRadius));
+			Particle puff = spawn(level, i % 2 == 0 ? DekuParticles.SOOT_SMOKE : ParticleTypes.CLOUD, at, out.scale(speed), i % 2 == 0 ? size : size * 0.6f);
+			if (puff instanceof SmokePuffParticle soot) {
+				soot.setLifetimeTicks(CORE_MIN_LIFETIME + random.nextInt(CORE_EXTRA_LIFETIME));
+			}
+		}
+	}
+
+	/** Streaks of smoke and vapour shooting out of the blast in every direction, showing the power of it. */
+	private static void smokeJets(ClientLevel level, Blast blast, double bigness, RandomSource random) {
+		double speed = 1.0 + blast.radius() * 0.03;
+		float size = 0.5f + blast.radius() * 0.025f;
+		for (int jet = 0; jet < scaled(JETS_PER_TICK * bigness + 2); jet++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double elevation = random.nextDouble() * JET_MAX_ELEVATION;
+			Vec3 direction = new Vec3(Math.cos(angle) * Math.cos(elevation), Math.sin(elevation), Math.sin(angle) * Math.cos(elevation));
+			for (int i = 0; i < PUFFS_PER_JET; i++) {
+				Vec3 at = blast.center().add(direction.scale(i * JET_SPACING));
+				spawn(level, jet % 2 == 0 ? DekuParticles.SOOT_SMOKE : ParticleTypes.CLOUD, at, direction.scale(speed), jet % 2 == 0 ? size : size * 0.5f);
 			}
 		}
 	}

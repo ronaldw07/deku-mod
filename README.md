@@ -25,8 +25,8 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 ## Explosion (slot 2)
 
 - Tap right-click: big AP Shot. Hold: rapid fire
-- Double-tap and hold space: fly (W/A/S/D to move, hover otherwise)
-- Hold V: Howitzer Impact, red lightning crackles out of you as you spin; release to explode under a mushroom cloud
+- Double-tap and hold space: fly (W/A/S/D to move and lie flat, hover standing otherwise)
+- Hold V: Howitzer Impact, red lightning crackles out of you as you spin; a quick release is half size, hold 3 seconds for full size, under a mushroom cloud
 - Hold C: charge the cross-arm ground blast, release to fire
 - Hold X: Cluster Bomb, grow a red fireball in front of you for up to 3 seconds, let go to throw it at the crosshair (150 blocks): it lands as a nuke with a huge crater and a mushroom cloud
 - Z: Explosion Cowling on/off, a red-orange glow that makes every blast 25% bigger and stronger

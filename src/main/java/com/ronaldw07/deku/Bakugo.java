@@ -2,6 +2,7 @@ package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload.Style;
+import com.ronaldw07.deku.network.FireballFlightPayload;
 import com.ronaldw07.deku.network.ExplosionPayload.Move;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,6 +39,7 @@ public final class Bakugo {
 	// Howitzer Impact: a huge core blast, two rings of blasts rolling outward from it, and a
 	// shockwave that throws everything within SHOCKWAVE_RANGE and badly hurts anything close.
 	private static final float HOWITZER_CORE_RADIUS = 36.0f;
+	private static final double MIN_HOWITZER_SCALE = 0.5; // size of a Howitzer released at once; holding builds it to full size
 	private static final int HOWITZER_CORE_DEBRIS = 300;
 	private static final double[] HOWITZER_RING_DISTANCES = {48, 84};
 	private static final int[] HOWITZER_RING_BLASTS = {12, 16};
@@ -71,12 +73,6 @@ public final class Bakugo {
 	private static final int MAX_NUKE_DEBRIS = 300;
 	private static final int NUKE_SCORCH_FIRES = 12;
 	private static final double NUKE_HAND_FORWARD = 1.5;
-	private static final int MIN_TRAIL_FIREBALLS = 2;
-	private static final int EXTRA_TRAIL_FIREBALLS = 4;
-	private static final double MIN_TRAIL_SPREAD = 0.4;
-	private static final double EXTRA_TRAIL_SPREAD = 1.2;
-	private static final int TRAIL_FLAMES = 6;
-	private static final int TRAIL_SOOT = 2;
 	private static final float NUKE_THROW_VOLUME = 2.0f;
 	private static final float NUKE_THROW_PITCH = 0.7f;
 	private static final float NUKE_THUNDER_VOLUME = 4.0f;
@@ -131,7 +127,7 @@ public final class Bakugo {
 				if (active) {
 					startHowitzer(player);
 				} else {
-					releaseHowitzer(player);
+					releaseHowitzer(player, Math.clamp(charge, 1, 100) / 100.0);
 				}
 			}
 			case GROUND_BLAST -> groundBlast(player, Math.clamp(charge, 0, 100) / 100.0);
@@ -181,27 +177,29 @@ public final class Bakugo {
 		spinning.add(player.getUUID());
 	}
 
-	private static void releaseHowitzer(ServerPlayer player) {
+	/** @param power how long the spin was held, 0-1: a quick release is a half-size blast, a full charge the whole thing */
+	private static void releaseHowitzer(ServerPlayer player, double power) {
 		if (!spinning.remove(player.getUUID())) {
 			return;
 		}
 		NoGravity.set(player, HOWITZER_ID, false);
 		ServerLevel level = player.level();
 		Vec3 center = player.position().add(0, 1, 0).add(player.getLookAngle().scale(HOWITZER_REACH));
-		blast(player, center, HOWITZER_CORE_RADIUS, HOWITZER_CORE_DEBRIS, Style.HOWITZER_CORE, center, CORE_SCORCH_FIRES);
-		shockwave(player, center, 1.0);
+		float scale = (float) Mth.lerp(power, MIN_HOWITZER_SCALE, 1.0);
+		blast(player, center, HOWITZER_CORE_RADIUS * scale, (int) (HOWITZER_CORE_DEBRIS * scale), Style.HOWITZER_CORE, center, CORE_SCORCH_FIRES);
+		shockwave(player, center, scale);
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 4.0f, 0.5f);
 
 		for (int layer = 0; layer < HOWITZER_COLUMN_HEIGHTS.length; layer++) {
-			Vec3 spot = center.add(0, HOWITZER_COLUMN_HEIGHTS[layer], 0);
-			float radius = HOWITZER_COLUMN_RADII[layer];
+			Vec3 spot = center.add(0, HOWITZER_COLUMN_HEIGHTS[layer] * scale, 0);
+			float radius = HOWITZER_COLUMN_RADII[layer] * scale;
 			Blasts.later(level.getServer(), layer + 1, () -> blast(player, spot, radius, HOWITZER_RING_DEBRIS, Style.HOWITZER, spot));
 		}
 
 		for (int ring = 0; ring < HOWITZER_RING_DISTANCES.length; ring++) {
-			double distance = HOWITZER_RING_DISTANCES[ring];
+			double distance = HOWITZER_RING_DISTANCES[ring] * scale;
 			int blasts = HOWITZER_RING_BLASTS[ring];
-			float radius = HOWITZER_RING_RADII[ring];
+			float radius = HOWITZER_RING_RADII[ring] * scale;
 			Blasts.later(level.getServer(), (ring + 1) * TICKS_PER_RING, () -> {
 				for (int i = 0; i < blasts; i++) {
 					double angle = i * Math.PI * 2 / blasts;
@@ -264,32 +262,24 @@ public final class Bakugo {
 		Vec3 start = hand(player, 1).add(player.getLookAngle().scale(NUKE_HAND_FORWARD));
 		float radius = (float) Mth.lerp(power, MIN_NUKE_RADIUS, MAX_NUKE_RADIUS);
 		level.playSound(null, start.x, start.y, start.z, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, NUKE_THROW_VOLUME, NUKE_THROW_PITCH);
+		FireballFlightPayload flight = new FireballFlightPayload(start, target, radius, (float) NUKE_SPEED);
+		for (ServerPlayer viewer : PlayerLookup.around(level, start, CORE_FX_VIEW_DISTANCE)) {
+			if (ServerPlayNetworking.canSend(viewer, FireballFlightPayload.TYPE)) {
+				ServerPlayNetworking.send(viewer, flight);
+			}
+		}
 		fly(player, start, target, radius, power, 1);
 	}
 
-	/** One tick of the fireball's flight; when it reaches the target it goes off. */
+	/** Waits out the fireball's flight; the clients draw the ball itself from the flight payload. */
 	private static void fly(ServerPlayer player, Vec3 start, Vec3 target, float radius, double power, int tick) {
 		Blasts.later(player.level().getServer(), 1, () -> {
-			ServerLevel level = player.level();
-			double length = target.distanceTo(start);
-			double travelled = Math.min(length, NUKE_SPEED * tick);
-			Vec3 at = start.add(target.subtract(start).scale(travelled / Math.max(length, 1.0E-3)));
-			trail(level, at, power);
-			if (travelled >= length) {
+			if (NUKE_SPEED * tick >= target.distanceTo(start)) {
 				detonate(player, target, radius);
 			} else {
 				fly(player, start, target, radius, power, tick + 1);
 			}
 		});
-	}
-
-	/** Fire and smoke streaming off the flying fireball, thicker the bigger it was charged. */
-	private static void trail(ServerLevel level, Vec3 at, double power) {
-		double spread = MIN_TRAIL_SPREAD + EXTRA_TRAIL_SPREAD * power;
-		level.sendParticles(DekuParticles.FIREBALL, at.x, at.y, at.z, MIN_TRAIL_FIREBALLS + (int) Math.round(EXTRA_TRAIL_FIREBALLS * power),
-			spread, spread, spread, 0);
-		level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, TRAIL_FLAMES, spread, spread, spread, 0.02);
-		level.sendParticles(DekuParticles.SOOT_SMOKE, at.x, at.y, at.z, TRAIL_SOOT, spread * 0.5, spread * 0.5, spread * 0.5, 0);
 	}
 
 	/** The fireball lands: a huge blast, a shockwave and thunder, with the mushroom cloud drawn by the clients. */

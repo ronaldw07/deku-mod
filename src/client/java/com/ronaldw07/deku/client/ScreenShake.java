@@ -54,6 +54,20 @@ public final class ScreenShake {
 		}
 	}
 
+	/** A steady rumble while something is charging; it lingers briefly after. */
+	static void rumble(float amount) {
+		if (!DekuSettings.get().noScreenEffects()) {
+			trauma = Math.max(trauma, Math.min(MAX_TRAUMA, amount));
+		}
+	}
+
+	/** A red tint over the screen that holds while something is charging. */
+	static void glow(float amount) {
+		if (!DekuSettings.get().noScreenEffects()) {
+			flash = Math.max(flash, Math.min(MAX_FLASH, amount));
+		}
+	}
+
 	static void tick() {
 		trauma = Math.max(0, trauma - TRAUMA_DECAY_PER_TICK);
 		flash = Math.max(0, flash - FLASH_DECAY_PER_TICK);

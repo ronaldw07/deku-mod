@@ -17,7 +17,8 @@ import net.minecraft.world.phys.Vec3;
  * longer and denser the longer they spin.
  */
 final class SpinFx {
-	private static final int FULL_BUILD_TICKS = 40;
+	private static final int FULL_BUILD_TICKS = 60;
+	private static final float MAX_RUMBLE = 0.3f;
 	private static final int MIN_BOLTS = 8;
 	private static final int EXTRA_BOLTS = 14;
 	private static final double MIN_LENGTH = 1.5;
@@ -41,6 +42,7 @@ final class SpinFx {
 		if (player == null || !ExplosionClient.spinning()) {
 			return;
 		}
+		ScreenShake.rumble(MAX_RUMBLE * (float) (build() * build()));
 		RandomSource random = player.getRandom();
 		int count = Math.max(1, (int) Math.round(MAX_EMBERS * (0.3 + 0.7 * build()) * DekuSettings.get().detailScale()));
 		for (int i = 0; i < count; i++) {

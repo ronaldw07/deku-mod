@@ -10,6 +10,7 @@ import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
+import com.ronaldw07.deku.network.FireballFlightPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.ShootStylePayload;
 import com.ronaldw07.deku.network.TornadoFxPayload;
@@ -63,6 +64,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(PunchFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionCowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballChargeFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(FireballFlightFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SpinFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GearshiftClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(DecayClient::render);
@@ -70,6 +72,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
 		ClientPlayNetworking.registerGlobalReceiver(ExplosionFxPayload.TYPE, (payload, context) -> ExplosionFx.add(payload));
+		ClientPlayNetworking.registerGlobalReceiver(FireballFlightPayload.TYPE, (payload, context) -> FireballFlightFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(BlackwhipFxPayload.TYPE, (payload, context) -> BlackwhipTendrils.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(SmashFxPayload.TYPE, (payload, context) -> SmashLightning.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(TornadoFxPayload.TYPE, (payload, context) -> TornadoFx.add(payload));
@@ -156,6 +159,7 @@ public class DekuModClient implements ClientModInitializer {
 		ExplosionFx.tick(client.level);
 		FaJinFx.tick(player);
 		FireballChargeFx.tick(player);
+		FireballFlightFx.tick(client.level);
 		SpinFx.tick(player);
 
 		DangerSenseClient.tick(player, countClicks(DANGER_SENSE_KEY) % 2 == 1);

@@ -27,6 +27,7 @@ public final class ExplosionClient {
 	private static final double HOWITZER_TURN = 0.8; // radians per tick around the circle
 	private static final int BURST_POSE_TICKS = 10;
 	private static final int FULL_FIREBALL_TICKS = 60; // three seconds
+	private static final int FULL_HOWITZER_TICKS = 60;
 	private static final int FIREBALL_SOUND_INTERVAL = 10;
 	private static final int FIREBALL_POSE_REPEAT_TICKS = 8;
 	private static final int FIREBALL_POSE_TICKS = 10;
@@ -35,6 +36,7 @@ public final class ExplosionClient {
 	private static int bigShotLoad;
 	private static final DoubleTapHold flightTap = new DoubleTapHold();
 	private static boolean flying;
+	private static boolean flightMoving;
 	private static boolean spinning;
 	private static double spinAngle;
 	private static int groundCharge;
@@ -61,6 +63,16 @@ public final class ExplosionClient {
 	/** How many ticks the Howitzer spin has lasted. */
 	public static int spinTicks() {
 		return spinTicks;
+	}
+
+	/** How far the Howitzer is wound up, 0-100; 0 when not spinning. */
+	public static int howitzerCharge() {
+		return spinning ? Math.min(100, 1 + spinTicks * 100 / FULL_HOWITZER_TICKS) : 0;
+	}
+
+	/** Flying and going somewhere; hovering in place doesn't count. */
+	public static boolean flightMoving() {
+		return flying && flightMoving;
 	}
 
 	public static boolean flying() {
@@ -147,7 +159,11 @@ public final class ExplosionClient {
 			send(Move.FLIGHT, flying, 0);
 		}
 		if (flying) {
-			player.setDeltaMovement(flightVelocity(player));
+			Vec3 velocity = flightVelocity(player);
+			flightMoving = !velocity.equals(Vec3.ZERO);
+			player.setDeltaMovement(velocity);
+		} else {
+			flightMoving = false;
 		}
 	}
 
@@ -174,8 +190,9 @@ public final class ExplosionClient {
 			spinTicks = 0;
 			send(Move.HOWITZER, true, 0);
 		} else if (!down && spinning) {
+			int charge = howitzerCharge();
 			spinning = false;
-			send(Move.HOWITZER, false, 0);
+			send(Move.HOWITZER, false, charge);
 			Cooldowns.start(Cooldowns.Ability.HOWITZER);
 		}
 		if (!spinning) {

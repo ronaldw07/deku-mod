@@ -46,7 +46,7 @@ public final class Poses {
 		if (ManchesterClient.diving()) {
 			return Pose.AXE_KICK;
 		}
-		if (ExplosionClient.flying() || ExplosionClient.spinning()) {
+		if (ExplosionClient.flightMoving() || ExplosionClient.spinning()) {
 			return Pose.THRUSTERS;
 		}
 		if (LaunchClient.launching()) {

@@ -561,10 +561,13 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitTicks(10);
 		double hoverDrift = context.computeOnClient(client -> client.player.position().distanceTo(hoverStart));
 		check(hoverDrift < 1, "explosion flight should hover without movement keys, drifted " + hoverDrift);
+		check(!context.computeOnClient(client -> ExplosionClient.flightMoving()), "hovering in place should leave the player standing, not lying flat");
+		context.takeScreenshot("explosion-hover");
 		// Holding W blasts them toward where they're looking.
 		context.getInput().holdKey(options -> options.keyUp);
 		camera(context, CameraType.THIRD_PERSON_FRONT);
 		context.waitTicks(15);
+		check(context.computeOnClient(client -> ExplosionClient.flightMoving()), "flying somewhere should lay the player flat");
 		context.takeScreenshot("explosion-flight");
 		double flown = context.computeOnClient(client -> client.player.position().distanceTo(flightStart));
 		check(flown > 8, "explosion flight should carry the player, moved " + flown);
@@ -579,8 +582,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		Vec3 howitzerStart = context.computeOnClient(client -> client.player.position());
 		command(singleplayer, "execute at @p run summon minecraft:pig ~60 ~ ~");
 		context.getInput().holdKey(DekuModClient.SMASH_KEY);
-		context.waitTicks(20);
+		context.waitTicks(65);
 		check(context.computeOnClient(client -> ExplosionClient.spinning()), "holding V with Explosion should start Howitzer Impact");
+		check(context.computeOnClient(client -> ExplosionClient.howitzerCharge()) >= 90, "holding V for three seconds should fully charge the Howitzer");
 		context.takeScreenshot("howitzer-spin");
 		double spiralled = context.computeOnClient(client -> client.player.position().distanceTo(howitzerStart));
 		check(spiralled > 5, "Howitzer Impact should carry the player forward, moved " + spiralled);
@@ -646,9 +650,15 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(context.computeOnClient(client -> ExplosionClient.fireballCharge()) >= 90, "holding X for three seconds should fully grow the fireball");
 		context.takeScreenshot("fireball-full");
 		context.getInput().releaseKey(DekuModClient.CLUSTER_KEY);
-		context.waitTicks(4);
+		camera(context, CameraType.FIRST_PERSON); // looking down the flight path, the ball is dead ahead
+		context.waitTicks(2);
+		context.takeScreenshot("fireball-flight-start");
+		context.waitTicks(3);
 		context.takeScreenshot("fireball-flight");
-		context.waitTicks(14);
+		context.waitTicks(3);
+		context.takeScreenshot("fireball-midair");
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(11);
 		check(context.computeOnClient(client -> ScreenShake.active()), "the nuke landing 30 blocks away should shake the screen");
 		context.takeScreenshot("nuke-flash");
 		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 -30");

@@ -18,10 +18,19 @@ import net.minecraft.world.phys.Vec3;
  * the player, crackling with red rays and shedding embers, bigger and angrier the longer X is held.
  */
 final class FireballChargeFx {
-	private static final double BALL_DISTANCE = 2.6;
+	private static final double BALL_DISTANCE = 2.0;
+	private static final double BALL_DISTANCE_PER_RADIUS = 1.3; // a bigger ball floats farther out, clear of the camera
 	private static final double BALL_DROP = 0.4;
-	private static final double MIN_RADIUS = 0.25;
-	private static final double MAX_RADIUS = 1.8;
+	private static final double MIN_RADIUS = 0.3;
+	private static final double MAX_RADIUS = 3.9;
+	// A halo of red light shaking around the player as the charge builds.
+	private static final double HALO_STARTS_AT = 0.25;
+	private static final double MIN_HALO_RADIUS = 1.5;
+	private static final double EXTRA_HALO_RADIUS = 2.0;
+	private static final int HALO_RAYS = 14;
+	private static final double HALO_RAY_LENGTH = 1.5;
+	private static final float MAX_HALO_RUMBLE = 0.35f;
+	private static final float MAX_HALO_GLOW = 0.18f;
 	private static final int SPHERE_SEGMENTS = 16;
 	private static final int MIN_RAYS = 8;
 	private static final int EXTRA_RAYS = 12;
@@ -39,11 +48,13 @@ final class FireballChargeFx {
 	private FireballChargeFx() {
 	}
 
-	private static Vec3 ballCenter(LocalPlayer player, float partialTick) {
-		return player.getEyePosition(partialTick).add(player.getViewVector(partialTick).scale(BALL_DISTANCE)).add(0, -BALL_DROP, 0);
+	private static Vec3 ballCenter(LocalPlayer player, float partialTick, double radius) {
+		double distance = BALL_DISTANCE + radius * BALL_DISTANCE_PER_RADIUS;
+		return player.getEyePosition(partialTick).add(player.getViewVector(partialTick).scale(distance)).add(0, -BALL_DROP, 0);
 	}
 
-	private static double radius(double power, double time) {
+	/** The ball's size at a charge of 0-1 (also the size of a thrown ball for a blast that big). */
+	static double radius(double power, double time) {
 		return Mth.lerp(power, MIN_RADIUS, MAX_RADIUS) * (1 + PULSE_DEPTH * Math.sin(time * PULSE_SPEED));
 	}
 
@@ -54,8 +65,10 @@ final class FireballChargeFx {
 			return;
 		}
 		double power = charge / 100.0;
-		Vec3 center = ballCenter(player, 1f);
 		double radius = radius(power, player.tickCount);
+		Vec3 center = ballCenter(player, 1f, radius);
+		ScreenShake.rumble(MAX_HALO_RUMBLE * (float) (power * power));
+		ScreenShake.glow(MAX_HALO_GLOW * (float) (power * power));
 		RandomSource random = player.getRandom();
 		int count = Math.max(1, (int) Math.round((MIN_EMBERS + EXTRA_EMBERS * power) * DekuSettings.get().detailScale()));
 		for (int i = 0; i < count; i++) {
@@ -73,26 +86,35 @@ final class FireballChargeFx {
 		}
 		float partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		double power = charge / 100.0;
-		Vec3 center = ballCenter(player, partialTick).subtract(context.levelState().cameraRenderState.pos);
 		double radius = radius(power, player.tickCount + partialTick);
+		Vec3 camera = context.levelState().cameraRenderState.pos;
 		RandomSource random = RandomSource.create(player.getId() * 31L + player.tickCount / TICKS_PER_SHAPE);
 
-		// A sphere drawn as three crossed rings, with rays leaping off it.
 		List<Segment> sphere = new ArrayList<>();
-		sphere.addAll(ring(center, radius, 0));
-		sphere.addAll(ring(center, radius, 1));
-		sphere.addAll(ring(center, radius, 2));
 		List<Segment> rays = new ArrayList<>();
-		for (int i = 0; i < MIN_RAYS + EXTRA_RAYS * power; i++) {
-			Vec3 out = LightningDraw.randomDirection(random);
-			double length = radius * (MIN_RAY_LENGTH + random.nextDouble() * EXTRA_RAY_LENGTH);
-			rays.addAll(LimbLightning.jagged(random, center.add(out.scale(radius * 0.6)), center.add(out.scale(length)), RAY_STEPS, RAY_JAG));
+		addBall(sphere, rays, random, ballCenter(player, partialTick, radius).subtract(camera), radius, MIN_RAYS + EXTRA_RAYS * power);
+		if (power >= HALO_STARTS_AT) {
+			double halo = Mth.lerp(power * power, MIN_HALO_RADIUS, MIN_HALO_RADIUS + EXTRA_HALO_RADIUS);
+			Vec3 chest = player.getPosition(partialTick).add(0, player.getBbHeight() * 0.55, 0).subtract(camera);
+			addBall(sphere, rays, random, chest, halo, HALO_RAYS * power);
 		}
 		float width = (float) (1 + 4 * power);
 		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
 			LightningDraw.draw(pose.pose(), buffer, sphere, width * 2, LightningDraw.CRIMSON, 0.6f);
 			LightningDraw.draw(pose.pose(), buffer, rays, width, LightningDraw.CRIMSON, 1f);
 		});
+	}
+
+	/** Draws a glowing sphere as three crossed rings with rays leaping off it, into the two lists. */
+	static void addBall(List<Segment> sphere, List<Segment> rays, RandomSource random, Vec3 center, double radius, double rayCount) {
+		sphere.addAll(ring(center, radius, 0));
+		sphere.addAll(ring(center, radius, 1));
+		sphere.addAll(ring(center, radius, 2));
+		for (int i = 0; i < rayCount; i++) {
+			Vec3 out = LightningDraw.randomDirection(random);
+			double length = radius * (MIN_RAY_LENGTH + random.nextDouble() * EXTRA_RAY_LENGTH);
+			rays.addAll(LimbLightning.jagged(random, center.add(out.scale(radius * 0.6)), center.add(out.scale(length)), RAY_STEPS, RAY_JAG));
+		}
 	}
 
 	/** A circle around the ball in one of its three planes. */

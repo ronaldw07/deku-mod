@@ -9,6 +9,7 @@ import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionCowlingPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
+import com.ronaldw07.deku.network.FireballFlightPayload;
 import com.ronaldw07.deku.network.ExplosionPayload;
 import com.ronaldw07.deku.network.FloatPayload;
 import com.ronaldw07.deku.network.GearshiftPayload;
@@ -93,6 +94,7 @@ public class DekuMod implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(ExplosionPayload.TYPE,
 			(payload, context) -> Bakugo.handle(context.player(), payload.move(), payload.active(), payload.charge()));
 		PayloadTypeRegistry.clientboundPlay().register(ExplosionFxPayload.TYPE, ExplosionFxPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(FireballFlightPayload.TYPE, FireballFlightPayload.CODEC);
 		ServerTickEvents.END_SERVER_TICK.register(Bakugo::tick);
 		ServerTickEvents.END_SERVER_TICK.register(Blasts::tick);
 
