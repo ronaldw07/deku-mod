@@ -14,6 +14,18 @@ public final class DekuParticles {
 	public static final SimpleParticleType WHITE_SMOKE = Registry.register(
 		BuiltInRegistries.PARTICLE_TYPE, DekuMod.id("white_smoke"), FabricParticleTypes.simple(true));
 
+	/** Near-black smoke that hangs over a blast for ten seconds or more. */
+	public static final SimpleParticleType SOOT_SMOKE = Registry.register(
+		BuiltInRegistries.PARTICLE_TYPE, DekuMod.id("soot_smoke"), FabricParticleTypes.simple(true));
+
+	/** A hot puff that goes white, orange, deep red and finally black as it burns out. */
+	public static final SimpleParticleType FIREBALL = Registry.register(
+		BuiltInRegistries.PARTICLE_TYPE, DekuMod.id("fireball"), FabricParticleTypes.simple(true));
+
+	/** Small dark flakes that drift down after a huge blast. */
+	public static final SimpleParticleType ASH_FLAKE = Registry.register(
+		BuiltInRegistries.PARTICLE_TYPE, DekuMod.id("ash_flake"), FabricParticleTypes.simple(true));
+
 	private DekuParticles() {
 	}
 

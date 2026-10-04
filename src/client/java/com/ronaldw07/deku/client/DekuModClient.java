@@ -72,6 +72,12 @@ public class DekuModClient implements ClientModInitializer {
 			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.SMOKESCREEN));
 		ParticleProviderRegistry.getInstance().register(DekuParticles.WHITE_SMOKE, sprites -> (options, level, x, y, z, xa, ya, za, random) ->
 			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.HOWITZER_CLOUD));
+		ParticleProviderRegistry.getInstance().register(DekuParticles.SOOT_SMOKE, sprites -> (options, level, x, y, z, xa, ya, za, random) ->
+			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.SOOT));
+		ParticleProviderRegistry.getInstance().register(DekuParticles.FIREBALL, sprites -> (options, level, x, y, z, xa, ya, za, random) ->
+			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.FIREBALL));
+		ParticleProviderRegistry.getInstance().register(DekuParticles.ASH_FLAKE, sprites -> (options, level, x, y, z, xa, ya, za, random) ->
+			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.ASH));
 	}
 
 	private static final DoubleTapHold floatTap = new DoubleTapHold();
