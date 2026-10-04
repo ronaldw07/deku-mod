@@ -10,12 +10,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -42,6 +44,8 @@ final class ExplosionSmoke {
 	private static final float MAX_FIREBALL_SCALE = 9f;
 	private static final float MAX_SOOT_SCALE = 14f;
 	private static final int FLASH_PUFFS = 6;
+	private static final int ICE_SHARDS = 150;
+	private static final int FROST_PUFFS = 60;
 	private static final double FIREBALL_SPREAD = 0.05;
 	private static final int MAX_FLAMES = 160;
 	private static final int MAX_EXPLOSION_PUFFS = 12;
@@ -188,6 +192,9 @@ final class ExplosionSmoke {
 
 	/** Plays what the blast does at this age; age 0 is the instant it goes off. */
 	static void emit(ClientLevel level, Blast blast, int age) {
+		if (blast.style() == Style.ICE_DOME) {
+			return; // the dome is drawn as lines by ExplosionFx
+		}
 		RandomSource random = level.getRandom();
 		double share = share(blast.style());
 		boolean core = isCore(blast.style());
@@ -233,12 +240,14 @@ final class ExplosionSmoke {
 			case HOWITZER -> 0.5;
 			case HOWITZER_RING -> 0.35;
 			case HOWITZER_CORE -> 1.0;
+			case HEATWAVE -> 1.0;
+			case ICE_DOME -> 0.0;
 		};
 	}
 
 	/** The blasts big enough for a full mushroom cloud, ash and thunder: the Howitzer's core and the nuke. */
 	private static boolean isCore(Style style) {
-		return style == Style.HOWITZER_CORE || style == Style.NUKE;
+		return style == Style.HOWITZER_CORE || style == Style.NUKE || style == Style.HEATWAVE;
 	}
 
 	private static boolean hasColumn(Blast blast) {
@@ -266,6 +275,9 @@ final class ExplosionSmoke {
 		for (int i = 0; i < puffs; i++) {
 			spawn(level, ParticleTypes.EXPLOSION, c.add(inSphere(random, radius * 0.8)), Vec3.ZERO, 1f);
 		}
+		if (blast.style() == Style.HEATWAVE) {
+			iceBurst(level, c, radius, random);
+		}
 		if (blast.style() == Style.NUKE) {
 			// The nuke burns deep red: a ball of red embers filling the blast.
 			for (int i = 0; i < scaled(NUKE_EMBERS + radius * NUKE_EMBERS_PER_RADIUS); i++) {
@@ -280,6 +292,20 @@ final class ExplosionSmoke {
 				spawn(level, ParticleTypes.FIREWORK, c, new Vec3(v.x, Math.abs(v.y), v.z), 1f);
 			}
 			ash = new Ash(c, blast.startTick());
+		}
+	}
+
+	/** The dome of ice shattering: shards of it flying out with a cloud of frost and steam. */
+	private static void iceBurst(ClientLevel level, Vec3 c, float radius, RandomSource random) {
+		for (int i = 0; i < scaled(ICE_SHARDS); i++) {
+			Vec3 v = LightningDraw.randomDirection(random).scale(0.5 + random.nextDouble() * 1.2);
+			spawn(level, new BlockParticleOption(ParticleTypes.BLOCK, Blocks.PACKED_ICE.defaultBlockState()),
+				c.add(LightningDraw.randomDirection(random).scale(radius * 0.4)), new Vec3(v.x, Math.abs(v.y) + 0.2, v.z), 2f);
+		}
+		for (int i = 0; i < scaled(FROST_PUFFS); i++) {
+			Vec3 v = LightningDraw.randomDirection(random).scale(0.6);
+			spawn(level, DekuParticles.WHITE_SMOKE, c.add(LightningDraw.randomDirection(random).scale(radius * 0.5)), v, 1f);
+			spawn(level, ParticleTypes.SNOWFLAKE, c, v.scale(2), 1f);
 		}
 	}
 

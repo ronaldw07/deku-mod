@@ -47,7 +47,7 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Hold V: flamethrower, a 30 block cone of fire that burns and shoves mobs, sets the ground ablaze and melts ice
 - Hold space: ice slide, glide where you look on a bridge of ice that builds under your feet
 - C: a giant wall of ice erupts ahead, hurling and freezing anyone in the way
-- X: Flashfreeze Heatwave, a ball of ice blown apart by a huge blast of fire, with a chain of fire explosions, a pillar of flame and magma raining down
+- X: Flashfreeze Heatwave, a 28 block dome of ice freezes the area ahead, cracks glow through it, then it blows apart in a huge fire and steam nova with a crater, flame pillar, magma rain and a mushroom cloud
 
 ## Danger Sense
 

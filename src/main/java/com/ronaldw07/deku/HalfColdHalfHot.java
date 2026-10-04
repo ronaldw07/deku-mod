@@ -1,5 +1,6 @@
 package com.ronaldw07.deku;
 
+import com.ronaldw07.deku.network.ExplosionFxPayload.Style;
 import com.ronaldw07.deku.network.HalfColdHalfHotPayload.Move;
 import java.util.HashSet;
 import java.util.Set;
@@ -11,10 +12,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.BaseFireBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -69,29 +73,35 @@ public final class HalfColdHalfHot {
 	private static final int IGNITE_INTERVAL = 2;
 	private static final int IGNITE_SPOTS = 3;
 	private static final int FLAME_SOUND_INTERVAL = 4;
-	// Flashfreeze Heatwave.
-	private static final double HEATWAVE_DISTANCE = 12.0;
-	private static final int HEATWAVE_ICE_RADIUS = 6;
-	private static final int HEATWAVE_DELAY = 15;
-	private static final float HEATWAVE_BLAST = 16.0f;
-	private static final float HEATWAVE_CRATER = 12.0f;
-	private static final int HEATWAVE_CRATER_FIRES = 60;
-	private static final int HEATWAVE_DEBRIS = 250;
-	private static final double HEATWAVE_REACH = 35.0;
-	private static final float HEATWAVE_DAMAGE = 45.0f;
-	private static final double HEATWAVE_PUSH = 5.0;
+	// Flashfreeze Heatwave: a giant dome of ice freezes the whole area, cracks glow through it,
+	// and then it blows apart in a huge fire and steam nova.
+	private static final double HEATWAVE_DISTANCE = 40.0;
+	private static final int DOME_RADIUS = 14;
+	private static final int DOME_THICKNESS = 2;
+	private static final int DOME_LAYERS_PER_TICK = 2;
+	private static final int HEATWAVE_DELAY = 34;
+	private static final float HEATWAVE_BLAST = 30.0f;
+	private static final float HEATWAVE_CRATER = 24.0f;
+	private static final int HEATWAVE_CRATER_FIRES = 80;
+	private static final int HEATWAVE_DEBRIS = 300;
+	private static final double HEATWAVE_REACH = 70.0;
+	private static final float HEATWAVE_DAMAGE = 60.0f;
+	private static final double HEATWAVE_PUSH = 6.0;
+	private static final float DOME_FREEZE_DAMAGE = 10.0f;
+	private static final int DOME_SLOW_AMPLIFIER = 5;
+	private static final double HEATWAVE_FX_DISTANCE = 300.0;
 	// Chain of fire explosions going off around the main blast.
-	private static final int CHAIN_BLASTS = 10;
-	private static final double CHAIN_MIN_DISTANCE = 14.0;
-	private static final double CHAIN_EXTRA_DISTANCE = 8.0;
+	private static final int CHAIN_BLASTS = 16;
+	private static final double CHAIN_MIN_DISTANCE = 20.0;
+	private static final double CHAIN_EXTRA_DISTANCE = 14.0;
 	private static final int CHAIN_MAX_DELAY = 20;
-	private static final float CHAIN_RADIUS = 5.0f;
+	private static final float CHAIN_RADIUS = 7.0f;
 	// A spiralling pillar of fire left standing over the crater.
 	private static final int PILLAR_TICKS = 60;
-	private static final double PILLAR_HEIGHT = 40.0;
-	private static final double PILLAR_RADIUS = 3.0;
+	private static final double PILLAR_HEIGHT = 70.0;
+	private static final double PILLAR_RADIUS = 5.0;
 	// Chunks of magma thrown out to rain back down.
-	private static final int MAGMA_CHUNKS = 12;
+	private static final int MAGMA_CHUNKS = 30;
 	// Ice slide.
 	private static final int SLIDE_HALF_WIDTH = 1;
 
@@ -390,29 +400,30 @@ public final class HalfColdHalfHot {
 		}
 	}
 
-	/** Flashfreeze Heatwave: freeze a ball of ice ahead, then blow it apart with a blast of heat. */
+	/** Flashfreeze Heatwave: raise a giant dome of ice around a spot ahead, then blow it apart with a blast of heat. */
 	private static void heatwave(ServerPlayer player) {
 		ServerLevel level = player.level();
 		Vec3 eye = player.getEyePosition();
-		Vec3 look = player.getLookAngle();
 		HitResult hit = Aim.trace(player, HEATWAVE_DISTANCE);
-		Vec3 center = hit.getType() == HitResult.Type.MISS ? eye.add(look.scale(HEATWAVE_DISTANCE)) : hit.getLocation();
+		Vec3 center = hit.getType() == HitResult.Type.MISS ? eye.add(player.getLookAngle().scale(HEATWAVE_DISTANCE)) : hit.getLocation();
 
 		BlockPos middle = BlockPos.containing(center);
-		for (BlockPos pos : BlockPos.betweenClosed(middle.offset(-HEATWAVE_ICE_RADIUS, -HEATWAVE_ICE_RADIUS, -HEATWAVE_ICE_RADIUS),
-				middle.offset(HEATWAVE_ICE_RADIUS, HEATWAVE_ICE_RADIUS, HEATWAVE_ICE_RADIUS))) {
-			if (pos.distSqr(middle) <= HEATWAVE_ICE_RADIUS * HEATWAVE_ICE_RADIUS) {
-				placeIce(level, pos.immutable());
-			}
+		for (int dy = -DOME_RADIUS; dy <= DOME_RADIUS; dy++) {
+			int layer = dy;
+			Blasts.later(level.getServer(), (layer + DOME_RADIUS) / DOME_LAYERS_PER_TICK, () -> domeLayer(level, middle, layer));
 		}
-		level.sendParticles(ParticleTypes.SNOWFLAKE, center.x, center.y, center.z, 60, 3, 3, 3, 0.05);
-		level.playSound(null, center.x, center.y, center.z, DekuSounds.ICE, SoundSource.PLAYERS, 2.0f, 0.7f);
+		BlastFx.send(level, center, DOME_RADIUS, Style.ICE_DOME, center, HEATWAVE_FX_DISTANCE);
+		level.playSound(null, center.x, center.y, center.z, DekuSounds.ICE, SoundSource.PLAYERS, 4.0f, 0.5f);
+		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(DOME_RADIUS),
+				entity -> entity != player && entity.isAlive() && entity.position().distanceTo(center) <= DOME_RADIUS)) {
+			entity.hurtServer(level, player.damageSources().freeze(), DOME_FREEZE_DAMAGE);
+			entity.setTicksFrozen(FROZEN_TICKS);
+			entity.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, HEATWAVE_DELAY, DOME_SLOW_AMPLIFIER));
+		}
 
 		Blasts.later(level.getServer(), HEATWAVE_DELAY, () -> {
-			level.sendParticles(ParticleTypes.FLAME, center.x, center.y, center.z, 400, 5, 5, 5, 0.5);
-			level.sendParticles(ParticleTypes.LAVA, center.x, center.y, center.z, 60, 4, 4, 4, 0);
 			level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y, center.z, 2, 2, 2, 2, 0);
-			level.sendParticles(DekuParticles.WHITE_SMOKE, center.x, center.y, center.z, 300, 8, 6, 8, 0.08);
+			BlastFx.send(level, center, HEATWAVE_BLAST, Style.HEATWAVE, center, HEATWAVE_FX_DISTANCE);
 			Blasts.blast(player, center, HEATWAVE_BLAST, Blasts.sparing(player), HEATWAVE_DEBRIS);
 			Blasts.carve(level, center, HEATWAVE_CRATER, HEATWAVE_CRATER_FIRES);
 			chain(player, center);
@@ -428,10 +439,25 @@ public final class HalfColdHalfHot {
 				entity.push(away.scale(HEATWAVE_PUSH * strength).add(0, strength * 0.5, 0));
 				entity.hurtMarked = true;
 			}
-			level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 5.0f, 0.6f);
-			level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, 5.0f, 0.5f);
-			level.playSound(null, center.x, center.y, center.z, DekuSounds.FLAME, SoundSource.PLAYERS, 4.0f, 0.6f);
+			level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 8.0f, 0.5f);
+			level.playSound(null, center.x, center.y, center.z, DekuSounds.EXPLOSION_BOOM, SoundSource.PLAYERS, 6.0f, 0.6f);
+			level.playSound(null, center.x, center.y, center.z, DekuSounds.FLAME, SoundSource.PLAYERS, 5.0f, 0.6f);
 		});
+	}
+
+	/** One slice of the dome's shell: packed and blue ice, rising a couple of layers a tick. */
+	private static void domeLayer(ServerLevel level, BlockPos middle, int dy) {
+		RandomSource random = level.getRandom();
+		BlockPos slice = middle.above(dy);
+		double outer = DOME_RADIUS + 0.5;
+		double inner = DOME_RADIUS - DOME_THICKNESS + 0.5;
+		for (BlockPos pos : BlockPos.betweenClosed(slice.offset(-DOME_RADIUS, 0, -DOME_RADIUS), slice.offset(DOME_RADIUS, 0, DOME_RADIUS))) {
+			double distance = Math.sqrt(pos.distSqr(middle));
+			if (distance > outer || distance < inner || !level.isLoaded(pos) || !level.getBlockState(pos).canBeReplaced()) {
+				continue;
+			}
+			level.setBlock(pos.immutable(), (random.nextInt(3) == 0 ? Blocks.BLUE_ICE : Blocks.PACKED_ICE).defaultBlockState(), Block.UPDATE_CLIENTS);
+		}
 	}
 
 	/** Smaller fire explosions going off one after another all around the main blast. */

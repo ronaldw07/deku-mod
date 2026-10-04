@@ -47,6 +47,12 @@ final class LightningDraw {
 		new Layer(0.03f, 0.75f, 0.1f, 0.1f, 0.7f),
 		new Layer(0.012f, 1.0f, 0.55f, 0.5f, 0.9f),
 	};
+	// Frost: pale blue to white.
+	static final Layer[] ICE = {
+		new Layer(0.1f, 0.3f, 0.6f, 1.0f, 0.25f),
+		new Layer(0.05f, 0.6f, 0.85f, 1.0f, 0.5f),
+		new Layer(0.02f, 0.95f, 1.0f, 1.0f, 0.9f),
+	};
 	static final Layer[] RED = {
 		new Layer(0.12f, 0.9f, 0.05f, 0.05f, 0.3f),
 		new Layer(0.06f, 1.0f, 0.2f, 0.1f, 0.55f),

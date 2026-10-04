@@ -90,6 +90,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("iceSlide")) {
 				iceSlide(context, singleplayer);
 			}
+			if (wanted("heatwave")) {
+				heatwave(context, singleplayer);
+			}
 			if (wanted("smokescreenHold")) {
 				smokescreenHold(context, singleplayer);
 			}
@@ -344,6 +347,47 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.getInput().releaseKey(options -> options.keyJump);
 		check(slid > 20, "the ice slide should carry the player over a step and a wall, it only got " + slid + " blocks");
 		context.waitTicks(10);
+	}
+
+	private static void heatwave(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// X with Half Cold Half Hot: a giant dome of ice goes up around a spot ahead, then blows apart in a fire nova.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 1800 -59 1800 0 3");
+		context.waitTicks(40);
+		selectSlot(context, 4);
+		Vec3 target = singleplayer.getServer().computeOnServer(server -> Aim.trace(player(server), 40).getLocation());
+		command(singleplayer, "summon minecraft:husk " + target.x + " " + target.y + " " + (target.z + 4) + " {NoAI:1b}");
+		context.getInput().pressKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(16);
+		context.takeScreenshot("heatwave-dome");
+		int ice = singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			BlockPos at = BlockPos.containing(target);
+			for (BlockPos pos : BlockPos.betweenClosed(at.offset(-15, 0, -15), at.offset(15, 15, 15))) {
+				count += server.overworld().getBlockState(pos).is(Blocks.PACKED_ICE) || server.overworld().getBlockState(pos).is(Blocks.BLUE_ICE) ? 1 : 0;
+			}
+			return count;
+		});
+		check(ice > 150, "the Flashfreeze dome should be built out of ice, only " + ice + " ice blocks");
+		context.waitTicks(14);
+		context.takeScreenshot("heatwave-cracking");
+		context.waitTicks(10);
+		context.takeScreenshot("heatwave-nova");
+		check(context.computeOnClient(client -> ScreenShake.active()), "the Flashfreeze blast should shake the screen");
+		context.waitTicks(40);
+		context.takeScreenshot("heatwave-aftermath");
+		boolean hurt = singleplayer.getServer().computeOnServer(server -> server.overworld()
+			.getEntities(EntityTypes.HUSK, husk -> husk.isAlive() && husk.getHealth() >= husk.getMaxHealth()).isEmpty());
+		check(hurt, "the Flashfreeze should hurt the husk inside the dome");
+		int dug = singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			BlockPos at = BlockPos.containing(target);
+			for (BlockPos pos : BlockPos.betweenClosed(at.offset(-20, -4, -20), at.offset(20, 0, 20))) {
+				count += server.overworld().getBlockState(pos).isAir() ? 1 : 0;
+			}
+			return count;
+		});
+		check(dug > 600, "the Flashfreeze nova should leave a big crater, only " + dug + " blocks cleared");
 	}
 
 	private static void poses(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

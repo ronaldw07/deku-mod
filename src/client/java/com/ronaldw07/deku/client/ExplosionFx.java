@@ -38,6 +38,15 @@ final class ExplosionFx {
 	private static final int NUKE_LIFETIME_TICKS = 30;
 	private static final double NUKE_SHOCKWAVE_PER_RADIUS = 8.0;
 	private static final double NUKE_RAY_REACH = 2.0;
+	// Flashfreeze's dome of ice, drawn as a glowing lattice that cracks open with fire just before it blows.
+	private static final int DOME_LIFETIME_TICKS = 36;
+	private static final double DOME_SURFACE_OFFSET = 0.7;
+	private static final int DOME_LATITUDES = 9;
+	private static final int DOME_LONGITUDES = 14;
+	private static final int DOME_SEGMENTS = 14;
+	private static final int CRACKS_START_TICK = 12;
+	private static final int MAX_CRACKS = 40;
+	private static final double CRACK_LENGTH_SHARE = 0.5;
 
 	record Blast(Vec3 center, float radius, Style style, Vec3 from, long startTick) {
 	}
@@ -100,8 +109,12 @@ final class ExplosionFx {
 				default -> LightningDraw.FIRE;
 			};
 			Vec3 center = blast.center().subtract(camera);
+			if (blast.style() == Style.ICE_DOME) {
+				drawDome(context, blast, center, age);
+				continue;
+			}
 			boolean howitzer = isHowitzer(blast.style());
-			boolean nuke = blast.style() == Style.NUKE;
+			boolean nuke = blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE;
 			double rayReach = howitzer ? HOWITZER_RAY_REACH : nuke ? NUKE_RAY_REACH : 1;
 			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS) * rayReach);
 			double progress = Math.min(1, age / lifetime * 1.5);
@@ -127,8 +140,48 @@ final class ExplosionFx {
 		}
 	}
 
+	/** A lattice of glowing ice over the dome, fading in as it is built, then cracking open with fire. */
+	private static void drawDome(LevelRenderContext context, Blast blast, Vec3 center, double age) {
+		double radius = blast.radius() + DOME_SURFACE_OFFSET; // just outside the ice, so the glow isn't buried in it
+		List<Segment> lattice = new ArrayList<>();
+		for (int i = 1; i < DOME_LATITUDES; i++) {
+			double polar = Math.PI * i / DOME_LATITUDES;
+			for (int j = 0; j < DOME_SEGMENTS * 2; j++) {
+				lattice.add(new Segment(onSphere(center, radius, polar, Math.PI * j / DOME_SEGMENTS),
+					onSphere(center, radius, polar, Math.PI * (j + 1) / DOME_SEGMENTS)));
+			}
+		}
+		for (int i = 0; i < DOME_LONGITUDES; i++) {
+			double around = Math.PI * 2 * i / DOME_LONGITUDES;
+			for (int j = 0; j < DOME_SEGMENTS; j++) {
+				lattice.add(new Segment(onSphere(center, radius, Math.PI * j / DOME_SEGMENTS, around),
+					onSphere(center, radius, Math.PI * (j + 1) / DOME_SEGMENTS, around)));
+			}
+		}
+		List<Segment> cracks = new ArrayList<>();
+		if (age > CRACKS_START_TICK) {
+			RandomSource random = RandomSource.create(blast.startTick() * 17);
+			int count = (int) (MAX_CRACKS * Math.min(1, (age - CRACKS_START_TICK) / (DOME_LIFETIME_TICKS - CRACKS_START_TICK)));
+			for (int i = 0; i < count; i++) {
+				Vec3 start = center.add(LightningDraw.randomDirection(random).scale(radius));
+				Vec3 end = center.add(LightningDraw.randomDirection(random).scale(radius)).lerp(start, 1 - CRACK_LENGTH_SHARE);
+				cracks.addAll(LimbLightning.jagged(random, start, end, 5, 0.6));
+			}
+		}
+		float fade = (float) Math.min(1, age / 6);
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
+			LightningDraw.draw(pose.pose(), buffer, lattice, 4f, LightningDraw.ICE, fade);
+			LightningDraw.draw(pose.pose(), buffer, cracks, 6f, LightningDraw.FIRE, 1f);
+		});
+	}
+
+	private static Vec3 onSphere(Vec3 center, double radius, double polar, double around) {
+		return center.add(radius * Math.sin(polar) * Math.cos(around), radius * Math.cos(polar), radius * Math.sin(polar) * Math.sin(around));
+	}
+
 	private static int lifetime(Blast blast) {
-		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : blast.style() == Style.NUKE ? NUKE_LIFETIME_TICKS : LIFETIME_TICKS;
+		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE ? NUKE_LIFETIME_TICKS
+			: blast.style() == Style.ICE_DOME ? DOME_LIFETIME_TICKS : LIFETIME_TICKS;
 	}
 
 	/** Howitzer Impact's core and its column blasts; the lighter ring blasts around it look like plain big shots. */

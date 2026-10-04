@@ -369,13 +369,8 @@ public final class Bakugo {
 			Blasts.scorch(level, center, radius, scorchFires);
 		}
 		boom(level, center, radius, style);
-		ExplosionFxPayload fx = new ExplosionFxPayload(center, radius, style, from);
 		double viewDistance = style == Style.HOWITZER_CORE || style == Style.NUKE ? CORE_FX_VIEW_DISTANCE : FX_VIEW_DISTANCE;
-		for (ServerPlayer viewer : PlayerLookup.around(level, center, viewDistance)) {
-			if (ServerPlayNetworking.canSend(viewer, ExplosionFxPayload.TYPE)) {
-				ServerPlayNetworking.send(viewer, fx);
-			}
-		}
+		BlastFx.send(level, center, radius, style, from, viewDistance);
 	}
 
 	/** A low boom, then a rumble rolling after it; the Howitzer's core also gets a thunder crack and its echo. */
