@@ -67,6 +67,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			launch(context, singleplayer);
 			floatQuirk(context, singleplayer);
 			dangerSense(context, singleplayer);
+			iceSlide(context, singleplayer);
 			smokescreenHold(context, singleplayer);
 			explosion(context, singleplayer);
 			fullPowerSmashTunnel(context, singleplayer);
@@ -285,6 +286,24 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		double gone = singleplayer.getServer().computeOnServer(server -> Smokescreen.largestRadius());
 		check(gone == 0, "a released Smokescreen should clear after a few seconds, radius " + gone);
 		camera(context, CameraType.FIRST_PERSON);
+	}
+
+	private static void iceSlide(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Sliding on ice carries the player over steps and walls instead of leaving them stuck against them.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 1000 -59 1000 0 0");
+		context.waitTicks(30);
+		command(singleplayer, "execute at @p run fill ~-4 ~ ~6 ~4 ~ ~6 minecraft:stone");
+		command(singleplayer, "execute at @p run fill ~-4 ~ ~14 ~4 ~2 ~14 minecraft:stone");
+		selectSlot(context, 4);
+		double startZ = context.computeOnClient(client -> client.player.getZ());
+		context.getInput().holdKey(options -> options.keyJump);
+		context.waitTicks(40);
+		context.takeScreenshot("ice-slide");
+		double slid = context.computeOnClient(client -> client.player.getZ()) - startZ;
+		context.getInput().releaseKey(options -> options.keyJump);
+		check(slid > 20, "the ice slide should carry the player over a step and a wall, it only got " + slid + " blocks");
+		context.waitTicks(10);
 	}
 
 	private static void poses(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

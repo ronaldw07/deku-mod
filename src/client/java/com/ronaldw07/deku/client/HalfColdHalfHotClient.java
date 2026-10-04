@@ -18,6 +18,7 @@ public final class HalfColdHalfHotClient {
 	private static final int HEATWAVE_POSE_TICKS = 20;
 
 	private static final double SLIDE_SPEED = 1.1;
+	private static final double SLIDE_STEP_HOP = 0.6; // upward speed when the slide runs into something
 	private static final double SLIDE_MAX_CLIMB = 0.5; // how steeply looking up or down tilts the slide
 
 	private static boolean flaming;
@@ -54,7 +55,9 @@ public final class HalfColdHalfHotClient {
 			Vec3 flat = new Vec3(look.x, 0, look.z);
 			Vec3 forward = flat.lengthSqr() < 1.0E-4 ? Vec3.ZERO : flat.normalize();
 			double climb = Mth.clamp(look.y, -SLIDE_MAX_CLIMB, SLIDE_MAX_CLIMB);
-			player.setDeltaMovement(forward.scale(SLIDE_SPEED).add(0, climb * SLIDE_SPEED, 0));
+			// Running into a step or wall hops up it, so the slide never stalls against terrain.
+			double lift = player.horizontalCollision ? Math.max(climb * SLIDE_SPEED, SLIDE_STEP_HOP) : climb * SLIDE_SPEED;
+			player.setDeltaMovement(forward.scale(SLIDE_SPEED).add(0, lift, 0));
 			player.setOnGround(false); // so ground friction doesn't eat the speed
 		}
 
