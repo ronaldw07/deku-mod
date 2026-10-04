@@ -4,6 +4,7 @@ import com.ronaldw07.deku.Aim;
 import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
+import com.ronaldw07.deku.Smokescreen;
 import com.ronaldw07.deku.client.Cooldowns;
 import com.ronaldw07.deku.client.DangerSenseClient;
 import com.ronaldw07.deku.client.DekuModClient;
@@ -65,6 +66,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			launch(context, singleplayer);
 			floatQuirk(context, singleplayer);
 			dangerSense(context, singleplayer);
+			smokescreenHold(context, singleplayer);
 			explosion(context, singleplayer);
 			fullPowerSmashTunnel(context, singleplayer);
 		}
@@ -257,6 +259,31 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("smokescreen");
 		camera(context, CameraType.FIRST_PERSON);
 		command(singleplayer, "kill @e[type=minecraft:husk]");
+	}
+
+	private static void smokescreenHold(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Holding Z keeps the cloud growing past its starting radius of 9, up to a cap of 30; letting go stops it.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		selectSlot(context, 0);
+		context.waitTicks(250); // the earlier clouds clear and the cooldown ends
+		context.getInput().holdKey(DekuModClient.SMOKESCREEN_KEY);
+		context.waitTicks(20);
+		double early = singleplayer.getServer().computeOnServer(server -> Smokescreen.largestRadius());
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(60);
+		context.takeScreenshot("smokescreen-grown");
+		double grown = singleplayer.getServer().computeOnServer(server -> Smokescreen.largestRadius());
+		check(grown > early && grown > 12 && grown <= 30, "a held Smokescreen should keep growing, was " + early + " then " + grown);
+		context.getInput().releaseKey(DekuModClient.SMOKESCREEN_KEY);
+		context.waitTicks(2);
+		double released = singleplayer.getServer().computeOnServer(server -> Smokescreen.largestRadius());
+		context.waitTicks(20);
+		double later = singleplayer.getServer().computeOnServer(server -> Smokescreen.largestRadius());
+		check(later == released, "a Smokescreen should stop growing once the key is let go, " + released + " then " + later);
+		context.waitTicks(250);
+		double gone = singleplayer.getServer().computeOnServer(server -> Smokescreen.largestRadius());
+		check(gone == 0, "a released Smokescreen should clear after a few seconds, radius " + gone);
+		camera(context, CameraType.FIRST_PERSON);
 	}
 
 	private static void poses(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

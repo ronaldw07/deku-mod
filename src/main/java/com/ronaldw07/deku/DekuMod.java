@@ -59,7 +59,13 @@ public class DekuMod implements ModInitializer {
 
 		PayloadTypeRegistry.serverboundPlay().register(SmokescreenPayload.TYPE, SmokescreenPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(SmokescreenPayload.TYPE,
-			(payload, context) -> Smokescreen.deploy(context.player()));
+			(payload, context) -> {
+				if (payload.holding()) {
+					Smokescreen.deploy(context.player());
+				} else {
+					Smokescreen.release(context.player());
+				}
+			});
 		ServerTickEvents.END_SERVER_TICK.register(Smokescreen::tick);
 
 		PayloadTypeRegistry.serverboundPlay().register(FloatPayload.TYPE, FloatPayload.CODEC);
@@ -129,6 +135,7 @@ public class DekuMod implements ModInitializer {
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
 			!(entity instanceof Player && source.is(DamageTypeTags.IS_FALL)));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Bakugo.forget(handler.player));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Smokescreen.forget(handler.player));
 
 		LOGGER.info("One For All loaded");
 	}

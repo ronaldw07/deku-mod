@@ -12,7 +12,6 @@ import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.ShootStylePayload;
-import com.ronaldw07.deku.network.SmokescreenPayload;
 import com.ronaldw07.deku.network.TornadoFxPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -83,7 +82,6 @@ public class DekuModClient implements ClientModInitializer {
 	}
 
 	private static final DoubleTapHold floatTap = new DoubleTapHold();
-	private static final int SMOKESCREEN_POSE_TICKS = 12;
 	private static final int WHIP_POSE_TICKS = 14;
 	private static final int KICK_POSE_TICKS = 8;
 	private static final int FLICK_POSE_TICKS = 6;
@@ -120,11 +118,7 @@ public class DekuModClient implements ClientModInitializer {
 
 		FullCowlingClient.tick(player, oneForAll && cowlingClicks % 2 == 1, oneForAll);
 		SmashClient.tick(player, oneForAll && SMASH_KEY.isDown(), oneForAll && smashClicks > 0);
-		if (oneForAll && smokescreenClicks > 0 && Cooldowns.ready(Cooldowns.Ability.SMOKESCREEN)) {
-			send(SmokescreenPayload.INSTANCE);
-			Cooldowns.start(Cooldowns.Ability.SMOKESCREEN);
-			Poses.play(Poses.Pose.SMOKESCREEN, SMOKESCREEN_POSE_TICKS);
-		}
+		SmokescreenClient.tick(player, oneForAll, SMOKESCREEN_KEY.isDown(), smokescreenClicks > 0);
 		boolean floatTapped = floatTap.tick(client.options.keyJump.isDown(), oneForAll);
 		FloatClient.tick(player, oneForAll && (FLOAT_KEY.isDown() || floatTapped), FLOAT_KEY.isDown());
 		if (oneForAll && blackwhipClicks > 0 && Cooldowns.ready(Cooldowns.Ability.BLACKWHIP)) {
