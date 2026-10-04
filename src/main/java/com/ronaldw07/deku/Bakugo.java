@@ -81,6 +81,9 @@ public final class Bakugo {
 	private static final double VORTEX_HEIGHT = 2.5;
 	private static final int SPIN_SOUND_INTERVAL = 10;
 	private static final double FX_VIEW_DISTANCE = 96;
+	private static final int BIG_SHOT_SCORCH_FIRES = 2;
+	private static final int GROUND_SCORCH_FIRES = 1;
+	private static final int CORE_SCORCH_FIRES = 12;
 	private static final double BOOM_MIN_RADIUS = 3.0;
 	private static final float BOOM_MAX_VOLUME = 6.0f;
 	private static final float BOOM_VOLUME_PER_RADIUS = 0.12f;
@@ -132,7 +135,7 @@ public final class Bakugo {
 		if (style == Style.BIG_SHOT) {
 			beam(player, hand, target);
 		}
-		blast(player, target, radius, 0, style, hand);
+		blast(player, target, radius, 0, style, hand, style == Style.BIG_SHOT ? BIG_SHOT_SCORCH_FIRES : 0);
 	}
 
 	/** Hits and shoves everything along the beam's path. */
@@ -175,7 +178,7 @@ public final class Bakugo {
 		NoGravity.set(player, HOWITZER_ID, false);
 		ServerLevel level = player.level();
 		Vec3 center = player.position().add(0, 1, 0).add(player.getLookAngle().scale(HOWITZER_REACH));
-		blast(player, center, HOWITZER_CORE_RADIUS, HOWITZER_CORE_DEBRIS, Style.HOWITZER_CORE, center);
+		blast(player, center, HOWITZER_CORE_RADIUS, HOWITZER_CORE_DEBRIS, Style.HOWITZER_CORE, center, CORE_SCORCH_FIRES);
 		shockwave(player, center);
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 4.0f, 0.5f);
 
@@ -234,7 +237,7 @@ public final class Bakugo {
 			Blasts.later(player.level().getServer(), row, () -> {
 				for (int lane = -lanesEachSide; lane <= lanesEachSide; lane++) {
 					Vec3 center = feet.add(forward.scale(distance)).add(right.scale(lane * distance * GROUND_BLAST_SPREAD / lanesEachSide));
-					blast(player, center, radius, GROUND_DEBRIS, Style.GROUND, center);
+					blast(player, center, radius, GROUND_DEBRIS, Style.GROUND, center, lane == 0 ? GROUND_SCORCH_FIRES : 0);
 				}
 			});
 		}
@@ -323,10 +326,18 @@ public final class Bakugo {
 	 * left burning in it, and the custom fireball effect.
 	 */
 	private static void blast(ServerPlayer owner, Vec3 center, float radius, int debris, Style style, Vec3 from) {
+		blast(owner, center, radius, debris, style, from, 0);
+	}
+
+	/** The same, and if scorchFires is above 0 the crater's rim is burnt black with that many extra fires. */
+	private static void blast(ServerPlayer owner, Vec3 center, float radius, int debris, Style style, Vec3 from, int scorchFires) {
 		ServerLevel level = owner.level();
 		Blasts.blast(owner, center, radius, Blasts.sparing(owner), debris);
 		int fires = (int) (radius / RADIUS_PER_FIRE);
 		Blasts.carve(level, center, radius, fires > 0 || level.getRandom().nextDouble() >= SMALL_BLAST_FIRE_CHANCE ? fires : 1);
+		if (scorchFires > 0) {
+			Blasts.scorch(level, center, radius, scorchFires);
+		}
 		boom(level, center, radius, style);
 		ExplosionFxPayload fx = new ExplosionFxPayload(center, radius, style, from);
 		double viewDistance = style == Style.HOWITZER_CORE ? CORE_FX_VIEW_DISTANCE : FX_VIEW_DISTANCE;

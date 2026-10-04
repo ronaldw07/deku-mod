@@ -3,9 +3,11 @@ package com.ronaldw07.deku;
 import java.util.List;
 import java.util.stream.Stream;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
@@ -44,6 +46,10 @@ public final class Blasts {
 	private static final int FIRE_DELAY_TICKS = 4;
 	private static final int CARVE_AT_ONCE_RADIUS = 12;
 	private static final int CARVE_LAYERS_PER_TICK = 3; // each way from the middle
+	private static final double SCORCH_REACH = 2.5; // how far past the crater's edge the burn spreads
+	private static final double SCORCH_STONE_CHANCE = 0.55;
+	private static final double SCORCH_SOIL_CHANCE = 0.75;
+	private static final int MAX_SCORCH_BLOCKS = 6000;
 
 	private record Scheduled(int runAt, Runnable action) {
 	}
@@ -119,8 +125,79 @@ public final class Blasts {
 			}
 		}
 		// A beat later, so blasts landing right after this one don't snuff the fires out.
-		int lastLayerTick = spread ? reach / CARVE_LAYERS_PER_TICK : 0;
-		later(level.getServer(), lastLayerTick + FIRE_DELAY_TICKS, () -> light(level, center, radius, fires));
+		later(level.getServer(), lastLayerTick(radius) + FIRE_DELAY_TICKS, () -> light(level, center, radius, fires));
+	}
+
+	/** The tick, counting from the call to carve, on which the last layer of a crater is cleared. */
+	private static int lastLayerTick(float radius) {
+		int reach = (int) Math.ceil(radius);
+		return reach > CARVE_AT_ONCE_RADIUS ? reach / CARVE_LAYERS_PER_TICK : 0;
+	}
+
+	/**
+	 * Burns the rim of a crater just carved by carve with the same radius: exposed stone turns to
+	 * blackstone and grass and dirt to coarse dirt, and a few more fires are left burning. Runs
+	 * after the crater is cleared, a few layers a tick, and never touches unloaded chunks.
+	 */
+	public static void scorch(ServerLevel level, Vec3 center, float radius, int extraFires) {
+		int reach = (int) Math.ceil(radius + SCORCH_REACH);
+		boolean spread = reach > CARVE_AT_ONCE_RADIUS;
+		int start = lastLayerTick(radius) + FIRE_DELAY_TICKS + 1;
+		int[] budget = {MAX_SCORCH_BLOCKS};
+		for (int dy = -reach; dy <= reach; dy++) {
+			int layer = dy;
+			int delay = start + (spread ? Math.abs(dy) / CARVE_LAYERS_PER_TICK : 0);
+			later(level.getServer(), delay, () -> scorchLayer(level, center, radius, layer, budget));
+		}
+		int lastTick = start + (spread ? reach / CARVE_LAYERS_PER_TICK : 0);
+		later(level.getServer(), lastTick + 1, () -> light(level, center, radius + (float) SCORCH_REACH, extraFires));
+	}
+
+	private static void scorchLayer(ServerLevel level, Vec3 center, float radius, int dy, int[] budget) {
+		BlockPos middle = BlockPos.containing(center).above(dy);
+		int reach = (int) Math.ceil(radius + SCORCH_REACH);
+		double innerSqr = Math.max(0, radius - 0.5) * Math.max(0, radius - 0.5);
+		double outer = radius + SCORCH_REACH;
+		RandomSource random = level.getRandom();
+		for (BlockPos pos : BlockPos.betweenClosed(middle.offset(-reach, 0, -reach), middle.offset(reach, 0, reach))) {
+			if (budget[0] <= 0) {
+				return;
+			}
+			double distanceSqr = Vec3.atCenterOf(pos).distanceToSqr(center);
+			if (distanceSqr < innerSqr || distanceSqr > outer * outer || !level.isLoaded(pos)) {
+				continue;
+			}
+			BlockState state = level.getBlockState(pos);
+			BlockState burnt = burnt(state, random);
+			if (burnt != null && exposed(level, pos)) {
+				level.setBlock(pos, burnt, Block.UPDATE_CLIENTS);
+				budget[0]--;
+			}
+		}
+	}
+
+	/** What a block turns into when scorched, or null if it is left as it is. */
+	private static BlockState burnt(BlockState state, RandomSource random) {
+		if (state.hasBlockEntity() || !state.getFluidState().isEmpty()) {
+			return null;
+		}
+		if (state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(Blocks.COBBLESTONE) || state.is(Blocks.DEEPSLATE)) {
+			return random.nextDouble() < SCORCH_STONE_CHANCE ? Blocks.BLACKSTONE.defaultBlockState() : null;
+		}
+		if (state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT) || state.is(Blocks.PODZOL) || state.is(Blocks.MYCELIUM)
+				|| state.is(Blocks.ROOTED_DIRT)) {
+			return random.nextDouble() < SCORCH_SOIL_CHANCE ? Blocks.COARSE_DIRT.defaultBlockState() : null;
+		}
+		return null;
+	}
+
+	private static boolean exposed(ServerLevel level, BlockPos pos) {
+		for (Direction side : Direction.values()) {
+			if (level.getBlockState(pos.relative(side)).isAir()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** Clears one horizontal slice of the sphere, dy blocks above or below its middle. */
