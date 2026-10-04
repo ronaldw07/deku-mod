@@ -45,8 +45,17 @@ public class SettingsScreen extends Screen {
 			.create(x, y + ROW_SPACING * 5, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Cooldowns"),
 				(button, on) -> DekuSettings.set(DekuSettings.get().withNoCooldowns(!on))));
 
+		addRenderableWidget(CycleButton.<Integer>builder(SettingsScreen::detailName, settings.particleDetail())
+			.withValues(DekuSettings.LOW_DETAIL, DekuSettings.NORMAL_DETAIL, DekuSettings.HIGH_DETAIL)
+			.create(x, y + ROW_SPACING * 6, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Particle detail"),
+				(button, detail) -> DekuSettings.set(DekuSettings.get().withParticleDetail(detail))));
+
+		addRenderableWidget(CycleButton.onOffBuilder(!settings.noScreenEffects())
+			.create(x, y + ROW_SPACING * 7, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Screen shake and flash"),
+				(button, on) -> DekuSettings.set(DekuSettings.get().withNoScreenEffects(!on))));
+
 		addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose())
-			.bounds(x, y + ROW_SPACING * 6 + 12, WIDGET_WIDTH, WIDGET_HEIGHT)
+			.bounds(x, y + ROW_SPACING * 8 + 12, WIDGET_WIDTH, WIDGET_HEIGHT)
 			.build());
 	}
 
@@ -65,6 +74,14 @@ public class SettingsScreen extends Screen {
 	public void onClose() {
 		DekuSettings.save();
 		super.onClose();
+	}
+
+	private static Component detailName(int detail) {
+		return Component.literal(switch (detail) {
+			case DekuSettings.LOW_DETAIL -> "Low";
+			case DekuSettings.HIGH_DETAIL -> "High";
+			default -> "Normal";
+		});
 	}
 
 	private static String percent(double value) {

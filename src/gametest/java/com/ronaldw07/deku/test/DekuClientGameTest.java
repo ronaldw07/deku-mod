@@ -109,6 +109,17 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitForScreen(SettingsScreen.class);
 		context.takeScreenshot("settings-screen");
 		context.setScreen(() -> null);
+
+		double[] scales = new double[3];
+		for (int detail = DekuSettings.LOW_DETAIL; detail <= DekuSettings.HIGH_DETAIL; detail++) {
+			int chosen = detail;
+			scales[detail - 1] = context.computeOnClient(client -> {
+				DekuSettings.set(DekuSettings.get().withParticleDetail(chosen));
+				return DekuSettings.get().detailScale();
+			});
+		}
+		context.runOnClient(client -> DekuSettings.set(DekuSettings.get().withParticleDetail(DekuSettings.NORMAL_DETAIL)));
+		check(scales[0] < scales[1] && scales[1] < scales[2], "particle detail should scale counts Low < Normal < High");
 	}
 
 	private static void fullCowling(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
