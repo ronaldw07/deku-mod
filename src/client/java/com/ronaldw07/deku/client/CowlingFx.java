@@ -12,6 +12,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
@@ -38,6 +39,14 @@ final class CowlingFx {
 	private static final double SWIRL_RADIUS = 0.9;
 	private static final double SWIRL_SPEED = 0.18;
 	private static final int SWIRL_EVERY_TICKS = 2;
+	private static final double FULL_PERCENT = 100.0;
+	private static final double EXTRA_SWIRL_RADIUS = 0.9; // up to 1.7 blocks out at full power
+	private static final double EXTRA_SWIRL_WISPS = 4;
+	private static final double OUTER_ORBIT_RADIUS = 2.6;
+	private static final double SWIRL_MIN_RISE = 0.04;
+	private static final double SWIRL_EXTRA_RISE = 0.08;
+	private static final int FULL_POWER_GUST_EVERY_TICKS = 6;
+	private static final double GUST_RADIUS = 1.4;
 
 	private CowlingFx() {
 	}
@@ -48,7 +57,7 @@ final class CowlingFx {
 			burst(player);
 		}
 		if (percent > 0 && player.tickCount % SWIRL_EVERY_TICKS == 0) {
-			swirl(player);
+			swirl(player, Mth.clamp(percent / FULL_PERCENT, 0, 1));
 		}
 	}
 
@@ -75,16 +84,32 @@ final class CowlingFx {
 		player.level().playLocalSound(player, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, 0.8f, 1.3f);
 	}
 
-	/** A wisp of wind circling the body. Kept below the eyes in first person so it doesn't cloud the view. */
-	private static void swirl(LocalPlayer player) {
+	/**
+	 * Wisps of wind circling the body, wider, denser and faster the more power Full Cowling has;
+	 * at full power a second wide orbit joins in with gusts and ribbons rising off the body.
+	 * Kept below the eyes in first person so it doesn't cloud the view.
+	 */
+	private static void swirl(LocalPlayer player, double power) {
 		RandomSource random = player.getRandom();
 		boolean firstPerson = Minecraft.getInstance().options.getCameraType().isFirstPerson();
 		double top = firstPerson ? player.getEyeHeight() - 0.6 : player.getBbHeight();
-		double angle = random.nextDouble() * Math.PI * 2;
-		double height = random.nextDouble() * top;
-		Vec3 at = player.position().add(Math.cos(angle) * SWIRL_RADIUS, height, Math.sin(angle) * SWIRL_RADIUS);
-		Vec3 tangent = new Vec3(-Math.sin(angle), 0.1, Math.cos(angle)).scale(SWIRL_SPEED);
-		player.level().addParticle(ParticleTypes.CLOUD, at.x, at.y, at.z, tangent.x, tangent.y, tangent.z);
+		double radius = SWIRL_RADIUS * (1 + EXTRA_SWIRL_RADIUS * power);
+		double speed = SWIRL_SPEED * (1 + power);
+		int wisps = Math.max(1, (int) Math.round((1 + EXTRA_SWIRL_WISPS * power) * DekuSettings.get().detailScale()));
+		for (int i = 0; i < wisps; i++) {
+			// At full power every other wisp rides the wide outer orbit.
+			double orbit = power >= 1 && i % 2 == 1 ? OUTER_ORBIT_RADIUS : radius;
+			double angle = random.nextDouble() * Math.PI * 2;
+			Vec3 at = player.position().add(Math.cos(angle) * orbit, random.nextDouble() * top, Math.sin(angle) * orbit);
+			double rise = SWIRL_MIN_RISE + random.nextDouble() * SWIRL_EXTRA_RISE * power;
+			Vec3 tangent = new Vec3(-Math.sin(angle), 0, Math.cos(angle)).scale(speed).add(0, rise, 0);
+			player.level().addParticle(ParticleTypes.CLOUD, at.x, at.y, at.z, tangent.x, tangent.y, tangent.z);
+		}
+		if (power >= 1 && player.tickCount % FULL_POWER_GUST_EVERY_TICKS == 0) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			player.level().addParticle(ParticleTypes.GUST, player.getX() + Math.cos(angle) * GUST_RADIUS,
+				player.getY() + random.nextDouble() * top, player.getZ() + Math.sin(angle) * GUST_RADIUS, 0, 0, 0);
+		}
 	}
 
 	/** Red bolts climbing from the feet, reaching higher the closer Full Cowling is to full power. */
