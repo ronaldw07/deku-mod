@@ -1,13 +1,18 @@
 package com.ronaldw07.deku.client;
 
 import com.ronaldw07.deku.client.LightningDraw.Segment;
+import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -34,14 +39,41 @@ final class ExplosionCowlingFx {
 	private ExplosionCowlingFx() {
 	}
 
+	private static Set<UUID> others = Set.of();
+
+	/** Someone nearby lit or put out their Cowling. */
+	static void add(ExplosionCowlingFxPayload fx) {
+		Set<UUID> next = new HashSet<>(others);
+		if (fx.on()) {
+			next.add(fx.player());
+		} else {
+			next.remove(fx.player());
+		}
+		others = Set.copyOf(next);
+	}
+
+	static void reset() {
+		others = Set.of();
+	}
+
 	static void render(LevelRenderContext context) {
 		Minecraft minecraft = Minecraft.getInstance();
-		LocalPlayer player = minecraft.player;
-		if (player == null || !ExplosionCowlingClient.active()) {
+		if (minecraft.level == null || minecraft.player == null) {
 			return;
 		}
 		float partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-		boolean firstPerson = minecraft.options.getCameraType().isFirstPerson();
+		if (ExplosionCowlingClient.active()) {
+			glow(context, minecraft.player, partialTick, minecraft.options.getCameraType().isFirstPerson());
+		}
+		for (UUID id : others) {
+			Player other = minecraft.level.getPlayerByUUID(id);
+			if (other != null && other != minecraft.player) {
+				glow(context, other, partialTick, false);
+			}
+		}
+	}
+
+	private static void glow(LevelRenderContext context, Player player, float partialTick, boolean firstPerson) {
 		double radius = firstPerson ? FIRST_PERSON_RADIUS : BODY_RADIUS;
 		double height = firstPerson ? player.getEyeHeight() - FIRST_PERSON_EYE_CLEARANCE : GLOW_HEIGHT;
 		Vec3 base = player.getPosition(partialTick).subtract(context.levelState().cameraRenderState.pos);

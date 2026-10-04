@@ -5,6 +5,7 @@ import com.ronaldw07.deku.network.ExplosionPayload;
 import com.ronaldw07.deku.network.ExplosionPayload.Move;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec3;
@@ -22,6 +23,8 @@ public final class ExplosionClient {
 	private static final int FULL_GROUND_CHARGE_TICKS = 30;
 	private static final int GROUND_CHARGE_SOUND_INTERVAL = 10;
 	private static final double FLIGHT_SPEED = 1.3;
+	private static final double BOOST_MULTIPLIER = 2.0; // holding sprint while flying
+	private static final int SONIC_BOOM_COOLDOWN = 20;
 	private static final double HOWITZER_FORWARD_SPEED = 0.8;
 	private static final double HOWITZER_CIRCLE_SPEED = 0.75;
 	private static final double HOWITZER_TURN = 0.8; // radians per tick around the circle
@@ -37,6 +40,8 @@ public final class ExplosionClient {
 	private static final DoubleTapHold flightTap = new DoubleTapHold();
 	private static boolean flying;
 	private static boolean flightMoving;
+	private static boolean boosting;
+	private static int boomCooldown;
 	private static boolean spinning;
 	private static double spinAngle;
 	private static int groundCharge;
@@ -161,10 +166,26 @@ public final class ExplosionClient {
 		if (flying) {
 			Vec3 velocity = flightVelocity(player);
 			flightMoving = !velocity.equals(Vec3.ZERO);
+			boostRing(player, velocity.length() > FLIGHT_SPEED * 1.5);
 			player.setDeltaMovement(velocity);
 		} else {
 			flightMoving = false;
 		}
+	}
+
+	/** A ring of cloud and a sonic boom as the player breaks into a boost. */
+	private static void boostRing(LocalPlayer player, boolean nowBoosting) {
+		boomCooldown = Math.max(0, boomCooldown - 1);
+		if (nowBoosting && !boosting && boomCooldown == 0) {
+			boomCooldown = SONIC_BOOM_COOLDOWN;
+			player.level().addParticle(ParticleTypes.SONIC_BOOM, player.getX(), player.getY() + 1, player.getZ(), 0, 0, 0);
+			for (int i = 0; i < 24; i++) {
+				double angle = Math.PI * 2 * i / 24;
+				player.level().addParticle(ParticleTypes.CLOUD, player.getX(), player.getY() + 1, player.getZ(), Math.cos(angle) * 0.8, 0.05, Math.sin(angle) * 0.8);
+			}
+			player.level().playLocalSound(player, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, 1.0f, 1.4f);
+		}
+		boosting = nowBoosting;
 	}
 
 	/**
@@ -179,7 +200,8 @@ public final class ExplosionClient {
 		double yaw = Math.toRadians(player.getYRot());
 		Vec3 right = new Vec3(-Math.cos(yaw), 0, -Math.sin(yaw));
 		Vec3 direction = look.scale(forward).add(right.scale(strafe));
-		return direction.lengthSqr() < 1.0E-6 ? Vec3.ZERO : direction.normalize().scale(FLIGHT_SPEED);
+		double speed = keys.sprint() ? FLIGHT_SPEED * BOOST_MULTIPLIER : FLIGHT_SPEED;
+		return direction.lengthSqr() < 1.0E-6 ? Vec3.ZERO : direction.normalize().scale(speed);
 	}
 
 	/** Spirals toward wherever the player is looking while the key is held; letting go explodes. */

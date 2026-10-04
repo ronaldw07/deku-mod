@@ -10,6 +10,7 @@ import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DomainPayload;
+import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.SlashFxPayload;
 import com.ronaldw07.deku.network.FireballFlightPayload;
@@ -26,6 +27,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -46,6 +48,7 @@ public class DekuModClient implements ClientModInitializer {
 	public static final KeyMapping US_SMASH_KEY = register("key.deku.us_smash", GLFW.GLFW_KEY_U);
 	public static final KeyMapping DANGER_SENSE_KEY = register("key.deku.danger_sense", GLFW.GLFW_KEY_H);
 	public static final KeyMapping SETTINGS_KEY = register("key.deku.settings", GLFW.GLFW_KEY_K);
+	public static final KeyMapping SCREEN_EFFECTS_KEY = register("key.deku.screen_effects", GLFW.GLFW_KEY_J);
 
 	@Override
 	public void onInitializeClient() {
@@ -78,6 +81,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
 		ClientPlayNetworking.registerGlobalReceiver(ExplosionFxPayload.TYPE, (payload, context) -> ExplosionFx.add(payload));
+		ClientPlayNetworking.registerGlobalReceiver(ExplosionCowlingFxPayload.TYPE, (payload, context) -> ExplosionCowlingFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(SlashFxPayload.TYPE, (payload, context) -> SlashFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(DomainPayload.TYPE, (payload, context) -> DomainFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(FireballFlightPayload.TYPE, (payload, context) -> FireballFlightFx.add(payload));
@@ -108,6 +112,14 @@ public class DekuModClient implements ClientModInitializer {
 	private static void tick(Minecraft client) {
 		while (SETTINGS_KEY.consumeClick()) {
 			client.gui.setScreen(new SettingsScreen());
+		}
+		while (SCREEN_EFFECTS_KEY.consumeClick()) {
+			DekuSettings settings = DekuSettings.get();
+			DekuSettings.set(settings.withNoScreenEffects(!settings.noScreenEffects()));
+			DekuSettings.save();
+			if (client.player != null) {
+				client.player.sendOverlayMessage(Component.literal("Screen shake and flash: " + (settings.noScreenEffects() ? "ON" : "OFF")));
+			}
 		}
 
 		// Keys are read once here, then go to whichever quirk item is in hand.
@@ -149,11 +161,7 @@ public class DekuModClient implements ClientModInitializer {
 			Cooldowns.start(Cooldowns.Ability.SHOOT_STYLE);
 			Poses.play(Poses.Pose.KICK, KICK_POSE_TICKS);
 		}
-		if (oneForAll && delawareClicks > 0 && Cooldowns.ready(Cooldowns.Ability.DELAWARE)) {
-			send(new DelawarePayload(DekuSettings.get().punchPower()));
-			Cooldowns.start(Cooldowns.Ability.DELAWARE);
-			Poses.play(Poses.Pose.AIM_RIGHT, FLICK_POSE_TICKS);
-		}
+		DelawareClient.tick(player, oneForAll && (DELAWARE_KEY.isDown() || delawareClicks > 0));
 		ManchesterClient.tick(player, oneForAll && manchesterClicks > 0);
 		UnitedStatesClient.tick(player, oneForAll && usSmashClicks > 0);
 		GearshiftClient.tick(player, oneForAll && gearshiftClicks % 2 == 1, oneForAll);

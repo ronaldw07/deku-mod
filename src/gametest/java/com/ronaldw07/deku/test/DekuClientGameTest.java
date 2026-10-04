@@ -9,6 +9,7 @@ import com.ronaldw07.deku.Sukuna;
 import com.ronaldw07.deku.client.Cooldowns;
 import com.ronaldw07.deku.client.DangerSenseClient;
 import com.ronaldw07.deku.client.DekuModClient;
+import com.ronaldw07.deku.client.DelawareClient;
 import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.ExplosionClient;
 import com.ronaldw07.deku.client.ExplosionCowlingClient;
@@ -100,6 +101,15 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			}
 			if (wanted("sukuna")) {
 				sukuna(context, singleplayer);
+			}
+			if (wanted("delaware")) {
+				delaware(context, singleplayer);
+			}
+			if (wanted("screenEffectsKey")) {
+				screenEffectsKey(context);
+			}
+			if (wanted("flightBoost")) {
+				flightBoost(context, singleplayer);
 			}
 			if (wanted("smokescreenHold")) {
 				smokescreenHold(context, singleplayer);
@@ -543,6 +553,69 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitTicks(100);
 		check(!singleplayer.getServer().computeOnServer(server -> Sukuna.domainOpen(player(server).getUUID())), "the Domain should close after ten seconds");
 		camera(context, CameraType.FIRST_PERSON);
+	}
+
+	private static void delaware(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Holding Y winds the flick up; letting go fires it and hurts the pig in line.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 3400 -59 3400 0 0");
+		context.waitTicks(40);
+		selectSlot(context, 0);
+		command(singleplayer, "execute at @p run summon minecraft:pig ~ ~ ~12 {NoAI:1b}");
+		DekuSettings.set(DekuSettings.get().withPunchPower(100));
+		context.getInput().holdKey(DekuModClient.DELAWARE_KEY);
+		context.waitTicks(45);
+		check(context.computeOnClient(client -> DelawareClient.charge()) >= 90, "holding Y should fully charge Delaware Smash");
+		context.takeScreenshot("delaware-charged");
+		context.getInput().releaseKey(DekuModClient.DELAWARE_KEY);
+		context.waitTicks(10);
+		context.takeScreenshot("delaware-fired");
+		boolean hurt = singleplayer.getServer().computeOnServer(server -> {
+			var pigs = server.overworld().getEntities(EntityTypes.PIG, pig -> true);
+			return pigs.isEmpty() || pigs.getFirst().getHealth() < pigs.getFirst().getMaxHealth();
+		});
+		check(hurt, "the charged Delaware Smash should hit the pig in line");
+	}
+
+	private static void screenEffectsKey(ClientGameTestContext context) {
+		// J switches screen shake and flash off and on.
+		boolean before = context.computeOnClient(client -> DekuSettings.get().noScreenEffects());
+		context.getInput().pressKey(DekuModClient.SCREEN_EFFECTS_KEY);
+		context.waitTicks(3);
+		check(context.computeOnClient(client -> DekuSettings.get().noScreenEffects()) != before, "J should switch the screen effects");
+		context.getInput().pressKey(DekuModClient.SCREEN_EFFECTS_KEY);
+		context.waitTicks(3);
+		check(context.computeOnClient(client -> DekuSettings.get().noScreenEffects()) == before, "J again should switch them back");
+	}
+
+	private static void flightBoost(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Holding sprint while flying doubles the speed.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 3000 -59 3000 0 -20");
+		context.waitTicks(40);
+		selectSlot(context, 1);
+		context.getInput().holdKeyFor(options -> options.keyJump, 2);
+		context.waitTicks(2);
+		context.getInput().holdKey(options -> options.keyJump);
+		context.waitTicks(5);
+		context.getInput().holdKey(options -> options.keyUp);
+		context.waitTicks(5);
+		Vec3 a = context.computeOnClient(client -> client.player.position());
+		context.waitTicks(10);
+		Vec3 b = context.computeOnClient(client -> client.player.position());
+		context.getInput().holdKey(options -> options.keySprint);
+		context.waitTicks(3);
+		Vec3 c = context.computeOnClient(client -> client.player.position());
+		context.waitTicks(10);
+		Vec3 d = context.computeOnClient(client -> client.player.position());
+		context.takeScreenshot("flight-boost");
+		double normal = a.distanceTo(b);
+		double boosted = c.distanceTo(d);
+		context.getInput().releaseKey(options -> options.keySprint);
+		context.getInput().releaseKey(options -> options.keyUp);
+		context.getInput().releaseKey(options -> options.keyJump);
+		check(boosted > normal * 1.5, "sprinting in flight should boost the speed, " + normal + " then " + boosted);
+		context.waitTicks(40);
 	}
 
 	private static void poses(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

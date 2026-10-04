@@ -7,6 +7,7 @@ import com.ronaldw07.deku.network.DecayPayload;
 import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
+import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
 import com.ronaldw07.deku.network.ExplosionCowlingPayload;
 import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.JujutsuPayload;
@@ -146,6 +147,7 @@ public class DekuMod implements ModInitializer {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Smokescreen.forget(handler.player));
 
 		PayloadTypeRegistry.serverboundPlay().register(ExplosionCowlingPayload.TYPE, ExplosionCowlingPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(ExplosionCowlingFxPayload.TYPE, ExplosionCowlingFxPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(ExplosionCowlingPayload.TYPE,
 			(payload, context) -> ExplosionCowling.set(context.player(), payload.on()));
 		ServerTickEvents.END_SERVER_TICK.register(ExplosionCowling::tick);

@@ -45,6 +45,11 @@ final class PowerHud {
 			y -= LINE_HEIGHT;
 		}
 
+		if (DelawareClient.charge() > 0) {
+			graphics.centeredText(Minecraft.getInstance().font, "Delaware " + DelawareClient.charge() + "%", x, y, COWLING_COLOR);
+			y -= LINE_HEIGHT;
+		}
+
 		if (GojoClient.purpleCharge() > 0) {
 			graphics.centeredText(Minecraft.getInstance().font, "Hollow Purple " + GojoClient.purpleCharge() + "%", x, y, GOJO_COLOR);
 			y -= LINE_HEIGHT;
