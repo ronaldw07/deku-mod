@@ -40,10 +40,11 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 
 ## Half Cold Half Hot (slot 5)
 
-- Right-click: a glacier of ice spikes races along the ground, freezing and trapping mobs
+- Right-click: a glacier of ice spikes races along the ground, impaling, freezing and trapping anyone it erupts into
 - Hold V: flamethrower, a 30 block cone of fire that burns and shoves mobs, sets the ground ablaze and melts ice
-- C: a giant wall of ice erupts ahead
-- X: Flashfreeze Heatwave, a block of ice blown apart by a blast of heat
+- Hold space: ice slide, glide where you look on a bridge of ice that builds under your feet
+- C: a giant wall of ice erupts ahead, hurling and freezing anyone in the way
+- X: Flashfreeze Heatwave, a ball of ice blown apart by a huge blast of fire, with a chain of fire explosions, a pillar of flame and magma raining down
 
 ## Danger Sense
 

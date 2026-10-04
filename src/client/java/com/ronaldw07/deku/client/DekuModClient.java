@@ -144,7 +144,7 @@ public class DekuModClient implements ClientModInitializer {
 		DecayClient.tick(player, decay, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
 			decay && cowlingClicks % 2 == 1);
 		HalfColdHalfHotClient.tick(player, halfColdHalfHot, client.options.keyUse.isDown(), SMASH_KEY.isDown(),
-			halfColdHalfHot && cowlingClicks > 0, halfColdHalfHot && clusterClicks > 0);
+			halfColdHalfHot && cowlingClicks > 0, halfColdHalfHot && clusterClicks > 0, client.options.keyJump.isDown());
 		TornadoFx.tick(client.level);
 		ExplosionFx.tick(client.level);
 		FaJinFx.tick(player);

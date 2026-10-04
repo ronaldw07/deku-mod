@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Blocks;
@@ -25,7 +26,8 @@ import net.minecraft.world.phys.Vec3;
  * Server side of Half Cold Half Hot. The right side freezes: a jagged glacier racing along
  * the ground that traps whatever it reaches, and a towering wall of ice. The left side burns:
  * a stream of fire held as long as the key is. Flashfreeze Heatwave does both at once, a
- * block of ice blown apart by a blast of heat.
+ * ball of ice blown apart by a blast of heat. Holding jump slides along on a bridge of ice
+ * that builds itself under your feet.
  */
 public final class HalfColdHalfHot {
 	// Ice wave.
@@ -37,7 +39,11 @@ public final class HalfColdHalfHot {
 	private static final double MIN_SPIKE_HEIGHT = 2.0;
 	private static final double SPIKE_HEIGHT_GROWTH = 0.2;
 	private static final double WAVE_WIDTH = 2.5;
-	private static final float FREEZE_DAMAGE = 6.0f;
+	private static final float FREEZE_DAMAGE = 14.0f;
+	// Anyone the ice erupts into is impaled: a big hit and thrown upward.
+	private static final float SPIKE_DAMAGE = 12.0f;
+	private static final float WALL_DAMAGE = 16.0f;
+	private static final double IMPALE_LIFT = 0.9;
 	private static final int FROZEN_TICKS = 300;
 	private static final int GROUND_SEARCH = 6;
 	// Ice wall.
@@ -64,23 +70,39 @@ public final class HalfColdHalfHot {
 	private static final int IGNITE_SPOTS = 3;
 	private static final int FLAME_SOUND_INTERVAL = 4;
 	// Flashfreeze Heatwave.
-	private static final double HEATWAVE_DISTANCE = 10.0;
-	private static final int HEATWAVE_ICE_RADIUS = 4;
+	private static final double HEATWAVE_DISTANCE = 12.0;
+	private static final int HEATWAVE_ICE_RADIUS = 6;
 	private static final int HEATWAVE_DELAY = 15;
-	private static final float HEATWAVE_BLAST = 9.0f;
-	private static final float HEATWAVE_CRATER = 7.0f;
-	private static final int HEATWAVE_DEBRIS = 60;
-	private static final double HEATWAVE_REACH = 20.0;
-	private static final float HEATWAVE_DAMAGE = 20.0f;
-	private static final double HEATWAVE_PUSH = 3.0;
+	private static final float HEATWAVE_BLAST = 16.0f;
+	private static final float HEATWAVE_CRATER = 12.0f;
+	private static final int HEATWAVE_CRATER_FIRES = 60;
+	private static final int HEATWAVE_DEBRIS = 250;
+	private static final double HEATWAVE_REACH = 35.0;
+	private static final float HEATWAVE_DAMAGE = 45.0f;
+	private static final double HEATWAVE_PUSH = 5.0;
+	// Chain of fire explosions going off around the main blast.
+	private static final int CHAIN_BLASTS = 10;
+	private static final double CHAIN_MIN_DISTANCE = 14.0;
+	private static final double CHAIN_EXTRA_DISTANCE = 8.0;
+	private static final int CHAIN_MAX_DELAY = 20;
+	private static final float CHAIN_RADIUS = 5.0f;
+	// A spiralling pillar of fire left standing over the crater.
+	private static final int PILLAR_TICKS = 60;
+	private static final double PILLAR_HEIGHT = 40.0;
+	private static final double PILLAR_RADIUS = 3.0;
+	// Chunks of magma thrown out to rain back down.
+	private static final int MAGMA_CHUNKS = 12;
+	// Ice slide.
+	private static final int SLIDE_HALF_WIDTH = 1;
 
 	private static final Set<UUID> flaming = new HashSet<>();
+	private static final Set<UUID> sliding = new HashSet<>();
 
 	private HalfColdHalfHot() {
 	}
 
 	public static void handle(ServerPlayer player, Move move, boolean active) {
-		boolean starting = active || move != Move.FLAME;
+		boolean starting = active || (move != Move.FLAME && move != Move.SLIDE);
 		if (starting && !DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT)) {
 			return;
 		}
@@ -91,6 +113,13 @@ public final class HalfColdHalfHot {
 					flaming.add(player.getUUID());
 				} else {
 					flaming.remove(player.getUUID());
+				}
+			}
+			case SLIDE -> {
+				if (active) {
+					sliding.add(player.getUUID());
+				} else {
+					sliding.remove(player.getUUID());
 				}
 			}
 			case ICE_WALL -> iceWall(player);
@@ -118,7 +147,7 @@ public final class HalfColdHalfHot {
 			Vec3 spot = feet.add(forward.scale(distance)).add(right.scale((random.nextDouble() - 0.5) * WAVE_JITTER));
 			double radius = MIN_SPIKE_RADIUS + distance * SPIKE_RADIUS_GROWTH;
 			double height = MIN_SPIKE_HEIGHT + distance * SPIKE_HEIGHT_GROWTH;
-			Blasts.later(server, (int) (distance / WAVE_BLOCKS_PER_TICK), () -> spike(level, spot, radius, height));
+			Blasts.later(server, (int) (distance / WAVE_BLOCKS_PER_TICK), () -> spike(level, player, spot, radius, height));
 		}
 
 		Vec3 end = feet.add(forward.scale(WAVE_LENGTH));
@@ -147,8 +176,8 @@ public final class HalfColdHalfHot {
 		return pos;
 	}
 
-	/** A jagged cone of ice, tallest in the middle. */
-	private static void spike(ServerLevel level, Vec3 at, double radius, double height) {
+	/** A jagged cone of ice, tallest in the middle, impaling anyone standing where it bursts up. */
+	private static void spike(ServerLevel level, ServerPlayer owner, Vec3 at, double radius, double height) {
 		RandomSource random = level.getRandom();
 		BlockPos base = ground(level, BlockPos.containing(at));
 		int reach = (int) Math.ceil(radius);
@@ -165,6 +194,21 @@ public final class HalfColdHalfHot {
 			}
 		}
 		level.sendParticles(ParticleTypes.SNOWFLAKE, at.x, base.getY() + height / 2, at.z, 8, radius, height / 2, radius, 0.02);
+		AABB area = new AABB(at.x - radius, base.getY(), at.z - radius, at.x + radius, base.getY() + height, at.z + radius);
+		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, area, entity -> entity != owner && entity.isAlive())) {
+			impale(level, owner, entity, SPIKE_DAMAGE);
+		}
+	}
+
+	/** Ice bursting up through someone: a big hit, a toss upward, and frost. */
+	private static void impale(ServerLevel level, ServerPlayer owner, LivingEntity entity, float damage) {
+		entity.invulnerableTime = 0; // lands even if the wave's freeze hit them a moment ago
+		entity.hurtServer(level, owner.damageSources().playerAttack(owner), damage);
+		entity.push(0, IMPALE_LIFT, 0);
+		entity.hurtMarked = true;
+		entity.setTicksFrozen(FROZEN_TICKS);
+		Vec3 center = entity.getBoundingBox().getCenter();
+		level.sendParticles(ParticleTypes.SNOWFLAKE, center.x, center.y, center.z, 12, 0.4, 0.6, 0.4, 0.1);
 	}
 
 	private static void placeIce(ServerLevel level, BlockPos pos) {
@@ -229,14 +273,22 @@ public final class HalfColdHalfHot {
 		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
 				new AABB(front, front).inflate(WALL_HALF_WIDTH, WALL_PEAK, WALL_THICKNESS + 2),
 				entity -> entity != player && entity.isAlive())) {
-			entity.push(forward.scale(1.5).add(0, 1.0, 0));
-			entity.hurtMarked = true;
+			impale(level, player, entity, WALL_DAMAGE);
+			entity.push(forward.scale(1.5));
 			freeze(level, player, entity);
 		}
 		level.playSound(null, feet.x, feet.y, feet.z, DekuSounds.ICE, SoundSource.PLAYERS, 3.0f, 0.5f);
 	}
 
 	public static void tick(MinecraftServer server) {
+		sliding.removeIf(id -> {
+			ServerPlayer player = server.getPlayerList().getPlayer(id);
+			if (player == null || !player.isAlive() || !DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT)) {
+				return true;
+			}
+			slide(player);
+			return false;
+		});
 		flaming.removeIf(id -> {
 			ServerPlayer player = server.getPlayerList().getPlayer(id);
 			if (player == null || !player.isAlive() || !DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT)) {
@@ -323,7 +375,22 @@ public final class HalfColdHalfHot {
 		}
 	}
 
-	/** Flashfreeze Heatwave: freeze a block of ice ahead, then blow it apart with a blast of heat. */
+	/** Lays a strip of ice under the player's feet, so they glide along a bridge of it. */
+	private static void slide(ServerPlayer player) {
+		ServerLevel level = player.level();
+		BlockPos under = BlockPos.containing(player.getX(), player.getY() - 0.5, player.getZ());
+		for (int dx = -SLIDE_HALF_WIDTH; dx <= SLIDE_HALF_WIDTH; dx++) {
+			for (int dz = -SLIDE_HALF_WIDTH; dz <= SLIDE_HALF_WIDTH; dz++) {
+				placeIce(level, under.offset(dx, 0, dz));
+			}
+		}
+		level.sendParticles(ParticleTypes.SNOWFLAKE, player.getX(), player.getY(), player.getZ(), 4, 0.6, 0.1, 0.6, 0.02);
+		if (player.tickCount % 8 == 0) {
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.ICE, SoundSource.PLAYERS, 0.5f, 1.4f);
+		}
+	}
+
+	/** Flashfreeze Heatwave: freeze a ball of ice ahead, then blow it apart with a blast of heat. */
 	private static void heatwave(ServerPlayer player) {
 		ServerLevel level = player.level();
 		Vec3 eye = player.getEyePosition();
@@ -342,10 +409,15 @@ public final class HalfColdHalfHot {
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.ICE, SoundSource.PLAYERS, 2.0f, 0.7f);
 
 		Blasts.later(level.getServer(), HEATWAVE_DELAY, () -> {
-			level.sendParticles(ParticleTypes.FLAME, center.x, center.y, center.z, 200, 3, 3, 3, 0.3);
-			level.sendParticles(DekuParticles.WHITE_SMOKE, center.x, center.y, center.z, 150, 5, 4, 5, 0.05);
+			level.sendParticles(ParticleTypes.FLAME, center.x, center.y, center.z, 400, 5, 5, 5, 0.5);
+			level.sendParticles(ParticleTypes.LAVA, center.x, center.y, center.z, 60, 4, 4, 4, 0);
+			level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y, center.z, 2, 2, 2, 2, 0);
+			level.sendParticles(DekuParticles.WHITE_SMOKE, center.x, center.y, center.z, 300, 8, 6, 8, 0.08);
 			Blasts.blast(player, center, HEATWAVE_BLAST, Blasts.sparing(player), HEATWAVE_DEBRIS);
-			Blasts.carve(level, center, HEATWAVE_CRATER, 0);
+			Blasts.carve(level, center, HEATWAVE_CRATER, HEATWAVE_CRATER_FIRES);
+			chain(player, center);
+			pillar(level, center, PILLAR_TICKS);
+			magma(level, center);
 			for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(HEATWAVE_REACH),
 					entity -> entity != player && entity.isAlive() && entity.position().distanceTo(center) <= HEATWAVE_REACH)) {
 				Vec3 offset = entity.position().subtract(center);
@@ -356,11 +428,68 @@ public final class HalfColdHalfHot {
 				entity.push(away.scale(HEATWAVE_PUSH * strength).add(0, strength * 0.5, 0));
 				entity.hurtMarked = true;
 			}
-			level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 3.0f, 0.7f);
+			level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 5.0f, 0.6f);
+			level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, 5.0f, 0.5f);
+			level.playSound(null, center.x, center.y, center.z, DekuSounds.FLAME, SoundSource.PLAYERS, 4.0f, 0.6f);
 		});
+	}
+
+	/** Smaller fire explosions going off one after another all around the main blast. */
+	private static void chain(ServerPlayer player, Vec3 center) {
+		ServerLevel level = player.level();
+		RandomSource random = level.getRandom();
+		for (int i = 0; i < CHAIN_BLASTS; i++) {
+			double angle = Math.PI * 2 * i / CHAIN_BLASTS + random.nextDouble() * 0.4;
+			double distance = CHAIN_MIN_DISTANCE + random.nextDouble() * CHAIN_EXTRA_DISTANCE;
+			Vec3 at = center.add(Math.cos(angle) * distance, random.nextDouble() * 4 - 2, Math.sin(angle) * distance);
+			Blasts.later(level.getServer(), 3 + random.nextInt(CHAIN_MAX_DELAY), () -> {
+				level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 80, 2, 2, 2, 0.25);
+				level.sendParticles(ParticleTypes.LAVA, at.x, at.y, at.z, 10, 1.5, 1.5, 1.5, 0);
+				Blasts.blast(player, at, CHAIN_RADIUS, Blasts.sparing(player), 15);
+				Blasts.carve(level, at, CHAIN_RADIUS - 1, 6);
+			});
+		}
+	}
+
+	/** A spiralling column of fire over the crater, burning for a few seconds. */
+	private static void pillar(ServerLevel level, Vec3 center, int ticksLeft) {
+		if (ticksLeft <= 0) {
+			return;
+		}
+		double spin = ticksLeft * 0.5;
+		for (double height = 0; height < PILLAR_HEIGHT; height += 1.5) {
+			double radius = PILLAR_RADIUS * (1 + height / PILLAR_HEIGHT);
+			for (int arm = 0; arm < 3; arm++) {
+				double angle = spin + height * 0.3 + Math.PI * 2 * arm / 3;
+				Vec3 at = center.add(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+				level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 0, 0, 1, 0, 0.15);
+			}
+		}
+		if (ticksLeft % 4 == 0) {
+			level.sendParticles(ParticleTypes.LAVA, center.x, center.y + 2, center.z, 3, 1, 1, 1, 0);
+		}
+		Blasts.later(level.getServer(), 1, () -> pillar(level, center, ticksLeft - 1));
+	}
+
+	/** Chunks of magma hurled out of the blast to rain back down around it. */
+	private static void magma(ServerLevel level, Vec3 center) {
+		RandomSource random = level.getRandom();
+		BlockState magma = Blocks.MAGMA_BLOCK.defaultBlockState();
+		for (int i = 0; i < MAGMA_CHUNKS; i++) {
+			BlockPos pos = BlockPos.containing(center.add(0, 2, 0));
+			if (!level.getBlockState(pos).isAir()) {
+				continue;
+			}
+			FallingBlockEntity chunk = FallingBlockEntity.fall(level, pos, magma);
+			double angle = random.nextDouble() * Math.PI * 2;
+			double speed = 0.6 + random.nextDouble() * 0.8;
+			chunk.setDeltaMovement(Math.cos(angle) * speed, 1.0 + random.nextDouble() * 0.8, Math.sin(angle) * speed);
+			chunk.hurtMarked = true;
+		}
 	}
 
 	public static void forget(ServerPlayer player) {
 		flaming.remove(player.getUUID());
+		sliding.remove(player.getUUID());
 	}
 }

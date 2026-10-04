@@ -68,10 +68,11 @@ final class HeroNotebook {
 
 				C: Decay Cowling on/off. Faster, stronger, higher jumps, and whatever you run into crumbles."""),
 			page("Half Cold Half Hot", """
-				Right-click: a glacier of ice spikes races along the ground and freezes mobs.
+				Right-click: ice spikes race along the ground, impaling and freezing mobs.
 				Hold V: flamethrower. It melts ice too.
+				Hold space: ice slide.
 				C: a giant wall of ice.
-				X: Flashfreeze Heatwave. Ice, then a blast of heat blows it apart."""),
+				X: Flashfreeze Heatwave. Ice, then a huge blast of fire."""),
 			page("Settings (K)", """
 				Full Cowling power and ramp-up time.
 

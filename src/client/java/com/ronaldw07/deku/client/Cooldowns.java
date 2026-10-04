@@ -30,6 +30,7 @@ public final class Cooldowns {
 		CATASTROPHE("Catastrophe", 100),
 		ICE_WAVE("Ice Wave", 8),
 		FLAMETHROWER("Flamethrower", 0),
+		ICE_SLIDE("Ice Slide", 0),
 		ICE_WALL("Ice Wall", 30),
 		HEATWAVE("Flashfreeze Heatwave", 50);
 

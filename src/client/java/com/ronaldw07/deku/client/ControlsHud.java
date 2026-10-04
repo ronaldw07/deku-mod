@@ -72,6 +72,7 @@ final class ControlsHud {
 	private static final Panel HALF_COLD_HALF_HOT = new Panel("Half Cold Half Hot", HALF_COLD_HALF_HOT_COLOR, List.of(
 		new Row(Ability.ICE_WAVE, () -> key(Minecraft.getInstance().options.keyUse)),
 		new Row(Ability.FLAMETHROWER, () -> hold(DekuModClient.SMASH_KEY)),
+		new Row(Ability.ICE_SLIDE, () -> hold(Minecraft.getInstance().options.keyJump)),
 		new Row(Ability.ICE_WALL, () -> key(DekuModClient.COWLING_KEY)),
 		new Row(Ability.HEATWAVE, () -> key(DekuModClient.CLUSTER_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));

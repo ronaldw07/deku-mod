@@ -61,6 +61,9 @@ public final class Poses {
 		if (SmashClient.charging() || DecayClient.charging()) {
 			return Pose.SMASH_CHARGE;
 		}
+		if (HalfColdHalfHotClient.sliding()) {
+			return Pose.GROUND_TOUCH;
+		}
 		if (HalfColdHalfHotClient.flaming()) {
 			return Pose.AIM_LEFT;
 		}
