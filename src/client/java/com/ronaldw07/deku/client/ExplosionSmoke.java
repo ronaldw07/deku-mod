@@ -45,6 +45,10 @@ final class ExplosionSmoke {
 	private static final float MAX_SOOT_SCALE = 14f;
 	private static final int FLASH_PUFFS = 6;
 	private static final int ICE_SHARDS = 150;
+	private static final int PURPLE_DUST = 260;
+	private static final int PURPLE_PORTAL = 120;
+	private static final DustParticleOptions PURPLE_BRIGHT = new DustParticleOptions(0xD080FF, 4.0f);
+	private static final DustParticleOptions PURPLE_DEEP = new DustParticleOptions(0x6000C0, 4.0f);
 	private static final int FROST_PUFFS = 60;
 	private static final double FIREBALL_SPREAD = 0.05;
 	private static final int MAX_FLAMES = 160;
@@ -195,6 +199,12 @@ final class ExplosionSmoke {
 		if (blast.style() == Style.ICE_DOME) {
 			return; // the dome is drawn as lines by ExplosionFx
 		}
+		if (blast.style() == Style.PURPLE) {
+			if (age == 0) {
+				purpleBurst(level, blast, level.getRandom());
+			}
+			return;
+		}
 		RandomSource random = level.getRandom();
 		double share = share(blast.style());
 		boolean core = isCore(blast.style());
@@ -242,6 +252,7 @@ final class ExplosionSmoke {
 			case HOWITZER_CORE -> 1.0;
 			case HEATWAVE -> 1.0;
 			case ICE_DOME -> 0.0;
+			case PURPLE -> 0.0;
 		};
 	}
 
@@ -292,6 +303,20 @@ final class ExplosionSmoke {
 				spawn(level, ParticleTypes.FIREWORK, c, new Vec3(v.x, Math.abs(v.y), v.z), 1f);
 			}
 			ash = new Ash(c, blast.startTick());
+		}
+	}
+
+	/** Hollow Purple collapsing: a sphere of violet light blowing outward and a flash that sucks the air after it. */
+	private static void purpleBurst(ClientLevel level, Blast blast, RandomSource random) {
+		Vec3 c = blast.center();
+		spawn(level, ParticleTypes.EXPLOSION_EMITTER, c, Vec3.ZERO, 1f);
+		for (int i = 0; i < scaled(PURPLE_DUST); i++) {
+			Vec3 v = LightningDraw.randomDirection(random).scale((0.4 + random.nextDouble() * 1.4) * blast.radius() / 14.0);
+			spawn(level, random.nextBoolean() ? PURPLE_BRIGHT : PURPLE_DEEP, c.add(inSphere(random, blast.radius() * 0.3)), v, 1f);
+		}
+		for (int i = 0; i < scaled(PURPLE_PORTAL); i++) {
+			Vec3 v = LightningDraw.randomDirection(random).scale(0.5 + random.nextDouble());
+			spawn(level, ParticleTypes.REVERSE_PORTAL, c.add(inSphere(random, blast.radius() * 0.6)), v, 1f);
 		}
 	}
 

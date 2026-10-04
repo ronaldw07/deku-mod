@@ -16,6 +16,8 @@ public final class DekuItems {
 	public static final Item HERO_NOTEBOOK = register("hero_notebook", HeroNotebookItem::new);
 	public static final Item DECAY = register("decay", Item::new);
 	public static final Item HALF_COLD_HALF_HOT = register("half_cold_half_hot", Item::new);
+	public static final Item GOJO = register("gojo", Item::new);
+	public static final Item SUKUNA = register("sukuna", Item::new);
 
 	private DekuItems() {
 	}

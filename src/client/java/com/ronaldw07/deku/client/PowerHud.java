@@ -9,6 +9,7 @@ final class PowerHud {
 	private static final int COWLING_COLOR = 0xFF55FF55;
 	private static final int SMASH_COLOR = 0xFFFFAA00;
 	private static final int GROUND_BLAST_COLOR = 0xFFFF4030;
+	private static final int GOJO_COLOR = 0xFFA0C0FF;
 	private static final int EXPLOSION_COWLING_COLOR = 0xFFFF7030;
 	private static final int DECAY_COLOR = 0xFFB8B0D0;
 	// Clear of the hotbar, health and armor rows, and the held item's name.
@@ -41,6 +42,21 @@ final class PowerHud {
 
 		if (GearshiftClient.gear() > 0) {
 			graphics.centeredText(Minecraft.getInstance().font, "Gearshift: gear " + GearshiftClient.gear(), x, y, COWLING_COLOR);
+			y -= LINE_HEIGHT;
+		}
+
+		if (GojoClient.purpleCharge() > 0) {
+			graphics.centeredText(Minecraft.getInstance().font, "Hollow Purple " + GojoClient.purpleCharge() + "%", x, y, GOJO_COLOR);
+			y -= LINE_HEIGHT;
+		}
+
+		if (GojoClient.redCharge() > 0) {
+			graphics.centeredText(Minecraft.getInstance().font, "Red " + GojoClient.redCharge() + "%", x, y, GROUND_BLAST_COLOR);
+			y -= LINE_HEIGHT;
+		}
+
+		if (GojoClient.infinity()) {
+			graphics.centeredText(Minecraft.getInstance().font, "Infinity", x, y, GOJO_COLOR);
 			y -= LINE_HEIGHT;
 		}
 

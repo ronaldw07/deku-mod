@@ -12,6 +12,7 @@ import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.ExplosionClient;
 import com.ronaldw07.deku.client.ExplosionCowlingClient;
 import com.ronaldw07.deku.client.FullCowlingClient;
+import com.ronaldw07.deku.client.GojoClient;
 import com.ronaldw07.deku.client.LaunchClient;
 import com.ronaldw07.deku.client.ScreenShake;
 import com.ronaldw07.deku.client.SettingsScreen;
@@ -92,6 +93,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			}
 			if (wanted("heatwave")) {
 				heatwave(context, singleplayer);
+			}
+			if (wanted("gojo")) {
+				gojo(context, singleplayer);
 			}
 			if (wanted("smokescreenHold")) {
 				smokescreenHold(context, singleplayer);
@@ -388,6 +392,85 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			return count;
 		});
 		check(dug > 600, "the Flashfreeze nova should leave a big crater, only " + dug + " blocks cleared");
+	}
+
+	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Gojo: Blue drags a pig in, Infinity stops a husk, Red blasts a pig away, Hollow Purple erases a wall and everything past it.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 2200 -59 2200 0 3");
+		context.waitTicks(40);
+		selectSlot(context, 5);
+		check(context.computeOnClient(client -> DekuItems.isHolding(client.player, DekuItems.GOJO)), "slot 6 should hold Gojo");
+		Vec3 target = singleplayer.getServer().computeOnServer(server -> Aim.trace(player(server), 24).getLocation());
+
+		command(singleplayer, "summon minecraft:pig " + (target.x + 9) + " " + target.y + " " + target.z);
+		double before = singleplayer.getServer().computeOnServer(server ->
+			server.overworld().getEntities(EntityTypes.PIG, pig -> true).getFirst().position().distanceTo(target));
+		context.getInput().holdKeyFor(options -> options.keyUse, 2);
+		context.waitTicks(25);
+		context.takeScreenshot("gojo-blue");
+		double after = singleplayer.getServer().computeOnServer(server ->
+			server.overworld().getEntities(EntityTypes.PIG, pig -> true).getFirst().position().distanceTo(target));
+		check(after < before - 3, "Blue should drag the pig toward it, " + before + " then " + after);
+		context.waitTicks(60);
+		command(singleplayer, "kill @e[type=minecraft:pig]");
+
+		// Z: Infinity keeps a husk's hits off the player.
+		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.waitTicks(5);
+		check(context.computeOnClient(client -> GojoClient.infinity()), "Z should switch Infinity on");
+		command(singleplayer, "difficulty normal");
+		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~2");
+		camera(context, CameraType.THIRD_PERSON_FRONT);
+		context.waitTicks(80);
+		context.takeScreenshot("gojo-infinity");
+		float health = context.computeOnClient(client -> client.player.getHealth());
+		check(health >= 20, "Infinity should keep the husk from hurting the player, health " + health);
+		command(singleplayer, "kill @e[type=minecraft:husk]");
+		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.waitTicks(5);
+		camera(context, CameraType.FIRST_PERSON);
+
+		// Hold V: Red bursts and throws a pig clear.
+		command(singleplayer, "execute as @p run tp @s 2200 -59 2200 0 3");
+		context.waitTicks(10);
+		command(singleplayer, "summon minecraft:pig " + target.x + " " + target.y + " " + (target.z + 3));
+		Vec3 pigStart = singleplayer.getServer().computeOnServer(server ->
+			server.overworld().getEntities(EntityTypes.PIG, pig -> true).getFirst().position());
+		context.getInput().holdKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(45);
+		check(context.computeOnClient(client -> GojoClient.redCharge()) >= 90, "holding V should fully charge Red");
+		context.takeScreenshot("gojo-red-charge");
+		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(20);
+		context.takeScreenshot("gojo-red");
+		double thrown = singleplayer.getServer().computeOnServer(server -> {
+			var pigs = server.overworld().getEntities(EntityTypes.PIG, pig -> true);
+			return pigs.isEmpty() ? 99 : pigs.getFirst().position().distanceTo(pigStart);
+		});
+		check(thrown > 2, "Red should throw the pig away, it moved " + thrown);
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		context.waitTicks(100);
+
+		// Hold X: the orbs fuse into Hollow Purple, which erases a wall in its way.
+		command(singleplayer, "execute as @p run tp @s 2200 -59 2200 0 0");
+		context.waitTicks(10);
+		command(singleplayer, "execute at @p run fill ~-4 ~ ~30 ~4 ~5 ~30 minecraft:stone");
+		BlockPos wall = singleplayer.getServer().computeOnServer(server -> BlockPos.containing(player(server).getEyePosition()).south(30));
+		context.getInput().holdKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(30);
+		context.takeScreenshot("gojo-purple-charging");
+		context.waitTicks(40);
+		check(context.computeOnClient(client -> GojoClient.purpleCharge()) >= 90, "holding X should fully charge Hollow Purple");
+		context.takeScreenshot("gojo-purple-fused");
+		context.getInput().releaseKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(6);
+		context.takeScreenshot("gojo-purple-flight");
+		context.waitTicks(20);
+		boolean erased = singleplayer.getServer().computeOnServer(server -> server.overworld().getBlockState(wall).isAir());
+		check(erased, "Hollow Purple should erase the wall in its path at " + wall);
+		context.waitTicks(25);
+		context.takeScreenshot("gojo-purple-end");
 	}
 
 	private static void poses(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

@@ -33,7 +33,14 @@ public final class Cooldowns {
 		FLAMETHROWER("Flamethrower", 0),
 		ICE_SLIDE("Ice Slide", 0),
 		ICE_WALL("Ice Wall", 30),
-		HEATWAVE("Flashfreeze Heatwave", 50);
+		HEATWAVE("Flashfreeze Heatwave", 50),
+		GOJO_BLUE("Blue", 40),
+		GOJO_RED("Red", 60),
+		GOJO_PURPLE("Hollow Purple", 200),
+		INFINITY("Infinity", 0),
+		DISMANTLE("Dismantle", 20),
+		CLEAVE("Cleave", 40),
+		DOMAIN("Domain Expansion", 600);
 
 		final String label;
 		final int ticks;

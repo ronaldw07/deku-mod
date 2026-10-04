@@ -106,6 +106,7 @@ final class ExplosionFx {
 			Layer[] palette = switch (blast.style()) {
 				case GROUND -> LightningDraw.RED;
 				case NUKE -> LightningDraw.CRIMSON;
+				case PURPLE -> LightningDraw.PURPLE;
 				default -> LightningDraw.FIRE;
 			};
 			Vec3 center = blast.center().subtract(camera);
@@ -114,7 +115,7 @@ final class ExplosionFx {
 				continue;
 			}
 			boolean howitzer = isHowitzer(blast.style());
-			boolean nuke = blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE;
+			boolean nuke = blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE;
 			double rayReach = howitzer ? HOWITZER_RAY_REACH : nuke ? NUKE_RAY_REACH : 1;
 			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS) * rayReach);
 			double progress = Math.min(1, age / lifetime * 1.5);
@@ -180,7 +181,7 @@ final class ExplosionFx {
 	}
 
 	private static int lifetime(Blast blast) {
-		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE ? NUKE_LIFETIME_TICKS
+		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE ? NUKE_LIFETIME_TICKS
 			: blast.style() == Style.ICE_DOME ? DOME_LIFETIME_TICKS : LIFETIME_TICKS;
 	}
 

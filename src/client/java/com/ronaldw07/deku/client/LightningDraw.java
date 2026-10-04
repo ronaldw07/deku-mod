@@ -53,6 +53,17 @@ final class LightningDraw {
 		new Layer(0.05f, 0.6f, 0.85f, 1.0f, 0.5f),
 		new Layer(0.02f, 0.95f, 1.0f, 1.0f, 0.9f),
 	};
+	// Gojo's Blue, and the violet of Hollow Purple.
+	static final Layer[] BLUE = {
+		new Layer(0.12f, 0.05f, 0.25f, 1.0f, 0.3f),
+		new Layer(0.06f, 0.2f, 0.5f, 1.0f, 0.55f),
+		new Layer(0.025f, 0.8f, 0.95f, 1.0f, 0.9f),
+	};
+	static final Layer[] PURPLE = {
+		new Layer(0.14f, 0.5f, 0.0f, 0.9f, 0.35f),
+		new Layer(0.07f, 0.7f, 0.2f, 1.0f, 0.6f),
+		new Layer(0.03f, 1.0f, 0.8f, 1.0f, 0.9f),
+	};
 	static final Layer[] RED = {
 		new Layer(0.12f, 0.9f, 0.05f, 0.05f, 0.3f),
 		new Layer(0.06f, 1.0f, 0.2f, 0.1f, 0.55f),

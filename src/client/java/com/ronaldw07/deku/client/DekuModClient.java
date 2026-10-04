@@ -65,6 +65,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionCowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballChargeFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballFlightFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(GojoFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SpinFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GearshiftClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(DecayClient::render);
@@ -112,6 +113,7 @@ public class DekuModClient implements ClientModInitializer {
 		boolean oneForAll = player != null && DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL);
 		boolean explosion = player != null && DekuItems.isHolding(player, DekuItems.EXPLOSION);
 		boolean decay = player != null && DekuItems.isHolding(player, DekuItems.DECAY);
+		boolean gojo = player != null && DekuItems.isHolding(player, DekuItems.GOJO);
 		boolean halfColdHalfHot = player != null && DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT);
 		int cowlingClicks = countClicks(COWLING_KEY);
 		int smashClicks = countClicks(SMASH_KEY);
@@ -155,6 +157,9 @@ public class DekuModClient implements ClientModInitializer {
 			decay && cowlingClicks % 2 == 1);
 		HalfColdHalfHotClient.tick(player, halfColdHalfHot, client.options.keyUse.isDown(), SMASH_KEY.isDown(),
 			halfColdHalfHot && cowlingClicks > 0, halfColdHalfHot && clusterClicks > 0, client.options.keyJump.isDown());
+		GojoClient.tick(player, gojo, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
+			gojo && smokescreenClicks % 2 == 1);
+		GojoFx.tick(player);
 		TornadoFx.tick(client.level);
 		ExplosionFx.tick(client.level);
 		FaJinFx.tick(player);

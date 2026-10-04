@@ -2,7 +2,7 @@ package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload.Style;
-import com.ronaldw07.deku.network.FireballFlightPayload;
+import com.ronaldw07.deku.network.FireballFlightPayload.Kind;
 import com.ronaldw07.deku.network.ExplosionPayload.Move;
 import java.util.HashSet;
 import java.util.Set;
@@ -66,6 +66,8 @@ public final class Bakugo {
 	// Cluster Bomb: hold X to grow a red fireball, release to throw it at the crosshair; it flies
 	// fast, trailing fire and smoke, and lands as a nuke-style blast with a mushroom cloud.
 	private static final double NUKE_RANGE = 150.0;
+	private static final double MIN_NUKE_BALL_RADIUS = 0.3; // how big the flying ball looks, from a tap to a full charge
+	private static final double MAX_NUKE_BALL_RADIUS = 3.9;
 	private static final double NUKE_SPEED = 3.0; // blocks a tick
 	private static final float MIN_NUKE_RADIUS = 12.0f;
 	private static final float MAX_NUKE_RADIUS = 40.0f;
@@ -262,12 +264,8 @@ public final class Bakugo {
 		Vec3 start = hand(player, 1).add(player.getLookAngle().scale(NUKE_HAND_FORWARD));
 		float radius = (float) Mth.lerp(power, MIN_NUKE_RADIUS, MAX_NUKE_RADIUS);
 		level.playSound(null, start.x, start.y, start.z, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, NUKE_THROW_VOLUME, NUKE_THROW_PITCH);
-		FireballFlightPayload flight = new FireballFlightPayload(start, target, radius, (float) NUKE_SPEED);
-		for (ServerPlayer viewer : PlayerLookup.around(level, start, CORE_FX_VIEW_DISTANCE)) {
-			if (ServerPlayNetworking.canSend(viewer, FireballFlightPayload.TYPE)) {
-				ServerPlayNetworking.send(viewer, flight);
-			}
-		}
+		float ballRadius = (float) Mth.lerp(power, MIN_NUKE_BALL_RADIUS, MAX_NUKE_BALL_RADIUS);
+		BlastFx.sendOrb(level, start, target, ballRadius, NUKE_SPEED, Kind.FIRE, 0, CORE_FX_VIEW_DISTANCE);
 		fly(player, start, target, radius, power, 1);
 	}
 

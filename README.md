@@ -2,7 +2,7 @@
 
 Fabric mod for Minecraft 26.2: One For All and Explosion quirks.
 
-New players get One For All, Explosion, a notebook of instructions, Decay and Half Cold Half Hot in hotbar slots 1-5.
+New players get One For All, Explosion, a notebook of instructions, Decay, Half Cold Half Hot, Gojo and Sukuna in hotbar slots 1-7.
 Keep inventory is always on, so dying never drops your items.
 Hold a quirk item to use its moves; its controls and cooldowns show in the bottom right. Keys can be changed in Options > Controls.
 
@@ -48,6 +48,13 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Hold space: ice slide, glide where you look on a bridge of ice that builds under your feet
 - C: a giant wall of ice erupts ahead, hurling and freezing anyone in the way
 - X: Flashfreeze Heatwave, a 28 block dome of ice freezes the area ahead, cracks glow through it, then it blows apart in a huge fire and steam nova with a crater, flame pillar, magma rain and a mushroom cloud
+
+## Gojo (slot 6)
+
+- Right-click: Blue, a blue sphere lands at the crosshair and drags everything nearby into it
+- Hold V: Red, charge up to 2 seconds and throw a red sphere that bursts and hurls everything away
+- Hold X: Hollow Purple, a blue and a red orb draw together over 3 seconds into a purple orb; let go and it erases everything in a line 150 blocks long, then collapses
+- Z: Infinity on/off, nothing that touches you can hurt you and anything close is pushed away
 
 ## Danger Sense
 

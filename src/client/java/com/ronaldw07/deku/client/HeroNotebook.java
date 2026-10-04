@@ -16,6 +16,8 @@ final class HeroNotebook {
 				Slot 2: Explosion
 				Slot 4: Decay
 				Slot 5: Half Cold Half Hot
+				Slot 6: Gojo
+				Slot 7: Sukuna
 
 				Hold a quirk item to use its moves. Its controls show in the bottom right.
 
@@ -58,6 +60,11 @@ final class HeroNotebook {
 				Hold C: charge ground blast, let go
 				Hold X: Cluster Bomb, grow a fireball and throw it
 				Z: Explosion Cowling on/off, bigger blasts"""),
+			page("Gojo", """
+				Right-click: Blue, pulls everything toward a point
+				Hold V: Red, charge, then burst everything away
+				Hold X: Hollow Purple, charge until the orbs fuse, then let go to erase everything in a line
+				Z: Infinity on/off"""),
 			page("Decay", """
 				Right-click: decay what you touch. It crumbles and the decay spreads through everything connected to it.
 

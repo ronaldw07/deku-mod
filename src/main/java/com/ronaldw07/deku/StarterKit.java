@@ -9,8 +9,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Hands each player One For All, Explosion, the notebook, Decay and Half Cold Half Hot in hotbar
- * slots 1-5 the first time they join a world. Quirks added in later updates go to players who
+ * Hands each player One For All, Explosion, the notebook, Decay, Half Cold Half Hot, Gojo and
+ * Sukuna in hotbar slots 1-7 the first time they join a world. Quirks added in later updates go to players who
  * already had the kit on their next join.
  */
 public final class StarterKit {
@@ -24,6 +24,8 @@ public final class StarterKit {
 	private static final Addition[] ADDITIONS = {
 		new Addition(DekuItems.DECAY, 3, received("received_decay")),
 		new Addition(DekuItems.HALF_COLD_HALF_HOT, 4, received("received_half_cold_half_hot")),
+		new Addition(DekuItems.GOJO, 5, received("received_gojo")),
+		new Addition(DekuItems.SUKUNA, 6, received("received_sukuna")),
 	};
 
 	private StarterKit() {

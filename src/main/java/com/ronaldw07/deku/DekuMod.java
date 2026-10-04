@@ -8,6 +8,7 @@ import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionCowlingPayload;
+import com.ronaldw07.deku.network.JujutsuPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.FireballFlightPayload;
 import com.ronaldw07.deku.network.ExplosionPayload;
@@ -34,6 +35,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
 import org.slf4j.Logger;
@@ -136,7 +138,8 @@ public class DekuMod implements ModInitializer {
 
 		// Quirk users land on their feet: no fall damage for players, ever.
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
-			!(entity instanceof Player && source.is(DamageTypeTags.IS_FALL)));
+			!(entity instanceof Player && source.is(DamageTypeTags.IS_FALL))
+				&& !(entity instanceof ServerPlayer player && Gojo.blocks(player, source)));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Bakugo.forget(handler.player));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Smokescreen.forget(handler.player));
 
@@ -145,6 +148,12 @@ public class DekuMod implements ModInitializer {
 			(payload, context) -> ExplosionCowling.set(context.player(), payload.on()));
 		ServerTickEvents.END_SERVER_TICK.register(ExplosionCowling::tick);
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> ExplosionCowling.forget(handler.player));
+
+		PayloadTypeRegistry.serverboundPlay().register(JujutsuPayload.TYPE, JujutsuPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(JujutsuPayload.TYPE,
+			(payload, context) -> Gojo.handle(context.player(), payload.move(), payload.active(), payload.charge()));
+		ServerTickEvents.END_SERVER_TICK.register(Gojo::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Gojo.forget(handler.player));
 
 		LOGGER.info("One For All loaded");
 	}

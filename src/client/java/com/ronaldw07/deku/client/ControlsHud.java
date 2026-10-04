@@ -22,6 +22,8 @@ final class ControlsHud {
 	private static final int EXPLOSION_COLOR = 0xFFFF9030;
 	private static final int DECAY_COLOR = 0xFFB8B0D0;
 	private static final int HALF_COLD_HALF_HOT_COLOR = 0xFF8FD8FF;
+	private static final int GOJO_COLOR = 0xFFA0C0FF;
+	private static final int SUKUNA_COLOR = 0xFFFF4050;
 	private static final int LABEL_COLOR = 0xFFFFFFFF;
 	private static final int COOLING_COLOR = 0xFF808080;
 	private static final int BACKGROUND = 0x90000000;
@@ -78,6 +80,19 @@ final class ControlsHud {
 		new Row(Ability.HEATWAVE, () -> key(DekuModClient.CLUSTER_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
+	private static final Panel GOJO = new Panel("Gojo", GOJO_COLOR, List.of(
+		new Row(Ability.GOJO_BLUE, () -> key(Minecraft.getInstance().options.keyUse)),
+		new Row(Ability.GOJO_RED, () -> hold(DekuModClient.SMASH_KEY)),
+		new Row(Ability.GOJO_PURPLE, () -> hold(DekuModClient.CLUSTER_KEY)),
+		new Row(Ability.INFINITY, () -> key(DekuModClient.SMOKESCREEN_KEY)),
+		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
+
+	private static final Panel SUKUNA = new Panel("Sukuna", SUKUNA_COLOR, List.of(
+		new Row(Ability.DISMANTLE, () -> key(Minecraft.getInstance().options.keyUse)),
+		new Row(Ability.CLEAVE, () -> key(DekuModClient.SMASH_KEY)),
+		new Row(Ability.DOMAIN, () -> key(DekuModClient.COWLING_KEY)),
+		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
+
 	private ControlsHud() {
 	}
 
@@ -90,7 +105,9 @@ final class ControlsHud {
 		Panel panel = DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL) ? ONE_FOR_ALL
 			: DekuItems.isHolding(player, DekuItems.EXPLOSION) ? EXPLOSION
 			: DekuItems.isHolding(player, DekuItems.DECAY) ? DECAY
-			: DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT) ? HALF_COLD_HALF_HOT : null;
+			: DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT) ? HALF_COLD_HALF_HOT
+			: DekuItems.isHolding(player, DekuItems.GOJO) ? GOJO
+			: DekuItems.isHolding(player, DekuItems.SUKUNA) ? SUKUNA : null;
 		if (panel == null) {
 			return;
 		}
