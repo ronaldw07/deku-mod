@@ -25,7 +25,7 @@ final class HeroNotebook {
 			page("One For All", """
 				C: Full Cowling on/off
 				Hold V: charge Smash, let go to throw
-				Z: Smokescreen
+				Z: Smokescreen, keep holding to make the cloud grow
 				Hold R, or double-tap and hold space: Float
 				B: Blackwhip
 				Hold space on the ground: crouch and charge, let go to launch toward your crosshair
@@ -56,7 +56,8 @@ final class HeroNotebook {
 				Double-tap space, keep holding: fly (WASD to move)
 				Hold V: Howitzer Impact, let go to explode
 				Hold C: charge ground blast, let go
-				X: Cluster Bomb"""),
+				X: Cluster Bomb
+				Z: Explosion Cowling on/off, bigger blasts"""),
 			page("Decay", """
 				Right-click: decay what you touch. It crumbles and the decay spreads through everything connected to it.
 

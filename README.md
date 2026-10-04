@@ -10,7 +10,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 
 - C: Full Cowling on/off
 - Hold V: charge Smash, release to throw (100% blasts through terrain)
-- Z: Smokescreen
+- Z: Smokescreen; keep holding and the cloud keeps growing, up to 30 blocks wide
 - Hold R, or double-tap and hold space: Float
 - B: Blackwhip
 - Hold space on the ground: crouch and charge, release to launch toward the crosshair
@@ -20,7 +20,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - U: United States of Smash, rocket into the sky and dive fist first: a crater 240 blocks across with a ring cut around it, and a 150 block tornado that spins in the middle for a minute
 - G: Manchester Smash, leap, flip and axe kick the ground into a crater and shockwave
 - N: Gearshift on/off, shifts up to gear 5 the longer you keep moving
-- K: settings (power, ramp-up and charge times, Danger Sense, cooldowns on/off)
+- K: settings (power, ramp-up and charge times, Smash max range, Danger Sense, cooldowns on/off, particle detail, screen shake)
 
 ## Explosion (slot 2)
 
@@ -29,6 +29,9 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Hold V: Howitzer Impact, release to explode
 - Hold C: charge the cross-arm ground blast, release to fire
 - X: Cluster Bomb, a 100-block line of red bombs going off one after another
+- Z: Explosion Cowling on/off, a red-orange glow that makes every blast 25% bigger and stronger
+
+Explosions burn out as a white-hot flash, a fireball that goes orange, red and then black, and thick black smoke that hangs for ten seconds or more. Big blasts set off secondary pops, fling burning chunks, send a dust ring racing over the ground, scorch the crater rim black and shake the screen when they go off close by. A Howitzer Impact raises a mushroom cloud over 100 blocks tall with ash falling over the area. Particle detail and screen shake can be turned down or off in the K menu.
 
 ## Decay (slot 4)
 
