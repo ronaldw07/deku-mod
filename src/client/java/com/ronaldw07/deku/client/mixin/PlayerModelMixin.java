@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Poses the local player's arms for whatever move they're doing. Angles are radians; a
+ * Poses the local player's arms, and legs for kicks, for whatever move they're doing. Angles are radians; a
  * negative xRot swings an arm forward and up, and zRot swings it out to the side.
  */
 @Mixin(PlayerModel.class)
@@ -28,6 +28,8 @@ abstract class PlayerModelMixin {
 		PlayerModel model = (PlayerModel) (Object) this;
 		ModelPart right = model.rightArm;
 		ModelPart left = model.leftArm;
+		ModelPart rightLeg = model.rightLeg;
+		ModelPart leftLeg = model.leftLeg;
 		float aim = model.head.xRot + STRAIGHT_AHEAD; // pointing where the player looks
 		switch (Poses.current()) {
 			case NONE -> {
@@ -81,6 +83,30 @@ abstract class PlayerModelMixin {
 				set(right, 1.3f, 0, 0.25f);
 				set(left, 1.3f, 0, -0.25f);
 			}
+			// Shoot Style: right leg snapped out ahead, arms flung out for balance.
+			case KICK -> {
+				set(rightLeg, -1.5f, 0, 0);
+				set(right, -0.3f, 0, 0.9f);
+				set(left, -0.3f, 0, -0.9f);
+			}
+			// Tucked into a flip at the top of the Manchester Smash leap.
+			case FLIP -> {
+				set(rightLeg, -1.2f, 0, 0);
+				set(leftLeg, -1.2f, 0, 0);
+				set(right, -1.0f, 0, 0.2f);
+				set(left, -1.0f, 0, -0.2f);
+			}
+			// Coming down heel first: right leg raised overhead, arms out wide.
+			case AXE_KICK -> {
+				set(rightLeg, -2.6f, 0, 0);
+				set(right, 0, 0, 1.2f);
+				set(left, 0, 0, -1.2f);
+			}
+			// Decay: right hand reaching down to the ground.
+			case GROUND_TOUCH -> {
+				set(right, -0.6f, 0, 0);
+				set(left, 0.3f, 0, -0.2f);
+			}
 			// Lying along the flight path: right fist punched out ahead, left arm trailing.
 			case LAUNCH -> {
 				set(right, (float) -Math.PI, 0, 0);
@@ -89,9 +115,9 @@ abstract class PlayerModelMixin {
 		}
 	}
 
-	private static void set(ModelPart arm, float xRot, float yRot, float zRot) {
-		arm.xRot = xRot;
-		arm.yRot = yRot;
-		arm.zRot = zRot;
+	private static void set(ModelPart limb, float xRot, float yRot, float zRot) {
+		limb.xRot = xRot;
+		limb.yRot = yRot;
+		limb.zRot = zRot;
 	}
 }

@@ -6,7 +6,8 @@ package com.ronaldw07.deku.client;
  */
 public final class Poses {
 	public enum Pose {
-		NONE, POWER_UP, SMASH_CHARGE, PUNCH, SMOKESCREEN, FLOAT, WHIP, AIM_RIGHT, AIM_BOTH, CROSS, BURST, THRUSTERS, LAUNCH_CHARGE, LAUNCH, FLICK
+		NONE, POWER_UP, SMASH_CHARGE, PUNCH, SMOKESCREEN, FLOAT, WHIP, AIM_RIGHT, AIM_BOTH, CROSS, BURST, THRUSTERS, LAUNCH_CHARGE, LAUNCH, FLICK, KICK, FLIP,
+		AXE_KICK, GROUND_TOUCH
 	}
 
 	private static Pose timed = Pose.NONE;
@@ -30,6 +31,12 @@ public final class Poses {
 		if (timed == Pose.FLICK) {
 			return timed;
 		}
+		if (ManchesterClient.rising()) {
+			return Pose.FLIP;
+		}
+		if (ManchesterClient.diving()) {
+			return Pose.AXE_KICK;
+		}
 		if (ExplosionClient.flying() || ExplosionClient.spinning()) {
 			return Pose.THRUSTERS;
 		}
@@ -42,7 +49,7 @@ public final class Poses {
 		if (ExplosionClient.armsCrossed()) {
 			return Pose.CROSS;
 		}
-		if (SmashClient.charging()) {
+		if (SmashClient.charging() || DecayClient.charging()) {
 			return Pose.SMASH_CHARGE;
 		}
 		if (ExplosionClient.rapidFiring()) {

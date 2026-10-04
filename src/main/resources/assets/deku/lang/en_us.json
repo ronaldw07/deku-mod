@@ -5,11 +5,14 @@
 	"key.deku.smokescreen": "Smokescreen",
 	"key.deku.float": "Float (hold)",
 	"key.deku.blackwhip": "Blackwhip",
-	"key.deku.cluster": "Cluster Bomb (Explosion)",
+	"key.deku.manchester": "Manchester Smash",
+	"key.deku.gearshift": "Gearshift (on/off)",
+	"key.deku.cluster": "Shoot Style (One For All) / Cluster Bomb (Explosion)",
 	"key.deku.danger_sense": "Danger Sense (on/off)",
 	"key.deku.settings": "Open Settings",
 	"screen.deku.settings": "One For All Settings",
 	"item.deku.one_for_all": "One For All",
 	"item.deku.explosion": "Explosion",
-	"item.deku.hero_notebook": "Hero Analysis for the Future No. 13"
+	"item.deku.hero_notebook": "Hero Analysis for the Future No. 13",
+	"item.deku.decay": "Decay"
 }

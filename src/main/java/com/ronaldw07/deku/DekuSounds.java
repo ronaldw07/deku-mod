@@ -24,6 +24,10 @@ public final class DekuSounds {
 	public static final SoundEvent EXPLOSION_POP = register("explosion.pop");
 	public static final SoundEvent EXPLOSION_CHARGE = register("explosion.charge");
 	public static final SoundEvent HOWITZER_SPIN = register("explosion.howitzer_spin");
+	public static final SoundEvent GEARSHIFT_SHIFT = register("gearshift.shift");
+	public static final SoundEvent DECAY_TOUCH = register("decay.touch");
+	public static final SoundEvent DECAY_CRUMBLE = register("decay.crumble");
+	public static final SoundEvent DECAY_CHARGE = register("decay.charge");
 
 	private DekuSounds() {
 	}

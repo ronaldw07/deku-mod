@@ -3,23 +3,30 @@ package com.ronaldw07.deku;
 import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.CowlingPayload;
+import com.ronaldw07.deku.network.DecayPayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.ExplosionPayload;
 import com.ronaldw07.deku.network.FloatPayload;
+import com.ronaldw07.deku.network.GearshiftPayload;
 import com.ronaldw07.deku.network.LaunchPayload;
+import com.ronaldw07.deku.network.ManchesterPayload;
+import com.ronaldw07.deku.network.ShootStylePayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.entity.player.Player;
 
@@ -78,12 +85,40 @@ public class DekuMod implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(Bakugo::tick);
 		ServerTickEvents.END_SERVER_TICK.register(Blasts::tick);
 
+		PayloadTypeRegistry.serverboundPlay().register(ShootStylePayload.TYPE, ShootStylePayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ShootStylePayload.TYPE,
+			(payload, context) -> ShootStyle.kick(context.player(), payload.percent()));
+
+		PayloadTypeRegistry.serverboundPlay().register(ManchesterPayload.TYPE, ManchesterPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(ManchesterPayload.TYPE,
+			(payload, context) -> Manchester.slam(context.player(), payload.percent()));
+
+		PayloadTypeRegistry.serverboundPlay().register(GearshiftPayload.TYPE, GearshiftPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(GearshiftPayload.TYPE,
+			(payload, context) -> Gearshift.apply(context.player(), payload.gear()));
+
+		PayloadTypeRegistry.serverboundPlay().register(DecayPayload.TYPE, DecayPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(DecayPayload.TYPE,
+			(payload, context) -> Decay.handle(context.player(), payload.move(), payload.charge()));
+		ServerTickEvents.END_SERVER_TICK.register(Decay::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Decay.forget(handler.player));
+
+		ServerLifecycleEvents.SERVER_STARTED.register(DekuMod::keepInventory);
+
 		// Quirk users land on their feet: no fall damage for players, ever.
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
 			!(entity instanceof Player && source.is(DamageTypeTags.IS_FALL)));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Bakugo.forget(handler.player));
 
 		LOGGER.info("One For All loaded");
+	}
+
+	/** Heroes keep their gear: dying never drops the inventory, in any world the mod runs in. */
+	private static void keepInventory(MinecraftServer server) {
+		CommandSourceStack source = server.createCommandSourceStack().withSuppressedOutput();
+		// The rule was renamed to keep_inventory; trying both covers either name, and the unknown one fails quietly.
+		server.getCommands().performPrefixedCommand(source, "gamerule keep_inventory true");
+		server.getCommands().performPrefixedCommand(source, "gamerule keepInventory true");
 	}
 
 	public static Identifier id(String path) {

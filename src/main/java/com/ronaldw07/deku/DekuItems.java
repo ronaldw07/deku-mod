@@ -14,6 +14,7 @@ public final class DekuItems {
 	public static final Item ONE_FOR_ALL = register("one_for_all", Item::new);
 	public static final Item EXPLOSION = register("explosion", Item::new);
 	public static final Item HERO_NOTEBOOK = register("hero_notebook", HeroNotebookItem::new);
+	public static final Item DECAY = register("decay", Item::new);
 
 	private DekuItems() {
 	}

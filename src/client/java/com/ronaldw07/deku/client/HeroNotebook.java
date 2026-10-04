@@ -14,6 +14,7 @@ final class HeroNotebook {
 			page("Hero Analysis", """
 				Slot 1: One For All
 				Slot 2: Explosion
+				Slot 4: Decay
 
 				Hold a quirk item to use its moves. Its controls show in the bottom right.
 
@@ -28,6 +29,12 @@ final class HeroNotebook {
 				B: Blackwhip
 				Hold space on the ground: crouch and charge, let go to launch toward your crosshair
 				Space in the air: air flick (hold to keep flicking)"""),
+			page("Shoot Style", """
+				X: St. Louis Smash, a kick that throws a crescent of wind. At half power and up it slices through terrain.
+
+				G: Manchester Smash. Leap, flip and axe kick the ground. In the air it dives straight down.
+
+				N: Gearshift on/off. Keep moving to shift up to gear 5."""),
 			page("One For All tips", """
 				Smash locks onto the mob nearest your crosshair.
 
@@ -43,6 +50,12 @@ final class HeroNotebook {
 				Hold V: Howitzer Impact, let go to explode
 				Hold C: charge ground blast, let go
 				X: Cluster Bomb"""),
+			page("Decay", """
+				Right-click: decay what you touch. It crumbles and the decay spreads through everything connected to it.
+
+				Hold V: wind up, let go to slam the ground and send a wave of decay rolling out.
+
+				Mobs it reaches rot away."""),
 			page("Settings (K)", """
 				Full Cowling power and ramp-up time.
 

@@ -2,7 +2,8 @@
 
 Fabric mod for Minecraft 26.2: One For All and Explosion quirks.
 
-New players get One For All, Explosion and a notebook of instructions in hotbar slots 1-3.
+New players get One For All, Explosion, a notebook of instructions and Decay in hotbar slots 1-4.
+Keep inventory is always on, so dying never drops your items.
 Hold a quirk item to use its moves; its controls and cooldowns show in the bottom right. Keys can be changed in Options > Controls.
 
 ## One For All (slot 1)
@@ -14,6 +15,9 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - B: Blackwhip
 - Hold space on the ground: crouch and charge, release to launch toward the crosshair
 - Space in the air: flick a blast of air to push yourself where you look; hold to keep flicking
+- X: Shoot Style, a St. Louis Smash kick that throws a crescent of wind (slices terrain from 50%)
+- G: Manchester Smash, leap, flip and axe kick the ground into a crater and shockwave
+- N: Gearshift on/off, shifts up to gear 5 the longer you keep moving
 - K: settings (power, ramp-up and charge times, Danger Sense, cooldowns on/off)
 
 ## Explosion (slot 2)
@@ -23,6 +27,12 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Hold V: Howitzer Impact, release to explode
 - Hold C: charge the cross-arm ground blast, release to fire
 - X: Cluster Bomb, a 100-block line of red bombs going off one after another
+
+## Decay (slot 4)
+
+- Right-click: decay what you touch; it crumbles and the decay spreads through everything connected to it
+- Hold V: wind up, release to slam the ground and send a wave of decay rolling out (up to 64 blocks)
+- Mobs it reaches rot away
 
 ## Danger Sense
 

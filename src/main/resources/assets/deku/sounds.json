@@ -69,5 +69,27 @@
 		"sounds": [
 			{ "name": "minecraft:block.amethyst_block.chime", "type": "event", "pitch": 2.0, "volume": 1.5 }
 		]
+	},
+	"gearshift.shift": {
+		"sounds": [
+			{ "name": "minecraft:block.beacon.power_select", "type": "event", "pitch": 1.5, "volume": 0.6 }
+		]
+	},
+	"decay.touch": {
+		"sounds": [
+			{ "name": "minecraft:block.sculk_catalyst.bloom", "type": "event", "pitch": 0.7 }
+		]
+	},
+	"decay.crumble": {
+		"sounds": [
+			{ "name": "minecraft:block.gravel.break", "type": "event", "pitch": 0.6 },
+			{ "name": "minecraft:block.sand.break", "type": "event", "pitch": 0.6 },
+			{ "name": "minecraft:block.rooted_dirt.break", "type": "event", "pitch": 0.6 }
+		]
+	},
+	"decay.charge": {
+		"sounds": [
+			{ "name": "minecraft:entity.warden.heartbeat", "type": "event", "volume": 0.8 }
+		]
 	}
 }

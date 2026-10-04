@@ -20,6 +20,7 @@ import net.minecraft.network.chat.Component;
 final class ControlsHud {
 	private static final int ONE_FOR_ALL_COLOR = 0xFF55FF55;
 	private static final int EXPLOSION_COLOR = 0xFFFF9030;
+	private static final int DECAY_COLOR = 0xFFB8B0D0;
 	private static final int LABEL_COLOR = 0xFFFFFFFF;
 	private static final int COOLING_COLOR = 0xFF808080;
 	private static final int BACKGROUND = 0x90000000;
@@ -45,6 +46,9 @@ final class ControlsHud {
 		new Row(Ability.FLOAT, () -> hold(DekuModClient.FLOAT_KEY).copy().append(" / ").append(doubleTap())),
 		new Row(Ability.BLACKWHIP, () -> key(DekuModClient.BLACKWHIP_KEY)),
 		new Row(Ability.LAUNCH, () -> hold(Minecraft.getInstance().options.keyJump)),
+		new Row(Ability.SHOOT_STYLE, () -> key(DekuModClient.CLUSTER_KEY)),
+		new Row(Ability.MANCHESTER, () -> key(DekuModClient.MANCHESTER_KEY)),
+		new Row(Ability.GEARSHIFT, () -> key(DekuModClient.GEARSHIFT_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private static final Panel EXPLOSION = new Panel("Explosion", EXPLOSION_COLOR, List.of(
@@ -53,6 +57,11 @@ final class ControlsHud {
 		new Row(Ability.HOWITZER, () -> hold(DekuModClient.SMASH_KEY)),
 		new Row(Ability.GROUND_BLAST, () -> hold(DekuModClient.COWLING_KEY)),
 		new Row(Ability.CLUSTER, () -> key(DekuModClient.CLUSTER_KEY)),
+		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
+
+	private static final Panel DECAY = new Panel("Decay", DECAY_COLOR, List.of(
+		new Row(Ability.DECAY_TOUCH, () -> key(Minecraft.getInstance().options.keyUse)),
+		new Row(Ability.DECAY_WAVE, () -> hold(DekuModClient.SMASH_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private ControlsHud() {
@@ -65,7 +74,8 @@ final class ControlsHud {
 			return;
 		}
 		Panel panel = DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL) ? ONE_FOR_ALL
-			: DekuItems.isHolding(player, DekuItems.EXPLOSION) ? EXPLOSION : null;
+			: DekuItems.isHolding(player, DekuItems.EXPLOSION) ? EXPLOSION
+			: DekuItems.isHolding(player, DekuItems.DECAY) ? DECAY : null;
 		if (panel == null) {
 			return;
 		}

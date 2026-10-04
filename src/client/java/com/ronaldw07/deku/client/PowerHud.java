@@ -9,6 +9,7 @@ final class PowerHud {
 	private static final int COWLING_COLOR = 0xFF55FF55;
 	private static final int SMASH_COLOR = 0xFFFFAA00;
 	private static final int GROUND_BLAST_COLOR = 0xFFFF4030;
+	private static final int DECAY_COLOR = 0xFFB8B0D0;
 	// Clear of the hotbar, health and armor rows, and the held item's name.
 	private static final int BOTTOM_LINE_ABOVE_SCREEN_BOTTOM = 72;
 	private static final int LINE_HEIGHT = 10;
@@ -37,9 +38,19 @@ final class PowerHud {
 			y -= LINE_HEIGHT;
 		}
 
+		if (GearshiftClient.gear() > 0) {
+			graphics.centeredText(Minecraft.getInstance().font, "Gearshift: gear " + GearshiftClient.gear(), x, y, COWLING_COLOR);
+			y -= LINE_HEIGHT;
+		}
+
 		if (ExplosionClient.armsCrossed()) {
 			graphics.centeredText(Minecraft.getInstance().font, "Ground Blast " + ExplosionClient.groundBlastCharge() + "%", x, y,
 				GROUND_BLAST_COLOR);
+			y -= LINE_HEIGHT;
+		}
+
+		if (DecayClient.charging()) {
+			graphics.centeredText(Minecraft.getInstance().font, "Decay Wave " + DecayClient.waveCharge() + "%", x, y, DECAY_COLOR);
 		}
 	}
 }

@@ -10,6 +10,7 @@ import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
+import com.ronaldw07.deku.network.ShootStylePayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -35,6 +36,8 @@ public class DekuModClient implements ClientModInitializer {
 	public static final KeyMapping FLOAT_KEY = register("key.deku.float", GLFW.GLFW_KEY_R);
 	public static final KeyMapping BLACKWHIP_KEY = register("key.deku.blackwhip", GLFW.GLFW_KEY_B);
 	public static final KeyMapping CLUSTER_KEY = register("key.deku.cluster", GLFW.GLFW_KEY_X);
+	public static final KeyMapping MANCHESTER_KEY = register("key.deku.manchester", GLFW.GLFW_KEY_G);
+	public static final KeyMapping GEARSHIFT_KEY = register("key.deku.gearshift", GLFW.GLFW_KEY_N);
 	public static final KeyMapping DANGER_SENSE_KEY = register("key.deku.danger_sense", GLFW.GLFW_KEY_H);
 	public static final KeyMapping SETTINGS_KEY = register("key.deku.settings", GLFW.GLFW_KEY_K);
 
@@ -52,6 +55,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingAura::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FaJinFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(GearshiftClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
@@ -67,6 +71,7 @@ public class DekuModClient implements ClientModInitializer {
 	private static final DoubleTapHold floatTap = new DoubleTapHold();
 	private static final int SMOKESCREEN_POSE_TICKS = 12;
 	private static final int WHIP_POSE_TICKS = 14;
+	private static final int KICK_POSE_TICKS = 8;
 
 	private static KeyMapping register(String name, int key) {
 		return KeyMappingHelper.registerKeyMapping(new KeyMapping(name, InputConstants.Type.KEYSYM, key, CATEGORY));
@@ -86,10 +91,14 @@ public class DekuModClient implements ClientModInitializer {
 		Poses.tick();
 		boolean oneForAll = player != null && DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL);
 		boolean explosion = player != null && DekuItems.isHolding(player, DekuItems.EXPLOSION);
+		boolean decay = player != null && DekuItems.isHolding(player, DekuItems.DECAY);
 		int cowlingClicks = countClicks(COWLING_KEY);
 		int smashClicks = countClicks(SMASH_KEY);
 		int smokescreenClicks = countClicks(SMOKESCREEN_KEY);
 		int blackwhipClicks = countClicks(BLACKWHIP_KEY);
+		int clusterClicks = countClicks(CLUSTER_KEY);
+		int manchesterClicks = countClicks(MANCHESTER_KEY);
+		int gearshiftClicks = countClicks(GEARSHIFT_KEY);
 
 		FullCowlingClient.tick(player, oneForAll && cowlingClicks % 2 == 1, oneForAll);
 		SmashClient.tick(player, oneForAll && SMASH_KEY.isDown(), oneForAll && smashClicks > 0);
@@ -105,9 +114,18 @@ public class DekuModClient implements ClientModInitializer {
 			Cooldowns.start(Cooldowns.Ability.BLACKWHIP);
 			Poses.play(Poses.Pose.WHIP, WHIP_POSE_TICKS);
 		}
+		// X is Shoot Style with One For All in hand, and the cluster bomb with Explosion.
+		if (oneForAll && clusterClicks > 0 && Cooldowns.ready(Cooldowns.Ability.SHOOT_STYLE)) {
+			send(new ShootStylePayload(DekuSettings.get().punchPower()));
+			Cooldowns.start(Cooldowns.Ability.SHOOT_STYLE);
+			Poses.play(Poses.Pose.KICK, KICK_POSE_TICKS);
+		}
+		ManchesterClient.tick(player, oneForAll && manchesterClicks > 0);
+		GearshiftClient.tick(player, oneForAll && gearshiftClicks % 2 == 1, oneForAll);
 
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
-			SMASH_KEY.isDown(), COWLING_KEY.isDown(), countClicks(CLUSTER_KEY) > 0);
+			SMASH_KEY.isDown(), COWLING_KEY.isDown(), clusterClicks > 0);
+		DecayClient.tick(player, decay, client.options.keyUse.isDown(), SMASH_KEY.isDown());
 		ExplosionFx.tick(client.level);
 		FaJinFx.tick(player);
 
