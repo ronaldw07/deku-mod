@@ -61,22 +61,23 @@ public final class UnitedStatesSmash {
 	private static final double FX_VIEW_DISTANCE = 384;
 	// Tornado.
 	private static final int TORNADO_TICKS = 1200; // a full minute
-	private static final double TORNADO_REACH = 80.0;
+	private static final double TORNADO_REACH = 100.0;
 	private static final double TORNADO_HEIGHT = 150.0;
-	private static final double FUNNEL_BASE = 4.0;
-	private static final double FUNNEL_FLARE = 0.35; // funnel widens this much per block of height
-	private static final double PULL = 0.08;
-	private static final double EXTRA_PULL = 0.12;
-	private static final double SPIN = 0.25;
-	private static final double EXTRA_SPIN = 0.35;
-	private static final double CORE_LIFT = 0.25;
-	private static final double OUTER_LIFT = 0.04;
-	private static final double FLING = 1.5;
+	private static final double FUNNEL_BASE = 15.0;
+	private static final double FUNNEL_FLARE = 0.4; // funnel widens this much per block of height
+	private static final double PULL = 0.12;
+	private static final double EXTRA_PULL = 0.2;
+	private static final double SPIN = 0.5;
+	private static final double EXTRA_SPIN = 0.6;
+	private static final double CORE_LIFT = 0.4;
+	private static final double OUTER_LIFT = 0.06;
+	private static final double FLING = 2.5;
 	private static final double DRAG = 0.8;
-	private static final int DAMAGE_INTERVAL = 20;
-	private static final float TORNADO_DAMAGE = 2.0f;
-	private static final int DEBRIS_PER_TICK = 2;
-	private static final double DEBRIS_REACH = 25.0;
+	private static final int DAMAGE_INTERVAL = 10;
+	private static final float TORNADO_DAMAGE = 4.0f;
+	private static final int DEBRIS_PER_TICK = 6;
+	private static final double DEBRIS_REACH = 40.0;
+	private static final double DEBRIS_SPIN = 1.2;
 	private static final int SOUND_INTERVAL = 40;
 
 	private record Tornado(ResourceKey<Level> dimension, UUID owner, Vec3 base, long endTick) {
@@ -297,7 +298,7 @@ public final class UnitedStatesSmash {
 		}
 		FallingBlockEntity block = FallingBlockEntity.fall(level, pos, state);
 		block.disableDrop();
-		block.setDeltaMovement(new Vec3(-Math.sin(angle), 0, Math.cos(angle)).scale(0.5).add(0, 0.8, 0));
+		block.setDeltaMovement(new Vec3(-Math.sin(angle), 0, Math.cos(angle)).scale(DEBRIS_SPIN).add(0, 0.8, 0));
 		block.hurtMarked = true;
 	}
 }
