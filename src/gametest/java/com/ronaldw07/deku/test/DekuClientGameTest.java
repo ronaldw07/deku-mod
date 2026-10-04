@@ -11,6 +11,7 @@ import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.ExplosionClient;
 import com.ronaldw07.deku.client.FullCowlingClient;
 import com.ronaldw07.deku.client.LaunchClient;
+import com.ronaldw07.deku.client.ScreenShake;
 import com.ronaldw07.deku.client.SettingsScreen;
 import com.ronaldw07.deku.client.SmashClient;
 import java.util.HashSet;
@@ -501,6 +502,13 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
 		context.waitTicks(2);
 		context.takeScreenshot("howitzer-impact");
+		check(context.computeOnClient(client -> ScreenShake.active()), "a Howitzer Impact right next to the player should shake the screen");
+		float wobble = 0;
+		for (int i = 0; i < 4; i++) {
+			wobble += context.computeOnClient(client -> Math.abs(ScreenShake.yaw()) + Math.abs(ScreenShake.pitch()));
+			context.waitTicks(1);
+		}
+		check(wobble > 0, "the shaking screen should twist the camera, total twist " + wobble);
 		context.waitTicks(10);
 		context.takeScreenshot("howitzer-shockwave");
 		double pigThrown = singleplayer.getServer().computeOnServer(server ->
@@ -509,6 +517,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		command(singleplayer, "kill @e[type=minecraft:pig]");
 		context.waitTicks(30);
 		context.takeScreenshot("howitzer-column");
+		check(!context.computeOnClient(client -> ScreenShake.active()), "the screen shake should settle within a couple of seconds");
 		context.waitTicks(60);
 		context.takeScreenshot("howitzer-smoke");
 
@@ -566,8 +575,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 
 	private static void crater(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
 		// A big AP Shot into the ground leaves a crater as big as its fireball: nothing breakable left inside.
-		command(singleplayer, "execute as @p at @p run tp @s ~40 ~ ~ 0 40");
-		context.waitTicks(3);
+		// Fresh ground far from every earlier blast, so there's grass left to scorch.
+		command(singleplayer, "execute as @p run tp @s 400 -59 400 0 40");
+		context.waitTicks(30);
 		Vec3 hit = singleplayer.getServer().computeOnServer(server -> Aim.trace(player(server), 48).getLocation());
 		context.getInput().holdKeyFor(options -> options.keyUse, 2);
 		context.waitTicks(14);
@@ -581,6 +591,16 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			return count;
 		});
 		check(left == 0, "the AP Shot crater should be cleared out, " + left + " blocks left inside");
+		int scorched = singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			for (BlockPos pos : BlockPos.betweenClosed(BlockPos.containing(hit).offset(-11, -11, -11), BlockPos.containing(hit).offset(11, 11, 11))) {
+				BlockState state = server.overworld().getBlockState(pos);
+				count += state.is(Blocks.BLACKSTONE) || state.is(Blocks.COARSE_DIRT) ? 1 : 0;
+			}
+			return count;
+		});
+		check(scorched > 0, "the AP Shot crater's rim should be scorched, found " + scorched + " burnt blocks");
+		context.takeScreenshot("crater-scorched");
 	}
 
 	private static void fullPowerSmashTunnel(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

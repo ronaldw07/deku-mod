@@ -53,6 +53,7 @@ public class DekuModClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(DekuModClient::tick);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("power"), PowerHud::extract);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR, DekuMod.id("danger_sense"), DangerSenseHud::extract);
+		HudElementRegistry.attachElementBefore(VanillaHudElements.HOTBAR, DekuMod.id("blast_flash"), ScreenShake::extractFlash);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, DekuMod.id("controls"), ControlsHud::extract);
 		ClientPlayNetworking.registerGlobalReceiver(DangerPayload.TYPE, (payload, context) -> DangerSenseClient.receive(payload, context.player()));
 		LevelRenderEvents.COLLECT_SUBMITS.register(CowlingLightning::render);

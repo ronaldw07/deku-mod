@@ -53,11 +53,15 @@ final class ExplosionFx {
 		blasts = Stream.concat(blasts.stream(), Stream.of(blast)).toList();
 		emitting = Stream.concat(emitting.stream(), Stream.of(blast)).toList();
 		ExplosionSmoke.emit(level, blast, 0);
+		if (Minecraft.getInstance().player != null) {
+			ScreenShake.blast(blast, Minecraft.getInstance().player.getEyePosition());
+		}
 	}
 
 	/** Plays each blast's fireball and smoke over the ticks after it goes off. */
 	static void tick(ClientLevel level) {
 		ExplosionSmoke.tick(level);
+		ScreenShake.tick();
 		if (level == null) {
 			emitting = List.of();
 			return;
