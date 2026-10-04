@@ -17,7 +17,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The look of an Explosion blast, on top of the vanilla boom: a burst of fiery rays,
  * a shockwave ring racing outward, flames, sparks and smoke, and for shots a streak
- * from the hand. The ground blast and cluster bombs burn red.
+ * from the hand. The ground blast and the Cluster Bomb's nuke burn red.
  */
 final class ExplosionFx {
 	private static final int LIFETIME_TICKS = 12;
@@ -34,6 +34,10 @@ final class ExplosionFx {
 	private static final double HOWITZER_SHOCKWAVE_RADIUS = 400.0;
 	private static final double SECOND_RING_FRACTION = 0.55;
 	private static final double HOWITZER_RAY_REACH = 2.5;
+	// The Cluster Bomb's nuke: a long-lived flash with a shockwave ring racing out to eight times its radius.
+	private static final int NUKE_LIFETIME_TICKS = 30;
+	private static final double NUKE_SHOCKWAVE_PER_RADIUS = 8.0;
+	private static final double NUKE_RAY_REACH = 2.0;
 
 	record Blast(Vec3 center, float radius, Style style, Vec3 from, long startTick) {
 	}
@@ -92,15 +96,19 @@ final class ExplosionFx {
 			float fade = age < GROW_TICKS ? 1f : (float) Math.max(0, 1 - (age - GROW_TICKS) / (lifetime - GROW_TICKS));
 			Layer[] palette = switch (blast.style()) {
 				case GROUND -> LightningDraw.RED;
-				case CLUSTER -> LightningDraw.CRIMSON;
+				case NUKE -> LightningDraw.CRIMSON;
 				default -> LightningDraw.FIRE;
 			};
 			Vec3 center = blast.center().subtract(camera);
 			boolean howitzer = isHowitzer(blast.style());
-			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS) * (howitzer ? HOWITZER_RAY_REACH : 1));
+			boolean nuke = blast.style() == Style.NUKE;
+			double rayReach = howitzer ? HOWITZER_RAY_REACH : nuke ? NUKE_RAY_REACH : 1;
+			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS) * rayReach);
 			double progress = Math.min(1, age / lifetime * 1.5);
+			double outward = 1 - Math.pow(1 - Math.min(1, age / lifetime), 3);
 			List<Segment> ring = new ArrayList<>(ring(center, howitzer
-				? HOWITZER_SHOCKWAVE_RADIUS * (1 - Math.pow(1 - Math.min(1, age / lifetime), 3))
+				? HOWITZER_SHOCKWAVE_RADIUS * outward
+				: nuke ? blast.radius() * NUKE_SHOCKWAVE_PER_RADIUS * outward
 				: blast.radius() * RING_GROWTH * progress));
 			if (howitzer) {
 				ring.addAll(ring(center, HOWITZER_SHOCKWAVE_RADIUS * SECOND_RING_FRACTION * (1 - Math.pow(1 - Math.min(1, age / lifetime), 2))));
@@ -120,7 +128,7 @@ final class ExplosionFx {
 	}
 
 	private static int lifetime(Blast blast) {
-		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : LIFETIME_TICKS;
+		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : blast.style() == Style.NUKE ? NUKE_LIFETIME_TICKS : LIFETIME_TICKS;
 	}
 
 	/** Howitzer Impact's core and its column blasts; the lighter ring blasts around it look like plain big shots. */

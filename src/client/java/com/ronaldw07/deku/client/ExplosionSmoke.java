@@ -47,9 +47,10 @@ final class ExplosionSmoke {
 	private static final int MAX_EXPLOSION_PUFFS = 12;
 	private static final double EXPLOSION_PUFFS_PER_RADIUS = 2.0;
 
-	private static final int CLUSTER_EMBERS = 60;
-	private static final DustParticleOptions CLUSTER_RED = new DustParticleOptions(0xFF0000, 4.0f);
-	private static final DustParticleOptions CLUSTER_DARK_RED = new DustParticleOptions(0xC00000, 3.5f);
+	private static final int NUKE_EMBERS = 60;
+	private static final double NUKE_EMBERS_PER_RADIUS = 4.0;
+	private static final DustParticleOptions NUKE_RED = new DustParticleOptions(0xFF0000, 4.0f);
+	private static final DustParticleOptions NUKE_DARK_RED = new DustParticleOptions(0xC00000, 3.5f);
 
 	// Secondary pops: small blasts going off around the main one a few ticks later.
 	private static final double MIN_POP_RADIUS = 5.0;
@@ -88,12 +89,20 @@ final class ExplosionSmoke {
 	private static final int COLUMN_RISE_TICKS = 20;
 	private static final int COLUMN_STEM_PUFFS = 6;
 	private static final int COLUMN_CAP_PUFFS = 8;
-	private static final double CORE_COLUMN_HEIGHT = 120.0;
-	private static final double CORE_STEM_RADIUS = 9.0;
-	private static final double CORE_CAP_RADIUS = 40.0;
-	private static final int CORE_RISE_TICKS = 45;
-	private static final int CORE_STEM_PUFFS = 30;
-	private static final int CORE_CAP_PUFFS = 24;
+	// A core blast's column is sized from its radius (a Howitzer core, radius 36, is 120 blocks tall
+	// with a 9 block stem and a 40 block cap), and rises over three seconds so the cap can be watched forming.
+	private static final double CORE_HEIGHT_PER_RADIUS = 10.0 / 3.0;
+	private static final double CORE_STEM_SHARE = 0.25;
+	private static final double CORE_CAP_SHARE = 10.0 / 9.0;
+	private static final double FULL_CORE_RADIUS = 36.0;
+	private static final int MIN_CORE_STEM_PUFFS = 6;
+	private static final int MIN_CORE_CAP_PUFFS = 6;
+	private static final int CORE_RISE_TICKS = 60;
+	private static final double CAP_THICKNESS_SHARE = 0.15;
+	private static final double CAP_DOME_SHARE = 0.45; // how high the cap bulges above the top of the stem, relative to its width
+	private static final int CORE_CAP_GLOW_PUFFS = 8;
+	private static final int CORE_STEM_PUFFS = 45;
+	private static final int CORE_CAP_PUFFS = 40;
 	private static final double CAP_STARTS_AT = 0.6; // share of the rise
 	private static final double CAP_OUT_SPEED = 0.15;
 	private static final double CAP_UP_SPEED = 0.05;
@@ -136,7 +145,7 @@ final class ExplosionSmoke {
 
 	/** How long a blast keeps emitting, in ticks. */
 	static int emitTicks(Blast blast) {
-		if (blast.style() == Style.HOWITZER_CORE) {
+		if (isCore(blast.style())) {
 			return CORE_RISE_TICKS + 1;
 		}
 		return hasColumn(blast) ? Math.max(SMOKE_LAST_TICK, COLUMN_RISE_TICKS) + 1 : SMOKE_LAST_TICK + 1;
@@ -163,7 +172,7 @@ final class ExplosionSmoke {
 	static void emit(ClientLevel level, Blast blast, int age) {
 		RandomSource random = level.getRandom();
 		double share = share(blast.style());
-		boolean core = blast.style() == Style.HOWITZER_CORE;
+		boolean core = isCore(blast.style());
 		if (age == 0) {
 			burst(level, blast, share, random);
 			scheduleExtras(blast, share);
@@ -187,15 +196,20 @@ final class ExplosionSmoke {
 			case SHOT -> 0.35;
 			case BIG_SHOT -> 0.8;
 			case GROUND -> 0.8;
-			case CLUSTER -> 0.6;
+			case NUKE -> 1.0;
 			case HOWITZER -> 0.5;
 			case HOWITZER_RING -> 0.35;
 			case HOWITZER_CORE -> 1.0;
 		};
 	}
 
+	/** The blasts big enough for a full mushroom cloud, ash and thunder: the Howitzer's core and the nuke. */
+	private static boolean isCore(Style style) {
+		return style == Style.HOWITZER_CORE || style == Style.NUKE;
+	}
+
 	private static boolean hasColumn(Blast blast) {
-		return blast.style() == Style.HOWITZER_CORE
+		return isCore(blast.style())
 			|| blast.style() == Style.BIG_SHOT && blast.radius() >= MIN_COLUMN_RADIUS && blast.radius() <= MAX_COLUMN_BLAST_RADIUS;
 	}
 
@@ -219,14 +233,14 @@ final class ExplosionSmoke {
 		for (int i = 0; i < puffs; i++) {
 			spawn(level, ParticleTypes.EXPLOSION, c.add(inSphere(random, radius * 0.8)), Vec3.ZERO, 1f);
 		}
-		if (blast.style() == Style.CLUSTER) {
-			// Cluster bombs burn deep red: a ball of red embers filling the blast.
-			for (int i = 0; i < scaled(CLUSTER_EMBERS); i++) {
+		if (blast.style() == Style.NUKE) {
+			// The nuke burns deep red: a ball of red embers filling the blast.
+			for (int i = 0; i < scaled(NUKE_EMBERS + radius * NUKE_EMBERS_PER_RADIUS); i++) {
 				Vec3 at = c.add(inSphere(random, radius));
-				spawn(level, random.nextBoolean() ? CLUSTER_RED : CLUSTER_DARK_RED, at, at.subtract(c).scale(0.05), 1f);
+				spawn(level, random.nextBoolean() ? NUKE_RED : NUKE_DARK_RED, at, at.subtract(c).scale(0.05), 1f);
 			}
 		}
-		if (blast.style() == Style.HOWITZER_CORE) {
+		if (isCore(blast.style())) {
 			spawn(level, ParticleTypes.EXPLOSION_EMITTER, c, Vec3.ZERO, 1f);
 			for (int i = 0; i < scaled(HOWITZER_SPARKS); i++) {
 				Vec3 v = LightningDraw.randomDirection(random).scale(0.6 + random.nextDouble() * 0.8);
@@ -329,34 +343,49 @@ final class ExplosionSmoke {
 		}
 	}
 
-	/** A rising stem of smoke with a wide flat cap, like a mushroom cloud. */
+	/** A rising stem of smoke with a wide flat cap, like a mushroom cloud; a core blast's cap glows red underneath. */
 	private static void column(ClientLevel level, Blast blast, int age, double share, RandomSource random) {
-		boolean core = blast.style() == Style.HOWITZER_CORE;
+		boolean core = isCore(blast.style());
 		int rise = core ? CORE_RISE_TICKS : COLUMN_RISE_TICKS;
 		if (age > rise) {
 			return;
 		}
 		float radius = blast.radius();
-		double height = core ? CORE_COLUMN_HEIGHT : radius * COLUMN_HEIGHT_PER_RADIUS;
-		double stem = core ? CORE_STEM_RADIUS : radius * COLUMN_STEM_SHARE;
-		double cap = core ? CORE_CAP_RADIUS : radius * COLUMN_CAP_SHARE;
+		double height = radius * (core ? CORE_HEIGHT_PER_RADIUS : COLUMN_HEIGHT_PER_RADIUS);
+		double stem = radius * (core ? CORE_STEM_SHARE : COLUMN_STEM_SHARE);
+		double cap = radius * (core ? CORE_CAP_SHARE : COLUMN_CAP_SHARE);
+		double bigness = Math.min(1, radius / FULL_CORE_RADIUS);
 		double progress = (double) age / rise;
 		double top = height * (1 - (1 - progress) * (1 - progress));
 		Vec3 c = blast.center();
 
-		for (int i = 0; i < scaled(core ? CORE_STEM_PUFFS : COLUMN_STEM_PUFFS); i++) {
+		int stemPuffs = core ? Math.max(MIN_CORE_STEM_PUFFS, (int) (CORE_STEM_PUFFS * bigness)) : COLUMN_STEM_PUFFS;
+		for (int i = 0; i < scaled(stemPuffs); i++) {
 			double angle = random.nextDouble() * Math.PI * 2;
 			double out = random.nextDouble() * stem;
 			Vec3 at = c.add(Math.cos(angle) * out, top * (0.2 + random.nextDouble() * 0.8), Math.sin(angle) * out);
 			column(level, at, new Vec3(0, 0.05 + random.nextDouble() * 0.1, 0), 1.5f + (float) stem * 0.25f, core, random);
 		}
 		if (progress >= CAP_STARTS_AT) {
-			for (int i = 0; i < scaled(core ? CORE_CAP_PUFFS : COLUMN_CAP_PUFFS); i++) {
+			// The cap is a dome of smoke on top of the stem, much wider than the stem itself.
+			int capPuffs = core ? Math.max(MIN_CORE_CAP_PUFFS, (int) (CORE_CAP_PUFFS * bigness)) : COLUMN_CAP_PUFFS;
+			for (int i = 0; i < scaled(capPuffs); i++) {
 				double angle = random.nextDouble() * Math.PI * 2;
-				double out = cap * (0.5 + random.nextDouble() * 0.5);
+				double across = Math.sqrt(random.nextDouble());
+				double out = cap * across;
+				double dome = Math.sqrt(1 - across * across) * cap * CAP_DOME_SHARE;
 				Vec3 direction = new Vec3(Math.cos(angle), 0, Math.sin(angle));
-				Vec3 at = c.add(direction.x * out * 0.3, top, direction.z * out * 0.3);
-				column(level, at, direction.scale(CAP_OUT_SPEED * out / cap * 2).add(0, CAP_UP_SPEED, 0), 2f + (float) cap * 0.1f, core, random);
+				Vec3 at = c.add(direction.x * out, top + dome * random.nextDouble(), direction.z * out);
+				column(level, at, direction.scale(CAP_OUT_SPEED).add(0, CAP_UP_SPEED, 0), 2f + (float) cap * 0.1f, core, random);
+			}
+			if (core) {
+				// Fire still burning under the cap lights it from below, cooling to black as it rises.
+				for (int i = 0; i < scaled(CORE_CAP_GLOW_PUFFS * bigness + 1); i++) {
+					double angle = random.nextDouble() * Math.PI * 2;
+					double out = cap * 0.7 * Math.sqrt(random.nextDouble());
+					Vec3 at = c.add(Math.cos(angle) * out, top - cap * CAP_THICKNESS_SHARE, Math.sin(angle) * out);
+					spawn(level, DekuParticles.FIREBALL, at, new Vec3(0, CAP_UP_SPEED, 0), 1f + (float) cap * 0.12f);
+				}
 			}
 		}
 	}

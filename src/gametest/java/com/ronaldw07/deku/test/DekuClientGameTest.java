@@ -57,20 +57,51 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getClientLevel().waitForChunksRender();
 			checkSoundsResolve(context);
-			starterKit(context, singleplayer);
-			settings(context);
-			fullCowling(context, singleplayer);
-			smash(context, singleplayer);
-			blackwhip(context, singleplayer);
-			smokescreen(context, singleplayer);
-			poses(context, singleplayer);
-			launch(context, singleplayer);
-			floatQuirk(context, singleplayer);
-			dangerSense(context, singleplayer);
-			iceSlide(context, singleplayer);
-			smokescreenHold(context, singleplayer);
-			explosion(context, singleplayer);
-			fullPowerSmashTunnel(context, singleplayer);
+			if (wanted("starterKit")) {
+				starterKit(context, singleplayer);
+			}
+			if (wanted("settings")) {
+				settings(context);
+			}
+			if (wanted("fullCowling")) {
+				fullCowling(context, singleplayer);
+			}
+			if (wanted("smash")) {
+				smash(context, singleplayer);
+			}
+			if (wanted("blackwhip")) {
+				blackwhip(context, singleplayer);
+			}
+			if (wanted("smokescreen")) {
+				smokescreen(context, singleplayer);
+			}
+			if (wanted("poses")) {
+				poses(context, singleplayer);
+			}
+			if (wanted("launch")) {
+				launch(context, singleplayer);
+			}
+			if (wanted("floatQuirk")) {
+				floatQuirk(context, singleplayer);
+			}
+			if (wanted("dangerSense")) {
+				dangerSense(context, singleplayer);
+			}
+			if (wanted("iceSlide")) {
+				iceSlide(context, singleplayer);
+			}
+			if (wanted("smokescreenHold")) {
+				smokescreenHold(context, singleplayer);
+			}
+			if (wanted("explosion")) {
+				explosion(context, singleplayer);
+			}
+			if (wanted("fullPowerSmashTunnel")) {
+				fullPowerSmashTunnel(context, singleplayer);
+			}
+		}
+		if (!wanted("mountainSmash")) {
+			return;
 		}
 		// The test world above is superflat; mountains need normal terrain.
 		try (TestSingleplayerContext singleplayer = context.worldBuilder()
@@ -78,6 +109,15 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			singleplayer.getClientLevel().waitForChunksRender();
 			mountainSmash(context, singleplayer);
 		}
+	}
+
+	/**
+	 * Runs every section unless the game is launched with -Ddeku.only=name,name, which runs just
+	 * those (and the setup they depend on), so a change to one move doesn't need the whole suite.
+	 */
+	private static boolean wanted(String section) {
+		String only = System.getProperty("deku.only");
+		return only == null || only.isBlank() || List.of(only.split(",")).contains(section) || section.equals("starterKit");
 	}
 
 	private static void starterKit(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
@@ -591,33 +631,50 @@ public class DekuClientGameTest implements FabricClientGameTest {
 	}
 
 	private static void clusterBomb(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
-		// X: a long line of bombs down the crosshair goes off one after another, catching husks all along it.
+		// Hold X: a red fireball grows in front of the player; let go and it flies to the crosshair spot and
+		// lands as a nuke, with a crater, a mushroom cloud, a shaking screen and a husk caught in it.
 		command(singleplayer, "kill @e[type=!minecraft:player]");
-		command(singleplayer, "execute as @p at @p run tp @s ~40 ~ ~ 0 0");
-		for (String spot : List.of("~ ~ ~10", "~ ~ ~35", "~ ~ ~60", "~ ~ ~90")) {
-			command(singleplayer, "execute at @p run summon minecraft:husk " + spot + " {NoAI:1b}");
-		}
+		command(singleplayer, "execute as @p run tp @s 1400 -59 1400 0 3");
+		context.waitTicks(40);
+		Vec3 hit = singleplayer.getServer().computeOnServer(server -> Aim.trace(player(server), 150).getLocation());
+		command(singleplayer, "summon minecraft:husk " + hit.x + " " + hit.y + " " + (hit.z + 5) + " {NoAI:1b}");
 		camera(context, CameraType.THIRD_PERSON_BACK);
-		context.waitTicks(3);
-		context.getInput().pressKey(DekuModClient.CLUSTER_KEY);
-		context.waitTicks(10);
-		context.takeScreenshot("cluster-boom");
-		context.waitTicks(20);
-		context.takeScreenshot("cluster-done");
-		boolean allHit = singleplayer.getServer().computeOnServer(server -> server.overworld()
+		context.getInput().holdKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(30);
+		context.takeScreenshot("fireball-charging");
+		context.waitTicks(35);
+		check(context.computeOnClient(client -> ExplosionClient.fireballCharge()) >= 90, "holding X for three seconds should fully grow the fireball");
+		context.takeScreenshot("fireball-full");
+		context.getInput().releaseKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(4);
+		context.takeScreenshot("fireball-flight");
+		context.waitTicks(14);
+		check(context.computeOnClient(client -> ScreenShake.active()), "the nuke landing 30 blocks away should shake the screen");
+		context.takeScreenshot("nuke-flash");
+		command(singleplayer, "execute as @p at @p run tp @s ~ ~ ~ 0 -30");
+		context.waitTicks(30);
+		context.takeScreenshot("nuke-cloud");
+		// From a hundred blocks back, the whole cloud shows as a stem with a wide cap.
+		command(singleplayer, "execute as @p run tp @s 1400 -59 1350 0 -30");
+		context.waitTicks(40);
+		context.takeScreenshot("nuke-cloud-mid");
+		command(singleplayer, "execute as @p run tp @s 1400 -59 1290 0 -22");
+		context.waitTicks(30);
+		context.takeScreenshot("nuke-cloud-far");
+		context.waitTicks(60);
+		context.takeScreenshot("nuke-cloud-late");
+		boolean caught = singleplayer.getServer().computeOnServer(server -> server.overworld()
 			.getEntities(EntityTypes.HUSK, husk -> husk.isAlive() && husk.getHealth() >= husk.getMaxHealth()).isEmpty());
-		check(allHit, "the cluster bomb should hit every husk along its line");
-		int fires = singleplayer.getServer().computeOnServer(server -> {
-			BlockPos feet = player(server).blockPosition();
+		check(caught, "the nuke should hurt the husk at the target");
+		int dug = singleplayer.getServer().computeOnServer(server -> {
 			int count = 0;
-			for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-8, -8, 0), feet.offset(8, 8, 100))) {
-				count += server.overworld().getBlockState(pos).is(Blocks.FIRE) ? 1 : 0;
+			BlockPos at = BlockPos.containing(hit);
+			for (BlockPos pos : BlockPos.betweenClosed(at.offset(-20, -4, -20), at.offset(20, 0, 20))) {
+				count += server.overworld().getBlockState(pos).isAir() ? 1 : 0;
 			}
 			return count;
 		});
-		check(fires > 0, "the cluster bomb should leave some fire burning");
-		context.waitTicks(40);
-		context.takeScreenshot("cluster-smoke");
+		check(dug > 800, "the nuke should leave a huge crater, only " + dug + " blocks cleared");
 		camera(context, CameraType.FIRST_PERSON);
 	}
 

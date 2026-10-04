@@ -62,6 +62,8 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashChargeFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(PunchFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionCowlingFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(FireballChargeFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(SpinFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GearshiftClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(DecayClient::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SmashLightning::render);
@@ -145,7 +147,7 @@ public class DekuModClient implements ClientModInitializer {
 
 		ExplosionCowlingClient.tick(player, explosion, explosion && smokescreenClicks % 2 == 1);
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
-			SMASH_KEY.isDown(), COWLING_KEY.isDown(), clusterClicks > 0);
+			SMASH_KEY.isDown(), COWLING_KEY.isDown(), explosion && (CLUSTER_KEY.isDown() || clusterClicks > 0));
 		DecayClient.tick(player, decay, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
 			decay && cowlingClicks % 2 == 1);
 		HalfColdHalfHotClient.tick(player, halfColdHalfHot, client.options.keyUse.isDown(), SMASH_KEY.isDown(),
@@ -153,6 +155,8 @@ public class DekuModClient implements ClientModInitializer {
 		TornadoFx.tick(client.level);
 		ExplosionFx.tick(client.level);
 		FaJinFx.tick(player);
+		FireballChargeFx.tick(player);
+		SpinFx.tick(player);
 
 		DangerSenseClient.tick(player, countClicks(DANGER_SENSE_KEY) % 2 == 1);
 	}

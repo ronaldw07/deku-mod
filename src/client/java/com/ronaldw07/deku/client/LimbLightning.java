@@ -60,4 +60,19 @@ final class LimbLightning {
 		}
 		return segments;
 	}
+
+	/** A bolt from one point to another, kinked along the way so it looks torn rather than drawn. */
+	static List<Segment> jagged(RandomSource random, Vec3 from, Vec3 to, int steps, double jag) {
+		List<Segment> segments = new ArrayList<>();
+		Vec3 point = from;
+		for (int i = 1; i <= steps; i++) {
+			Vec3 next = from.lerp(to, (double) i / steps);
+			if (i < steps) {
+				next = next.add(LightningDraw.randomDirection(random).scale(jag));
+			}
+			segments.add(new Segment(point, next));
+			point = next;
+		}
+		return segments;
+	}
 }

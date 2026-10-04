@@ -9,6 +9,7 @@ import java.util.UUID;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.util.Mth;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -60,16 +61,25 @@ public final class Bakugo {
 	private static final float MIN_GROUND_RADIUS = 6.0f;
 	private static final float EXTRA_GROUND_RADIUS = 5.0f;
 	private static final int GROUND_DEBRIS = 4;
-	// Cluster bomb: a long, lumpy line of round bombs down the crosshair, going off one after
-	// another from the hand outward.
-	private static final double CLUSTER_START = 4.0;
-	private static final double CLUSTER_LENGTH = 100.0;
-	private static final double CLUSTER_SPACING = 3.0;
-	private static final double CLUSTER_JITTER = 0.9;
-	private static final float MIN_CLUSTER_RADIUS = 3.5f;
-	private static final float EXTRA_CLUSTER_RADIUS = 1.5f;
-	private static final double CLUSTER_BOMBS_PER_TICK = 2.0;
-	private static final int CLUSTER_DEBRIS = 3;
+	// Cluster Bomb: hold X to grow a red fireball, release to throw it at the crosshair; it flies
+	// fast, trailing fire and smoke, and lands as a nuke-style blast with a mushroom cloud.
+	private static final double NUKE_RANGE = 150.0;
+	private static final double NUKE_SPEED = 3.0; // blocks a tick
+	private static final float MIN_NUKE_RADIUS = 12.0f;
+	private static final float MAX_NUKE_RADIUS = 40.0f;
+	private static final int NUKE_DEBRIS_PER_RADIUS = 8;
+	private static final int MAX_NUKE_DEBRIS = 300;
+	private static final int NUKE_SCORCH_FIRES = 12;
+	private static final double NUKE_HAND_FORWARD = 1.5;
+	private static final int MIN_TRAIL_FIREBALLS = 2;
+	private static final int EXTRA_TRAIL_FIREBALLS = 4;
+	private static final double MIN_TRAIL_SPREAD = 0.4;
+	private static final double EXTRA_TRAIL_SPREAD = 1.2;
+	private static final int TRAIL_FLAMES = 6;
+	private static final int TRAIL_SOOT = 2;
+	private static final float NUKE_THROW_VOLUME = 2.0f;
+	private static final float NUKE_THROW_PITCH = 0.7f;
+	private static final float NUKE_THUNDER_VOLUME = 4.0f;
 	// Fires left in a crater: one for every few blocks of radius; smaller blasts only sometimes leave one.
 	private static final float RADIUS_PER_FIRE = 4.0f;
 	private static final double SMALL_BLAST_FIRE_CHANCE = 0.3;
@@ -125,7 +135,7 @@ public final class Bakugo {
 				}
 			}
 			case GROUND_BLAST -> groundBlast(player, Math.clamp(charge, 0, 100) / 100.0);
-			case CLUSTER -> cluster(player);
+			case CLUSTER -> nuke(player, Math.clamp(charge, 1, 100) / 100.0);
 		}
 	}
 
@@ -179,7 +189,7 @@ public final class Bakugo {
 		ServerLevel level = player.level();
 		Vec3 center = player.position().add(0, 1, 0).add(player.getLookAngle().scale(HOWITZER_REACH));
 		blast(player, center, HOWITZER_CORE_RADIUS, HOWITZER_CORE_DEBRIS, Style.HOWITZER_CORE, center, CORE_SCORCH_FIRES);
-		shockwave(player, center);
+		shockwave(player, center, 1.0);
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 4.0f, 0.5f);
 
 		for (int layer = 0; layer < HOWITZER_COLUMN_HEIGHTS.length; layer++) {
@@ -202,23 +212,25 @@ public final class Bakugo {
 		}
 	}
 
-	/** Throws everything within range away from the center, and badly hurts anything close. */
-	private static void shockwave(ServerPlayer player, Vec3 center) {
+	/** Throws everything within range away from the center, and badly hurts anything close; scale shrinks the reach. */
+	private static void shockwave(ServerPlayer player, Vec3 center, double scale) {
 		ServerLevel level = player.level();
-		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(SHOCKWAVE_RANGE),
+		double range = SHOCKWAVE_RANGE * scale;
+		double damageRange = SHOCKWAVE_DAMAGE_RANGE * scale;
+		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(range),
 				entity -> entity != player && entity.isAlive())) {
 			Vec3 offset = entity.position().subtract(center);
 			double distance = offset.length();
-			if (distance > SHOCKWAVE_RANGE) {
+			if (distance > range) {
 				continue;
 			}
-			double strength = 1 - distance / SHOCKWAVE_RANGE;
+			double strength = 1 - distance / range;
 			Vec3 away = distance < 1.0E-3 ? new Vec3(0, 1, 0) : offset.scale(1 / distance);
 			entity.push(away.scale(SHOCKWAVE_MAX_PUSH * strength).add(0, strength, 0));
 			entity.hurtMarked = true;
-			if (distance < SHOCKWAVE_DAMAGE_RANGE) {
+			if (distance < damageRange) {
 				entity.hurtServer(level, player.damageSources().explosion(player, player),
-					SHOCKWAVE_MAX_DAMAGE * (float) (1 - distance / SHOCKWAVE_DAMAGE_RANGE));
+					SHOCKWAVE_MAX_DAMAGE * (float) (1 - distance / damageRange));
 			}
 		}
 	}
@@ -245,21 +257,48 @@ public final class Bakugo {
 			2.0f + 2.0f * (float) charge, 0.6f);
 	}
 
-	/** Bombs strung out along the aim, each a little off the line and a different size, booming in sequence. */
-	private static void cluster(ServerPlayer player) {
+	/** Throws the charged fireball at wherever the crosshair points, 150 blocks at most. */
+	private static void nuke(ServerPlayer player, double power) {
 		ServerLevel level = player.level();
-		RandomSource random = level.getRandom();
-		Vec3 eye = player.getEyePosition();
-		Vec3 aim = player.getLookAngle();
-		int bomb = 0;
-		for (double distance = CLUSTER_START; distance <= CLUSTER_LENGTH; distance += CLUSTER_SPACING, bomb++) {
-			Vec3 spot = eye.add(aim.scale(distance)).add(new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1,
-				random.nextDouble() * 2 - 1).scale(CLUSTER_JITTER));
-			float radius = MIN_CLUSTER_RADIUS + random.nextFloat() * EXTRA_CLUSTER_RADIUS;
-			Blasts.later(level.getServer(), (int) (bomb / CLUSTER_BOMBS_PER_TICK),
-				() -> blast(player, spot, radius, CLUSTER_DEBRIS, Style.CLUSTER, spot));
-		}
-		level.playSound(null, eye.x, eye.y, eye.z, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 2.0f, 1.4f);
+		Vec3 target = Aim.trace(player, NUKE_RANGE).getLocation();
+		Vec3 start = hand(player, 1).add(player.getLookAngle().scale(NUKE_HAND_FORWARD));
+		float radius = (float) Mth.lerp(power, MIN_NUKE_RADIUS, MAX_NUKE_RADIUS);
+		level.playSound(null, start.x, start.y, start.z, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, NUKE_THROW_VOLUME, NUKE_THROW_PITCH);
+		fly(player, start, target, radius, power, 1);
+	}
+
+	/** One tick of the fireball's flight; when it reaches the target it goes off. */
+	private static void fly(ServerPlayer player, Vec3 start, Vec3 target, float radius, double power, int tick) {
+		Blasts.later(player.level().getServer(), 1, () -> {
+			ServerLevel level = player.level();
+			double length = target.distanceTo(start);
+			double travelled = Math.min(length, NUKE_SPEED * tick);
+			Vec3 at = start.add(target.subtract(start).scale(travelled / Math.max(length, 1.0E-3)));
+			trail(level, at, power);
+			if (travelled >= length) {
+				detonate(player, target, radius);
+			} else {
+				fly(player, start, target, radius, power, tick + 1);
+			}
+		});
+	}
+
+	/** Fire and smoke streaming off the flying fireball, thicker the bigger it was charged. */
+	private static void trail(ServerLevel level, Vec3 at, double power) {
+		double spread = MIN_TRAIL_SPREAD + EXTRA_TRAIL_SPREAD * power;
+		level.sendParticles(DekuParticles.FIREBALL, at.x, at.y, at.z, MIN_TRAIL_FIREBALLS + (int) Math.round(EXTRA_TRAIL_FIREBALLS * power),
+			spread, spread, spread, 0);
+		level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, TRAIL_FLAMES, spread, spread, spread, 0.02);
+		level.sendParticles(DekuParticles.SOOT_SMOKE, at.x, at.y, at.z, TRAIL_SOOT, spread * 0.5, spread * 0.5, spread * 0.5, 0);
+	}
+
+	/** The fireball lands: a huge blast, a shockwave and thunder, with the mushroom cloud drawn by the clients. */
+	private static void detonate(ServerPlayer player, Vec3 center, float radius) {
+		ServerLevel level = player.level();
+		int debris = Math.min(MAX_NUKE_DEBRIS, (int) (radius * NUKE_DEBRIS_PER_RADIUS));
+		blast(player, center, radius, debris, Style.NUKE, center, NUKE_SCORCH_FIRES);
+		shockwave(player, center, radius / HOWITZER_CORE_RADIUS);
+		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, NUKE_THUNDER_VOLUME, 0.5f);
 	}
 
 	public static void tick(MinecraftServer server) {
@@ -341,7 +380,7 @@ public final class Bakugo {
 		}
 		boom(level, center, radius, style);
 		ExplosionFxPayload fx = new ExplosionFxPayload(center, radius, style, from);
-		double viewDistance = style == Style.HOWITZER_CORE ? CORE_FX_VIEW_DISTANCE : FX_VIEW_DISTANCE;
+		double viewDistance = style == Style.HOWITZER_CORE || style == Style.NUKE ? CORE_FX_VIEW_DISTANCE : FX_VIEW_DISTANCE;
 		for (ServerPlayer viewer : PlayerLookup.around(level, center, viewDistance)) {
 			if (ServerPlayNetworking.canSend(viewer, ExplosionFxPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);
@@ -352,7 +391,7 @@ public final class Bakugo {
 	/** A low boom, then a rumble rolling after it; the Howitzer's core also gets a thunder crack and its echo. */
 	private static void boom(ServerLevel level, Vec3 center, float radius, Style style) {
 		// Cluster and ground blasts go off by the dozen, so only single big blasts get their own boom.
-		if (style != Style.BIG_SHOT && style != Style.HOWITZER_CORE || radius < BOOM_MIN_RADIUS) {
+		if (style != Style.BIG_SHOT && style != Style.HOWITZER_CORE && style != Style.NUKE || radius < BOOM_MIN_RADIUS) {
 			return;
 		}
 		float pitch = 1.0f - Math.min(BOOM_MAX_PITCH_DROP, radius * BOOM_PITCH_DROP_PER_RADIUS);
@@ -362,7 +401,7 @@ public final class Bakugo {
 			Blasts.later(level.getServer(), RUMBLE_DELAY_TICKS, () -> level.playSound(null, center.x, center.y, center.z,
 				DekuSounds.EXPLOSION_RUMBLE, SoundSource.PLAYERS, Math.min(RUMBLE_MAX_VOLUME, radius * RUMBLE_VOLUME_PER_RADIUS), 1.0f));
 		}
-		if (style == Style.HOWITZER_CORE) {
+		if (style == Style.HOWITZER_CORE || style == Style.NUKE) {
 			Blasts.later(level.getServer(), THUNDER_DELAY_TICKS, () -> level.playSound(null, center.x, center.y, center.z,
 				DekuSounds.EXPLOSION_THUNDER, SoundSource.PLAYERS, THUNDER_VOLUME, 1.0f));
 			Blasts.later(level.getServer(), THUNDER_ECHO_DELAY_TICKS, () -> level.playSound(null, center.x, center.y, center.z,

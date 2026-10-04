@@ -23,7 +23,7 @@ public final class Cooldowns {
 		FLIGHT("Explosion Flight", 0),
 		HOWITZER("Howitzer Impact", 40),
 		GROUND_BLAST("Ground Blast", 30),
-		CLUSTER("Cluster Bomb", 30),
+		CLUSTER("Cluster Bomb", 100),
 		EXPLOSION_COWLING("Explosion Cowling", 0),
 		DECAY_TOUCH("Decay Touch", 4),
 		DECAY_WAVE("Decay Wave", 30),

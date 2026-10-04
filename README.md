@@ -26,9 +26,9 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 
 - Tap right-click: big AP Shot. Hold: rapid fire
 - Double-tap and hold space: fly (W/A/S/D to move, hover otherwise)
-- Hold V: Howitzer Impact, release to explode
+- Hold V: Howitzer Impact, red lightning crackles out of you as you spin; release to explode under a mushroom cloud
 - Hold C: charge the cross-arm ground blast, release to fire
-- X: Cluster Bomb, a 100-block line of red bombs going off one after another
+- Hold X: Cluster Bomb, grow a red fireball in front of you for up to 3 seconds, let go to throw it at the crosshair (150 blocks): it lands as a nuke with a huge crater and a mushroom cloud
 - Z: Explosion Cowling on/off, a red-orange glow that makes every blast 25% bigger and stronger
 
 Explosions burn out as a white-hot flash, a fireball that goes orange, red and then black, and thick black smoke that hangs for ten seconds or more. Big blasts set off secondary pops, fling burning chunks, send a dust ring racing over the ground, scorch the crater rim black and shake the screen when they go off close by. A Howitzer Impact raises a mushroom cloud over 100 blocks tall with ash falling over the area. Particle detail and screen shake can be turned down or off in the K menu.

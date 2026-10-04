@@ -12,8 +12,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Client side of the Explosion quirk, used while the Explosion item is in hand:
  * right-click for AP Shot (tap for a big one, hold for rapid fire), double-tap and hold
- * jump to fly, hold V for Howitzer Impact, C for the cross-arm ground blast, and X for the
- * cluster bomb.
+ * jump to fly, hold V for Howitzer Impact, C for the cross-arm ground blast, and hold X to
+ * grow a fireball and throw it.
  */
 public final class ExplosionClient {
 	private static final int TAP_TICKS = 6; // right-click held for less than this is a tap
@@ -26,7 +26,10 @@ public final class ExplosionClient {
 	private static final double HOWITZER_CIRCLE_SPEED = 0.75;
 	private static final double HOWITZER_TURN = 0.8; // radians per tick around the circle
 	private static final int BURST_POSE_TICKS = 10;
-	private static final int CLUSTER_POSE_TICKS = 10;
+	private static final int FULL_FIREBALL_TICKS = 60; // three seconds
+	private static final int FIREBALL_SOUND_INTERVAL = 10;
+	private static final int FIREBALL_POSE_REPEAT_TICKS = 8;
+	private static final int FIREBALL_POSE_TICKS = 10;
 
 	private static int useHeldTicks;
 	private static int bigShotLoad;
@@ -35,6 +38,8 @@ public final class ExplosionClient {
 	private static boolean spinning;
 	private static double spinAngle;
 	private static int groundCharge;
+	private static int fireballTicks;
+	private static int spinTicks;
 
 	private ExplosionClient() {
 	}
@@ -46,6 +51,16 @@ public final class ExplosionClient {
 	/** How far the ground blast is wound up, 0-100. */
 	public static int groundBlastCharge() {
 		return groundCharge * 100 / FULL_GROUND_CHARGE_TICKS;
+	}
+
+	/** How far the Cluster Bomb's fireball is grown, 0-100; 0 when not charging. */
+	public static int fireballCharge() {
+		return fireballTicks == 0 ? 0 : Math.min(100, 1 + fireballTicks * 100 / FULL_FIREBALL_TICKS);
+	}
+
+	/** How many ticks the Howitzer spin has lasted. */
+	public static int spinTicks() {
+		return spinTicks;
 	}
 
 	public static boolean flying() {
@@ -61,13 +76,15 @@ public final class ExplosionClient {
 	}
 
 	static void tick(LocalPlayer player, boolean holding, boolean useDown, boolean jumpDown, boolean howitzerDown,
-			boolean groundBlastDown, boolean clusterPressed) {
+			boolean groundBlastDown, boolean clusterDown) {
 		if (player == null) {
 			useHeldTicks = 0;
 			bigShotLoad = 0;
 			flying = false;
 			spinning = false;
 			groundCharge = 0;
+			fireballTicks = 0;
+			spinTicks = 0;
 			return;
 		}
 
@@ -76,10 +93,27 @@ public final class ExplosionClient {
 		flight(player, able, jumpDown);
 		howitzer(player, able && howitzerDown);
 		groundBlast(player, able && groundBlastDown);
-		if (able && clusterPressed && Cooldowns.ready(Cooldowns.Ability.CLUSTER)) {
-			send(Move.CLUSTER, true, 0);
+		fireball(player, able && clusterDown);
+	}
+
+	/** Holding X grows a red fireball in front of the player; letting go throws it at the crosshair. */
+	private static void fireball(LocalPlayer player, boolean down) {
+		if (down && (fireballTicks > 0 || Cooldowns.ready(Cooldowns.Ability.CLUSTER))) {
+			if (fireballTicks % FIREBALL_SOUND_INTERVAL == 0) {
+				player.level().playLocalSound(player, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 1.0f,
+					0.5f + 0.8f * fireballCharge() / 100f);
+			}
+			if (fireballTicks % FIREBALL_POSE_REPEAT_TICKS == 0) {
+				Poses.play(Poses.Pose.AIM_BOTH, FIREBALL_POSE_TICKS);
+			}
+			fireballTicks = Math.min(FULL_FIREBALL_TICKS, fireballTicks + 1);
+			return;
+		}
+		if (fireballTicks > 0) {
+			send(Move.CLUSTER, true, fireballCharge());
+			fireballTicks = 0;
 			Cooldowns.start(Cooldowns.Ability.CLUSTER);
-			Poses.play(Poses.Pose.AIM_BOTH, CLUSTER_POSE_TICKS);
+			Poses.play(Poses.Pose.AIM_BOTH, FIREBALL_POSE_TICKS);
 		}
 	}
 
@@ -137,6 +171,7 @@ public final class ExplosionClient {
 		if (down && !spinning && Cooldowns.ready(Cooldowns.Ability.HOWITZER)) {
 			spinning = true;
 			spinAngle = 0;
+			spinTicks = 0;
 			send(Move.HOWITZER, true, 0);
 		} else if (!down && spinning) {
 			spinning = false;
@@ -144,9 +179,11 @@ public final class ExplosionClient {
 			Cooldowns.start(Cooldowns.Ability.HOWITZER);
 		}
 		if (!spinning) {
+			spinTicks = 0;
 			return;
 		}
 
+		spinTicks++;
 		spinAngle += HOWITZER_TURN;
 		Vec3 look = player.getLookAngle();
 		Vec3 right = look.cross(new Vec3(0, 1, 0));

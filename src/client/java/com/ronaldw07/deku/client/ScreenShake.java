@@ -36,10 +36,10 @@ public final class ScreenShake {
 	/** Called when a blast goes off; shakes and flashes the screen if it is close enough. */
 	static void blast(Blast blast, Vec3 camera) {
 		if (DekuSettings.get().noScreenEffects() || blast.radius() < MIN_BLAST_RADIUS || blast.style() == Style.SHOT
-				|| blast.style() == Style.CLUSTER || blast.style() == Style.GROUND) {
+				|| blast.style() == Style.GROUND) {
 			return;
 		}
-		boolean core = blast.style() == Style.HOWITZER_CORE;
+		boolean core = blast.style() == Style.HOWITZER_CORE || blast.style() == Style.NUKE;
 		double distance = camera.distanceTo(blast.center());
 		double reach = core ? CORE_REACH : blast.radius() * REACH_PER_RADIUS;
 		double strength = Mth.clamp((reach - distance) / reach, 0, 1) * Math.min(1, blast.radius() / FULL_SHAKE_RADIUS);

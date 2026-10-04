@@ -56,7 +56,7 @@ final class HeroNotebook {
 				Double-tap space, keep holding: fly (WASD to move)
 				Hold V: Howitzer Impact, let go to explode
 				Hold C: charge ground blast, let go
-				X: Cluster Bomb
+				Hold X: Cluster Bomb, grow a fireball and throw it
 				Z: Explosion Cowling on/off, bigger blasts"""),
 			page("Decay", """
 				Right-click: decay what you touch. It crumbles and the decay spreads through everything connected to it.
