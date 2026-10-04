@@ -23,7 +23,9 @@ public final class Cooldowns {
 		GROUND_BLAST("Ground Blast", 100),
 		CLUSTER("Cluster Bomb", 120),
 		DECAY_TOUCH("Decay Touch", 10),
-		DECAY_WAVE("Decay Wave", 100);
+		DECAY_WAVE("Decay Wave", 100),
+		DECAY_COWLING("Decay Cowling", 0),
+		CATASTROPHE("Catastrophe", 400);
 
 		final String label;
 		final int ticks;

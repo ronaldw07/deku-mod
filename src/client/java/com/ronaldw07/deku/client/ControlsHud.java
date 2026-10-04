@@ -62,6 +62,8 @@ final class ControlsHud {
 	private static final Panel DECAY = new Panel("Decay", DECAY_COLOR, List.of(
 		new Row(Ability.DECAY_TOUCH, () -> key(Minecraft.getInstance().options.keyUse)),
 		new Row(Ability.DECAY_WAVE, () -> hold(DekuModClient.SMASH_KEY)),
+		new Row(Ability.CATASTROPHE, () -> hold(DekuModClient.CLUSTER_KEY)),
+		new Row(Ability.DECAY_COWLING, () -> key(DekuModClient.COWLING_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private ControlsHud() {

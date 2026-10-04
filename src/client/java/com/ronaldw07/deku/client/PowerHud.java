@@ -49,7 +49,14 @@ final class PowerHud {
 			y -= LINE_HEIGHT;
 		}
 
-		if (DecayClient.charging()) {
+		if (DecayClient.cowling()) {
+			graphics.centeredText(Minecraft.getInstance().font, "Decay Cowling", x, y, DECAY_COLOR);
+			y -= LINE_HEIGHT;
+		}
+
+		if (DecayClient.chargingCatastrophe()) {
+			graphics.centeredText(Minecraft.getInstance().font, "Catastrophe " + DecayClient.catastropheCharge() + "%", x, y, DECAY_COLOR);
+		} else if (DecayClient.charging()) {
 			graphics.centeredText(Minecraft.getInstance().font, "Decay Wave " + DecayClient.waveCharge() + "%", x, y, DECAY_COLOR);
 		}
 	}

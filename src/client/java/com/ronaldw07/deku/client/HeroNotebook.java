@@ -56,6 +56,10 @@ final class HeroNotebook {
 				Hold V: wind up, let go to slam the ground and send a wave of decay rolling out.
 
 				Mobs it reaches rot away."""),
+			page("Decay at full power", """
+				Hold X: Catastrophe. Wind up for 3 seconds, let go, and everything all around you decays, out to 128 blocks.
+
+				C: Decay Cowling on/off. Faster, stronger, higher jumps, and whatever you run into crumbles."""),
 			page("Settings (K)", """
 				Full Cowling power and ramp-up time.
 

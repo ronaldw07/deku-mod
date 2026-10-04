@@ -1,6 +1,7 @@
 package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.DecayPayload.Move;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,9 +14,11 @@ import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -24,6 +27,10 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -38,7 +45,9 @@ import net.minecraft.world.phys.Vec3;
  * Server side of the Decay quirk. Whatever the hand touches crumbles to dust, and the decay
  * spreads outward through every block connected to it, a ring at a time. Living things it
  * reaches rot away over a few seconds. Holding the charge and slamming the ground sends a
- * wave of decay rolling out across the land.
+ * wave of decay rolling out across the land; Catastrophe is that at full scale, levelling
+ * everything all the way around. Decay Cowling powers the body up and decays whatever it
+ * runs into.
  */
 public final class Decay {
 	private static final double TOUCH_REACH = 6.0;
@@ -49,8 +58,29 @@ public final class Decay {
 	private static final double WAVE_GROWTH = 1.5;
 	private static final int WAVE_DEPTH = 6; // blocks below the ground the wave eats into
 	private static final int WAVE_HEIGHT = 40; // so trees and buildings on top crumble too
+	// Catastrophe: the whole surroundings, out to 128 blocks, mountains and all.
+	private static final double MIN_CATASTROPHE_RADIUS = 48.0;
+	private static final double EXTRA_CATASTROPHE_RADIUS = 80.0;
+	private static final double CATASTROPHE_GROWTH = 2.5;
+	private static final int CATASTROPHE_DEPTH = 12;
+	private static final int CATASTROPHE_HEIGHT = 64;
+	private static final int CATASTROPHE_RING_POINTS = 96;
 	private static final int BLOCKS_PER_TICK = 3000;
+	private static final int CATASTROPHE_BLOCKS_PER_TICK = 6000;
 	private static final int PARTICLE_EVERY = 4; // only some crumbling blocks puff, to keep packets down
+	private static final int CATASTROPHE_PARTICLE_EVERY = 10;
+	// Decay Cowling: stat boosts like Full Cowling at 100%, and anything run into crumbles.
+	private static final Identifier COWLING_SPEED_ID = DekuMod.id("decay_cowling_speed");
+	private static final Identifier COWLING_JUMP_ID = DekuMod.id("decay_cowling_jump");
+	private static final Identifier COWLING_SAFE_FALL_ID = DekuMod.id("decay_cowling_safe_fall");
+	private static final Identifier COWLING_ATTACK_ID = DekuMod.id("decay_cowling_attack");
+	private static final double COWLING_SPEED_BONUS = 1.0;
+	private static final double COWLING_JUMP_BONUS = 0.5;
+	private static final double COWLING_SAFE_FALL_BONUS = 20.0;
+	private static final double COWLING_ATTACK_BONUS = 10.0;
+	private static final int COWLING_INTERVAL = 2; // ticks between decaying what's touched
+	private static final double COWLING_REACH = 0.6; // around the body; the floor underfoot is spared
+	private static final double COWLING_ROT_REACH = 1.5;
 	private static final int SOUND_INTERVAL = 4;
 	// Rotting: a few hearts every other tick for three seconds.
 	private static final int ROT_TICKS = 60;
@@ -72,11 +102,13 @@ public final class Decay {
 		final int minY;
 		final int maxY;
 		final PriorityQueue<Node> queue = new PriorityQueue<>(Comparator.comparingDouble(Node::distanceSqr));
-		final Set<Long> seen = new HashSet<>();
+		final LongOpenHashSet seen = new LongOpenHashSet();
+		final boolean catastrophe;
 		double radius;
 		int age;
 
-		Spread(ResourceKey<Level> dimension, UUID owner, Vec3 origin, double maxRadius, double growth, int minY, int maxY) {
+		Spread(ResourceKey<Level> dimension, UUID owner, Vec3 origin, double maxRadius, double growth, int minY, int maxY,
+				boolean catastrophe) {
 			this.dimension = dimension;
 			this.owner = owner;
 			this.origin = origin;
@@ -84,14 +116,16 @@ public final class Decay {
 			this.growth = growth;
 			this.minY = minY;
 			this.maxY = maxY;
+			this.catastrophe = catastrophe;
 		}
 
 		boolean inside(BlockPos pos) {
 			return pos.getY() >= minY && pos.getY() <= maxY && Vec3.atCenterOf(pos).distanceToSqr(origin) <= maxRadius * maxRadius;
 		}
 
-		void offer(BlockPos pos) {
-			if (inside(pos) && seen.add(pos.asLong())) {
+		/** Queues the block if it's in range, not checked before, and something decay can eat. */
+		void offer(ServerLevel level, BlockPos pos) {
+			if (inside(pos) && seen.add(pos.asLong()) && level.isLoaded(pos) && decayable(level, pos, level.getBlockState(pos))) {
 				queue.add(new Node(pos, Vec3.atCenterOf(pos).distanceToSqr(origin)));
 			}
 		}
@@ -102,6 +136,7 @@ public final class Decay {
 
 	private static final List<Spread> spreads = new ArrayList<>();
 	private static final Map<UUID, Rot> rotting = new HashMap<>();
+	private static final Set<UUID> cowling = new HashSet<>();
 
 	private Decay() {
 	}
@@ -112,7 +147,9 @@ public final class Decay {
 		}
 		switch (move) {
 			case TOUCH -> touch(player);
-			case WAVE -> wave(player, Mth.clamp(charge, 0, 100) / 100.0);
+			case WAVE -> wave(player, Mth.clamp(charge, 0, 100) / 100.0, false);
+			case CATASTROPHE -> wave(player, Mth.clamp(charge, 0, 100) / 100.0, true);
+			case COWLING -> setCowling(player, charge > 0);
 		}
 	}
 
@@ -126,8 +163,8 @@ public final class Decay {
 		} else if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
 			BlockPos pos = blockHit.getBlockPos();
 			Spread spread = new Spread(level.dimension(), player.getUUID(), Vec3.atCenterOf(pos), TOUCH_RADIUS, TOUCH_GROWTH,
-				level.getMinY(), level.getMaxY());
-			spread.offer(pos);
+				level.getMinY(), level.getMaxY(), false);
+			spread.offer(level, pos);
 			spreads.add(spread);
 		} else {
 			return;
@@ -136,22 +173,26 @@ public final class Decay {
 		level.playSound(null, at.x, at.y, at.z, DekuSounds.DECAY_TOUCH, SoundSource.PLAYERS, 1.0f, 1.0f);
 	}
 
-	/** Both hands on the ground: decay floods out from beneath the player. */
-	private static void wave(ServerPlayer player, double power) {
+	/** Both hands on the ground: decay floods out from beneath the player, all the way around. */
+	private static void wave(ServerPlayer player, double power, boolean catastrophe) {
 		ServerLevel level = player.level();
 		BlockPos ground = player.blockPosition().below();
-		int top = Math.min(level.getMaxY(), ground.getY() + WAVE_HEIGHT);
-		int bottom = Math.max(level.getMinY(), ground.getY() - WAVE_DEPTH);
-		Spread spread = new Spread(level.dimension(), player.getUUID(), Vec3.atCenterOf(ground),
-			MIN_WAVE_RADIUS + EXTRA_WAVE_RADIUS * power, WAVE_GROWTH, bottom, top);
+		int top = Math.min(level.getMaxY(), ground.getY() + (catastrophe ? CATASTROPHE_HEIGHT : WAVE_HEIGHT));
+		int bottom = Math.max(level.getMinY(), ground.getY() - (catastrophe ? CATASTROPHE_DEPTH : WAVE_DEPTH));
+		double radius = catastrophe ? MIN_CATASTROPHE_RADIUS + EXTRA_CATASTROPHE_RADIUS * power : MIN_WAVE_RADIUS + EXTRA_WAVE_RADIUS * power;
+		Spread spread = new Spread(level.dimension(), player.getUUID(), Vec3.atCenterOf(ground), radius,
+			catastrophe ? CATASTROPHE_GROWTH : WAVE_GROWTH, bottom, top, catastrophe);
 		// Start from the whole patch under the hands, so the wave doesn't depend on one block.
 		for (BlockPos pos : BlockPos.betweenClosed(ground.offset(-1, -1, -1), ground.offset(1, 0, 1))) {
-			spread.offer(pos.immutable());
+			spread.offer(level, pos.immutable());
 		}
 		spreads.add(spread);
-		level.sendParticles(ASH, player.getX(), player.getY(), player.getZ(), 60, 1.5, 0.2, 1.5, 0.05);
+		level.sendParticles(ASH, player.getX(), player.getY(), player.getZ(), catastrophe ? 200 : 60, 1.5, 0.2, 1.5, 0.05);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.DECAY_TOUCH, SoundSource.PLAYERS,
-			(float) (1.0 + power), 0.6f);
+			(float) (1.0 + power) * (catastrophe ? 3 : 1), catastrophe ? 0.4f : 0.6f);
+		if (catastrophe) {
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 3.0f, 0.5f);
+		}
 	}
 
 	private static void rot(ServerLevel level, Entity entity) {
@@ -161,6 +202,13 @@ public final class Decay {
 	}
 
 	public static void tick(MinecraftServer server) {
+		for (UUID id : cowling) {
+			ServerPlayer player = server.getPlayerList().getPlayer(id);
+			if (player != null && player.isAlive() && player.tickCount % COWLING_INTERVAL == 0) {
+				cowlingTouch(player);
+			}
+		}
+
 		Iterator<Spread> spreadIterator = spreads.iterator();
 		while (spreadIterator.hasNext()) {
 			Spread spread = spreadIterator.next();
@@ -195,25 +243,28 @@ public final class Decay {
 		spread.radius = Math.min(spread.maxRadius, spread.radius + spread.growth);
 		double reachSqr = spread.radius * spread.radius;
 		int decayed = 0;
-		while (!spread.queue.isEmpty() && decayed < BLOCKS_PER_TICK && spread.queue.peek().distanceSqr() <= reachSqr) {
+		int budget = spread.catastrophe ? CATASTROPHE_BLOCKS_PER_TICK : BLOCKS_PER_TICK;
+		int particleEvery = spread.catastrophe ? CATASTROPHE_PARTICLE_EVERY : PARTICLE_EVERY;
+		while (!spread.queue.isEmpty() && decayed < budget && spread.queue.peek().distanceSqr() <= reachSqr) {
 			BlockPos pos = spread.queue.poll().pos();
-			if (!level.isLoaded(pos)) {
-				continue;
-			}
 			BlockState state = level.getBlockState(pos);
+			// Checked again: something else may have changed it since it was queued.
 			if (!decayable(level, pos, state)) {
 				continue;
 			}
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
-			if (decayed % PARTICLE_EVERY == 0) {
+			if (decayed % particleEvery == 0) {
 				level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), pos.getX() + 0.5, pos.getY() + 0.5,
 					pos.getZ() + 0.5, 4, 0.3, 0.3, 0.3, 0.05);
 				level.sendParticles(ASH, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 2, 0.4, 0.4, 0.4, 0.01);
 			}
 			decayed++;
 			for (Direction direction : Direction.values()) {
-				spread.offer(pos.relative(direction));
+				spread.offer(level, pos.relative(direction));
 			}
+		}
+		if (spread.catastrophe && spread.radius < spread.maxRadius) {
+			ring(level, spread);
 		}
 
 		// Anything alive inside the ring rots, except the one doing the decaying.
@@ -257,7 +308,74 @@ public final class Decay {
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.DECAY_CRUMBLE, SoundSource.HOSTILE, 1.0f, 0.8f);
 	}
 
+	/** A wall of dust racing outward at the edge of a Catastrophe. */
+	private static void ring(ServerLevel level, Spread spread) {
+		for (int i = 0; i < CATASTROPHE_RING_POINTS; i++) {
+			double angle = Math.PI * 2 * i / CATASTROPHE_RING_POINTS;
+			double x = spread.origin.x + Math.cos(angle) * spread.radius;
+			double z = spread.origin.z + Math.sin(angle) * spread.radius;
+			level.sendParticles(ASH, x, spread.origin.y + 1.5, z, 3, 0.5, 1.5, 0.5, 0.02);
+			if (i % 3 == 0) {
+				level.sendParticles(DRIED_BLOOD, x, spread.origin.y + 1.5, z, 2, 0.5, 1.5, 0.5, 0.02);
+			}
+		}
+	}
+
+	private static void setCowling(ServerPlayer player, boolean on) {
+		boolean wasOn = cowling.contains(player.getUUID());
+		if (on) {
+			cowling.add(player.getUUID());
+			if (!wasOn) {
+				player.level().playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.DECAY_TOUCH, SoundSource.PLAYERS,
+					1.5f, 0.5f);
+			}
+		} else {
+			cowling.remove(player.getUUID());
+		}
+		setBonus(player, Attributes.MOVEMENT_SPEED, COWLING_SPEED_ID, on ? COWLING_SPEED_BONUS : 0, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+		setBonus(player, Attributes.JUMP_STRENGTH, COWLING_JUMP_ID, on ? COWLING_JUMP_BONUS : 0, AttributeModifier.Operation.ADD_VALUE);
+		setBonus(player, Attributes.SAFE_FALL_DISTANCE, COWLING_SAFE_FALL_ID, on ? COWLING_SAFE_FALL_BONUS : 0,
+			AttributeModifier.Operation.ADD_VALUE);
+		setBonus(player, Attributes.ATTACK_DAMAGE, COWLING_ATTACK_ID, on ? COWLING_ATTACK_BONUS : 0, AttributeModifier.Operation.ADD_VALUE);
+	}
+
+	private static void setBonus(ServerPlayer player, Holder<Attribute> attribute, Identifier id, double amount,
+			AttributeModifier.Operation operation) {
+		AttributeInstance instance = player.getAttribute(attribute);
+		if (instance == null) {
+			return;
+		}
+		if (amount == 0) {
+			instance.removeModifier(id);
+		} else {
+			instance.addOrUpdateTransientModifier(new AttributeModifier(id, amount, operation));
+		}
+	}
+
+	/** Decay Cowling: walls and anything else the body runs into crumble, and mobs up close rot. */
+	private static void cowlingTouch(ServerPlayer player) {
+		ServerLevel level = player.level();
+		AABB body = player.getBoundingBox().inflate(COWLING_REACH);
+		int floor = player.blockPosition().getY();
+		for (BlockPos pos : BlockPos.betweenClosed(BlockPos.containing(body.minX, floor, body.minZ),
+				BlockPos.containing(body.maxX, body.maxY, body.maxZ))) {
+			BlockState state = level.getBlockState(pos);
+			if (decayable(level, pos, state)) {
+				level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+				level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), pos.getX() + 0.5, pos.getY() + 0.5,
+					pos.getZ() + 0.5, 4, 0.3, 0.3, 0.3, 0.05);
+			}
+		}
+		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(COWLING_ROT_REACH),
+				entity -> entity != player && entity.isAlive())) {
+			rot(level, entity);
+		}
+		Vec3 center = player.getBoundingBox().getCenter();
+		level.sendParticles(ASH, center.x, center.y, center.z, 3, 0.4, 0.8, 0.4, 0.01);
+	}
+
 	public static void forget(ServerPlayer player) {
 		spreads.removeIf(spread -> spread.owner.equals(player.getUUID()));
+		cowling.remove(player.getUUID());
 	}
 }

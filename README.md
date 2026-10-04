@@ -32,6 +32,8 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 
 - Right-click: decay what you touch; it crumbles and the decay spreads through everything connected to it
 - Hold V: wind up, release to slam the ground and send a wave of decay rolling out (up to 64 blocks)
+- Hold X: Catastrophe, a 3 second wind up, then everything all around decays out to 128 blocks, mountains included
+- C: Decay Cowling on/off, faster, stronger, higher jumps, and whatever you run into crumbles
 - Mobs it reaches rot away
 
 ## Danger Sense
