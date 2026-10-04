@@ -47,6 +47,7 @@ final class ControlsHud {
 		new Row(Ability.BLACKWHIP, () -> key(DekuModClient.BLACKWHIP_KEY)),
 		new Row(Ability.LAUNCH, () -> hold(Minecraft.getInstance().options.keyJump)),
 		new Row(Ability.SHOOT_STYLE, () -> key(DekuModClient.CLUSTER_KEY)),
+		new Row(Ability.DELAWARE, () -> key(DekuModClient.DELAWARE_KEY)),
 		new Row(Ability.MANCHESTER, () -> key(DekuModClient.MANCHESTER_KEY)),
 		new Row(Ability.GEARSHIFT, () -> key(DekuModClient.GEARSHIFT_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));

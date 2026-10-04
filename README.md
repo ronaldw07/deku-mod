@@ -16,6 +16,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Hold space on the ground: crouch and charge, release to launch toward the crosshair
 - Space in the air: flick a blast of air to push yourself where you look; hold to keep flicking
 - X: Shoot Style, a St. Louis Smash kick that throws a crescent of wind (slices terrain from 50%)
+- Y: Delaware Smash, a finger flick that fires a small air bullet straight ahead
 - G: Manchester Smash, leap, flip and axe kick the ground into a crater and shockwave
 - N: Gearshift on/off, shifts up to gear 5 the longer you keep moving
 - K: settings (power, ramp-up and charge times, Danger Sense, cooldowns on/off)

@@ -7,6 +7,7 @@ import com.ronaldw07.deku.DekuParticles;
 import com.ronaldw07.deku.HeroNotebookItem;
 import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
+import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
@@ -38,6 +39,7 @@ public class DekuModClient implements ClientModInitializer {
 	public static final KeyMapping CLUSTER_KEY = register("key.deku.cluster", GLFW.GLFW_KEY_X);
 	public static final KeyMapping MANCHESTER_KEY = register("key.deku.manchester", GLFW.GLFW_KEY_G);
 	public static final KeyMapping GEARSHIFT_KEY = register("key.deku.gearshift", GLFW.GLFW_KEY_N);
+	public static final KeyMapping DELAWARE_KEY = register("key.deku.delaware", GLFW.GLFW_KEY_Y);
 	public static final KeyMapping DANGER_SENSE_KEY = register("key.deku.danger_sense", GLFW.GLFW_KEY_H);
 	public static final KeyMapping SETTINGS_KEY = register("key.deku.settings", GLFW.GLFW_KEY_K);
 
@@ -73,6 +75,7 @@ public class DekuModClient implements ClientModInitializer {
 	private static final int SMOKESCREEN_POSE_TICKS = 12;
 	private static final int WHIP_POSE_TICKS = 14;
 	private static final int KICK_POSE_TICKS = 8;
+	private static final int FLICK_POSE_TICKS = 6;
 
 	private static KeyMapping register(String name, int key) {
 		return KeyMappingHelper.registerKeyMapping(new KeyMapping(name, InputConstants.Type.KEYSYM, key, CATEGORY));
@@ -100,6 +103,7 @@ public class DekuModClient implements ClientModInitializer {
 		int clusterClicks = countClicks(CLUSTER_KEY);
 		int manchesterClicks = countClicks(MANCHESTER_KEY);
 		int gearshiftClicks = countClicks(GEARSHIFT_KEY);
+		int delawareClicks = countClicks(DELAWARE_KEY);
 
 		FullCowlingClient.tick(player, oneForAll && cowlingClicks % 2 == 1, oneForAll);
 		SmashClient.tick(player, oneForAll && SMASH_KEY.isDown(), oneForAll && smashClicks > 0);
@@ -120,6 +124,11 @@ public class DekuModClient implements ClientModInitializer {
 			send(new ShootStylePayload(DekuSettings.get().punchPower()));
 			Cooldowns.start(Cooldowns.Ability.SHOOT_STYLE);
 			Poses.play(Poses.Pose.KICK, KICK_POSE_TICKS);
+		}
+		if (oneForAll && delawareClicks > 0 && Cooldowns.ready(Cooldowns.Ability.DELAWARE)) {
+			send(new DelawarePayload(DekuSettings.get().punchPower()));
+			Cooldowns.start(Cooldowns.Ability.DELAWARE);
+			Poses.play(Poses.Pose.AIM_RIGHT, FLICK_POSE_TICKS);
 		}
 		ManchesterClient.tick(player, oneForAll && manchesterClicks > 0);
 		GearshiftClient.tick(player, oneForAll && gearshiftClicks % 2 == 1, oneForAll);

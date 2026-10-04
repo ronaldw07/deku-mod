@@ -14,6 +14,7 @@ public final class Cooldowns {
 		BLACKWHIP("Blackwhip", 20),
 		LAUNCH("Launch", 40),
 		SHOOT_STYLE("Shoot Style", 15),
+		DELAWARE("Delaware Smash", 10),
 		MANCHESTER("Manchester Smash", 60),
 		GEARSHIFT("Gearshift", 0),
 		DANGER_SENSE("Danger Sense", 0),

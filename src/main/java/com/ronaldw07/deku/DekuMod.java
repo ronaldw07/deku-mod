@@ -4,6 +4,7 @@ import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.CowlingPayload;
 import com.ronaldw07.deku.network.DecayPayload;
+import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
@@ -88,6 +89,10 @@ public class DekuMod implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(ShootStylePayload.TYPE, ShootStylePayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(ShootStylePayload.TYPE,
 			(payload, context) -> ShootStyle.kick(context.player(), payload.percent()));
+
+		PayloadTypeRegistry.serverboundPlay().register(DelawarePayload.TYPE, DelawarePayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(DelawarePayload.TYPE,
+			(payload, context) -> Delaware.flick(context.player(), payload.percent()));
 
 		PayloadTypeRegistry.serverboundPlay().register(ManchesterPayload.TYPE, ManchesterPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(ManchesterPayload.TYPE,
