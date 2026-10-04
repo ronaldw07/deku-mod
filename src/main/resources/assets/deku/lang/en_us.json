@@ -8,6 +8,7 @@
 	"key.deku.manchester": "Manchester Smash",
 	"key.deku.gearshift": "Gearshift (on/off)",
 	"key.deku.delaware": "Delaware Smash",
+	"key.deku.us_smash": "United States of Smash",
 	"key.deku.cluster": "Shoot Style / Cluster Bomb / Catastrophe",
 	"key.deku.danger_sense": "Danger Sense (on/off)",
 	"key.deku.settings": "Open Settings",
@@ -15,5 +16,6 @@
 	"item.deku.one_for_all": "One For All",
 	"item.deku.explosion": "Explosion",
 	"item.deku.hero_notebook": "Hero Analysis for the Future No. 13",
-	"item.deku.decay": "Decay"
+	"item.deku.decay": "Decay",
+	"item.deku.half_cold_half_hot": "Half Cold Half Hot"
 }

@@ -2,7 +2,7 @@
 
 Fabric mod for Minecraft 26.2: One For All and Explosion quirks.
 
-New players get One For All, Explosion, a notebook of instructions and Decay in hotbar slots 1-4.
+New players get One For All, Explosion, a notebook of instructions, Decay and Half Cold Half Hot in hotbar slots 1-5.
 Keep inventory is always on, so dying never drops your items.
 Hold a quirk item to use its moves; its controls and cooldowns show in the bottom right. Keys can be changed in Options > Controls.
 
@@ -17,6 +17,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Space in the air: flick a blast of air to push yourself where you look; hold to keep flicking
 - X: Shoot Style, a St. Louis Smash kick that throws a crescent of wind (slices terrain from 50%)
 - Y: Delaware Smash, a finger flick that fires an air bullet through every mob in its line, bursting into a small crater
+- U: United States of Smash, rocket into the sky and dive fist first: a huge crater with a ring cut around it, and a tornado that spins in the middle for a minute
 - G: Manchester Smash, leap, flip and axe kick the ground into a crater and shockwave
 - N: Gearshift on/off, shifts up to gear 5 the longer you keep moving
 - K: settings (power, ramp-up and charge times, Danger Sense, cooldowns on/off)
@@ -36,6 +37,13 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Hold X: Catastrophe, a 3 second wind up, then everything all around decays out to 128 blocks, mountains included
 - C: Decay Cowling on/off, faster, stronger, higher jumps, and whatever you run into crumbles
 - Mobs it reaches rot away
+
+## Half Cold Half Hot (slot 5)
+
+- Right-click: a glacier of ice spikes races along the ground, freezing and trapping mobs
+- Hold V: flamethrower, which sets mobs and the ground on fire and melts ice
+- C: a giant wall of ice erupts ahead
+- X: Flashfreeze Heatwave, a block of ice blown apart by a blast of heat
 
 ## Danger Sense
 

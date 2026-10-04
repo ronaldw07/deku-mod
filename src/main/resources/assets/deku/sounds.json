@@ -91,5 +91,23 @@
 		"sounds": [
 			{ "name": "minecraft:entity.warden.heartbeat", "type": "event", "volume": 0.8 }
 		]
+	},
+	"tornado": {
+		"sounds": [
+			{ "name": "minecraft:entity.breeze.whirl", "type": "event", "pitch": 0.4 },
+			{ "name": "minecraft:item.elytra.flying", "type": "event", "pitch": 0.5, "volume": 0.8 }
+		]
+	},
+	"ice": {
+		"sounds": [
+			{ "name": "minecraft:block.glass.break", "type": "event", "pitch": 0.6 },
+			{ "name": "minecraft:block.powder_snow.place", "type": "event", "pitch": 0.7 }
+		]
+	},
+	"flame": {
+		"sounds": [
+			{ "name": "minecraft:item.firecharge.use", "type": "event", "pitch": 0.8, "volume": 0.6 },
+			{ "name": "minecraft:block.fire.ambient", "type": "event", "volume": 1.5 }
+		]
 	}
 }

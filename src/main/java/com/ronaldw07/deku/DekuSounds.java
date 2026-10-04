@@ -28,6 +28,9 @@ public final class DekuSounds {
 	public static final SoundEvent DECAY_TOUCH = register("decay.touch");
 	public static final SoundEvent DECAY_CRUMBLE = register("decay.crumble");
 	public static final SoundEvent DECAY_CHARGE = register("decay.charge");
+	public static final SoundEvent TORNADO = register("tornado");
+	public static final SoundEvent ICE = register("ice");
+	public static final SoundEvent FLAME = register("flame");
 
 	private DekuSounds() {
 	}

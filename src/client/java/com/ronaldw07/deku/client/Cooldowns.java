@@ -15,6 +15,7 @@ public final class Cooldowns {
 		LAUNCH("Launch", 40),
 		SHOOT_STYLE("Shoot Style", 15),
 		DELAWARE("Delaware Smash", 10),
+		US_SMASH("United States of Smash", 600),
 		MANCHESTER("Manchester Smash", 60),
 		GEARSHIFT("Gearshift", 0),
 		DANGER_SENSE("Danger Sense", 0),
@@ -26,7 +27,11 @@ public final class Cooldowns {
 		DECAY_TOUCH("Decay Touch", 10),
 		DECAY_WAVE("Decay Wave", 100),
 		DECAY_COWLING("Decay Cowling", 0),
-		CATASTROPHE("Catastrophe", 400);
+		CATASTROPHE("Catastrophe", 400),
+		ICE_WAVE("Ice Wave", 20),
+		FLAMETHROWER("Flamethrower", 0),
+		ICE_WALL("Ice Wall", 100),
+		HEATWAVE("Flashfreeze Heatwave", 200);
 
 		final String label;
 		final int ticks;

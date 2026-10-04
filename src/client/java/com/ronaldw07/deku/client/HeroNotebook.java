@@ -15,6 +15,7 @@ final class HeroNotebook {
 				Slot 1: One For All
 				Slot 2: Explosion
 				Slot 4: Decay
+				Slot 5: Half Cold Half Hot
 
 				Hold a quirk item to use its moves. Its controls show in the bottom right.
 
@@ -37,6 +38,10 @@ final class HeroNotebook {
 				G: Manchester Smash. Leap, flip and axe kick the ground. In the air it dives straight down.
 
 				N: Gearshift on/off. Keep moving to shift up to gear 5."""),
+			page("United States of Smash", """
+				U: rocket into the sky, hang there winding up, then dive fist first.
+
+				Leaves a huge crater with a ring cut around it, and a tornado that spins in the middle for a minute."""),
 			page("One For All tips", """
 				Smash locks onto the mob nearest your crosshair.
 
@@ -62,6 +67,11 @@ final class HeroNotebook {
 				Hold X: Catastrophe. Wind up for 3 seconds, let go, and everything all around you decays, out to 128 blocks.
 
 				C: Decay Cowling on/off. Faster, stronger, higher jumps, and whatever you run into crumbles."""),
+			page("Half Cold Half Hot", """
+				Right-click: a glacier of ice spikes races along the ground and freezes mobs.
+				Hold V: flamethrower. It melts ice too.
+				C: a giant wall of ice.
+				X: Flashfreeze Heatwave. Ice, then a blast of heat blows it apart."""),
 			page("Settings (K)", """
 				Full Cowling power and ramp-up time.
 

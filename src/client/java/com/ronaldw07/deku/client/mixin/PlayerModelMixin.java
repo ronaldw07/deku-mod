@@ -55,6 +55,7 @@ abstract class PlayerModelMixin {
 				set(left, 0, 0, -0.6f);
 			}
 			case WHIP, AIM_RIGHT -> set(right, aim, model.head.yRot, 0);
+			case AIM_LEFT -> set(left, aim, model.head.yRot, 0);
 			case AIM_BOTH -> {
 				set(right, aim, model.head.yRot + 0.15f, 0);
 				set(left, aim, model.head.yRot - 0.15f, 0);
@@ -101,6 +102,11 @@ abstract class PlayerModelMixin {
 				set(rightLeg, -2.6f, 0, 0);
 				set(right, 0, 0, 1.2f);
 				set(left, 0, 0, -1.2f);
+			}
+			// United States of Smash coming down: right fist driving toward the ground, left arm thrown up.
+			case DIVE -> {
+				set(right, -0.3f, 0, 0.1f);
+				set(left, -2.8f, 0, -0.3f);
 			}
 			// Decay: right hand reaching down to the ground.
 			case GROUND_TOUCH -> {

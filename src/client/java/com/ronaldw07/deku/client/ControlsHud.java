@@ -21,6 +21,7 @@ final class ControlsHud {
 	private static final int ONE_FOR_ALL_COLOR = 0xFF55FF55;
 	private static final int EXPLOSION_COLOR = 0xFFFF9030;
 	private static final int DECAY_COLOR = 0xFFB8B0D0;
+	private static final int HALF_COLD_HALF_HOT_COLOR = 0xFF8FD8FF;
 	private static final int LABEL_COLOR = 0xFFFFFFFF;
 	private static final int COOLING_COLOR = 0xFF808080;
 	private static final int BACKGROUND = 0x90000000;
@@ -49,6 +50,7 @@ final class ControlsHud {
 		new Row(Ability.SHOOT_STYLE, () -> key(DekuModClient.CLUSTER_KEY)),
 		new Row(Ability.DELAWARE, () -> key(DekuModClient.DELAWARE_KEY)),
 		new Row(Ability.MANCHESTER, () -> key(DekuModClient.MANCHESTER_KEY)),
+		new Row(Ability.US_SMASH, () -> key(DekuModClient.US_SMASH_KEY)),
 		new Row(Ability.GEARSHIFT, () -> key(DekuModClient.GEARSHIFT_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
@@ -67,6 +69,13 @@ final class ControlsHud {
 		new Row(Ability.DECAY_COWLING, () -> key(DekuModClient.COWLING_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
+	private static final Panel HALF_COLD_HALF_HOT = new Panel("Half Cold Half Hot", HALF_COLD_HALF_HOT_COLOR, List.of(
+		new Row(Ability.ICE_WAVE, () -> key(Minecraft.getInstance().options.keyUse)),
+		new Row(Ability.FLAMETHROWER, () -> hold(DekuModClient.SMASH_KEY)),
+		new Row(Ability.ICE_WALL, () -> key(DekuModClient.COWLING_KEY)),
+		new Row(Ability.HEATWAVE, () -> key(DekuModClient.CLUSTER_KEY)),
+		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
+
 	private ControlsHud() {
 	}
 
@@ -78,7 +87,8 @@ final class ControlsHud {
 		}
 		Panel panel = DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL) ? ONE_FOR_ALL
 			: DekuItems.isHolding(player, DekuItems.EXPLOSION) ? EXPLOSION
-			: DekuItems.isHolding(player, DekuItems.DECAY) ? DECAY : null;
+			: DekuItems.isHolding(player, DekuItems.DECAY) ? DECAY
+			: DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT) ? HALF_COLD_HALF_HOT : null;
 		if (panel == null) {
 			return;
 		}

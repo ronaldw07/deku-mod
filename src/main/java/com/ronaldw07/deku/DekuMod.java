@@ -11,12 +11,15 @@ import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.ExplosionPayload;
 import com.ronaldw07.deku.network.FloatPayload;
 import com.ronaldw07.deku.network.GearshiftPayload;
+import com.ronaldw07.deku.network.HalfColdHalfHotPayload;
 import com.ronaldw07.deku.network.LaunchPayload;
 import com.ronaldw07.deku.network.ManchesterPayload;
 import com.ronaldw07.deku.network.ShootStylePayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.SmashPayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
+import com.ronaldw07.deku.network.TornadoFxPayload;
+import com.ronaldw07.deku.network.UnitedStatesSmashPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -107,6 +110,18 @@ public class DekuMod implements ModInitializer {
 			(payload, context) -> Decay.handle(context.player(), payload.move(), payload.charge()));
 		ServerTickEvents.END_SERVER_TICK.register(Decay::tick);
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Decay.forget(handler.player));
+
+		PayloadTypeRegistry.serverboundPlay().register(UnitedStatesSmashPayload.TYPE, UnitedStatesSmashPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(UnitedStatesSmashPayload.TYPE,
+			(payload, context) -> UnitedStatesSmash.land(context.player(), payload.percent()));
+		PayloadTypeRegistry.clientboundPlay().register(TornadoFxPayload.TYPE, TornadoFxPayload.CODEC);
+		ServerTickEvents.END_SERVER_TICK.register(UnitedStatesSmash::tick);
+
+		PayloadTypeRegistry.serverboundPlay().register(HalfColdHalfHotPayload.TYPE, HalfColdHalfHotPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(HalfColdHalfHotPayload.TYPE,
+			(payload, context) -> HalfColdHalfHot.handle(context.player(), payload.move(), payload.active()));
+		ServerTickEvents.END_SERVER_TICK.register(HalfColdHalfHot::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> HalfColdHalfHot.forget(handler.player));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(DekuMod::keepInventory);
 

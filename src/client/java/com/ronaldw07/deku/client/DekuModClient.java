@@ -13,6 +13,7 @@ import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.ShootStylePayload;
 import com.ronaldw07.deku.network.SmokescreenPayload;
+import com.ronaldw07.deku.network.TornadoFxPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -40,6 +41,7 @@ public class DekuModClient implements ClientModInitializer {
 	public static final KeyMapping MANCHESTER_KEY = register("key.deku.manchester", GLFW.GLFW_KEY_G);
 	public static final KeyMapping GEARSHIFT_KEY = register("key.deku.gearshift", GLFW.GLFW_KEY_N);
 	public static final KeyMapping DELAWARE_KEY = register("key.deku.delaware", GLFW.GLFW_KEY_Y);
+	public static final KeyMapping US_SMASH_KEY = register("key.deku.us_smash", GLFW.GLFW_KEY_U);
 	public static final KeyMapping DANGER_SENSE_KEY = register("key.deku.danger_sense", GLFW.GLFW_KEY_H);
 	public static final KeyMapping SETTINGS_KEY = register("key.deku.settings", GLFW.GLFW_KEY_K);
 
@@ -65,6 +67,7 @@ public class DekuModClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(ExplosionFxPayload.TYPE, (payload, context) -> ExplosionFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(BlackwhipFxPayload.TYPE, (payload, context) -> BlackwhipTendrils.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(SmashFxPayload.TYPE, (payload, context) -> SmashLightning.add(payload));
+		ClientPlayNetworking.registerGlobalReceiver(TornadoFxPayload.TYPE, (payload, context) -> TornadoFx.add(payload));
 		ParticleProviderRegistry.getInstance().register(DekuParticles.PURPLE_SMOKE, sprites -> (options, level, x, y, z, xa, ya, za, random) ->
 			new SmokePuffParticle(level, x, y, z, xa, ya, za, sprites.get(random), SmokePuffParticle.SMOKESCREEN));
 		ParticleProviderRegistry.getInstance().register(DekuParticles.WHITE_SMOKE, sprites -> (options, level, x, y, z, xa, ya, za, random) ->
@@ -96,6 +99,7 @@ public class DekuModClient implements ClientModInitializer {
 		boolean oneForAll = player != null && DekuItems.isHolding(player, DekuItems.ONE_FOR_ALL);
 		boolean explosion = player != null && DekuItems.isHolding(player, DekuItems.EXPLOSION);
 		boolean decay = player != null && DekuItems.isHolding(player, DekuItems.DECAY);
+		boolean halfColdHalfHot = player != null && DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT);
 		int cowlingClicks = countClicks(COWLING_KEY);
 		int smashClicks = countClicks(SMASH_KEY);
 		int smokescreenClicks = countClicks(SMOKESCREEN_KEY);
@@ -104,6 +108,7 @@ public class DekuModClient implements ClientModInitializer {
 		int manchesterClicks = countClicks(MANCHESTER_KEY);
 		int gearshiftClicks = countClicks(GEARSHIFT_KEY);
 		int delawareClicks = countClicks(DELAWARE_KEY);
+		int usSmashClicks = countClicks(US_SMASH_KEY);
 
 		FullCowlingClient.tick(player, oneForAll && cowlingClicks % 2 == 1, oneForAll);
 		SmashClient.tick(player, oneForAll && SMASH_KEY.isDown(), oneForAll && smashClicks > 0);
@@ -131,12 +136,16 @@ public class DekuModClient implements ClientModInitializer {
 			Poses.play(Poses.Pose.AIM_RIGHT, FLICK_POSE_TICKS);
 		}
 		ManchesterClient.tick(player, oneForAll && manchesterClicks > 0);
+		UnitedStatesClient.tick(player, oneForAll && usSmashClicks > 0);
 		GearshiftClient.tick(player, oneForAll && gearshiftClicks % 2 == 1, oneForAll);
 
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
 			SMASH_KEY.isDown(), COWLING_KEY.isDown(), clusterClicks > 0);
 		DecayClient.tick(player, decay, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
 			decay && cowlingClicks % 2 == 1);
+		HalfColdHalfHotClient.tick(player, halfColdHalfHot, client.options.keyUse.isDown(), SMASH_KEY.isDown(),
+			halfColdHalfHot && cowlingClicks > 0, halfColdHalfHot && clusterClicks > 0);
+		TornadoFx.tick(client.level);
 		ExplosionFx.tick(client.level);
 		FaJinFx.tick(player);
 
