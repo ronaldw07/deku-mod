@@ -81,6 +81,20 @@ public final class Bakugo {
 	private static final double VORTEX_HEIGHT = 2.5;
 	private static final int SPIN_SOUND_INTERVAL = 10;
 	private static final double FX_VIEW_DISTANCE = 96;
+	private static final double BOOM_MIN_RADIUS = 3.0;
+	private static final float BOOM_MAX_VOLUME = 6.0f;
+	private static final float BOOM_VOLUME_PER_RADIUS = 0.12f;
+	private static final float BOOM_PITCH_DROP_PER_RADIUS = 0.015f;
+	private static final float BOOM_MAX_PITCH_DROP = 0.4f;
+	private static final double RUMBLE_MIN_RADIUS = 6.0;
+	private static final int RUMBLE_DELAY_TICKS = 8;
+	private static final float RUMBLE_MAX_VOLUME = 5.0f;
+	private static final float RUMBLE_VOLUME_PER_RADIUS = 0.1f;
+	private static final int THUNDER_DELAY_TICKS = 30;
+	private static final int THUNDER_ECHO_DELAY_TICKS = 70;
+	private static final float THUNDER_VOLUME = 8.0f;
+	private static final float THUNDER_ECHO_VOLUME = 5.0f;
+	private static final float THUNDER_ECHO_PITCH = 0.45f;
 	private static final double CORE_FX_VIEW_DISTANCE = 300; // far enough to see and feel the Howitzer from a distance
 
 	private static final Set<UUID> flying = new HashSet<>();
@@ -313,12 +327,34 @@ public final class Bakugo {
 		Blasts.blast(owner, center, radius, Blasts.sparing(owner), debris);
 		int fires = (int) (radius / RADIUS_PER_FIRE);
 		Blasts.carve(level, center, radius, fires > 0 || level.getRandom().nextDouble() >= SMALL_BLAST_FIRE_CHANCE ? fires : 1);
+		boom(level, center, radius, style);
 		ExplosionFxPayload fx = new ExplosionFxPayload(center, radius, style, from);
 		double viewDistance = style == Style.HOWITZER_CORE ? CORE_FX_VIEW_DISTANCE : FX_VIEW_DISTANCE;
 		for (ServerPlayer viewer : PlayerLookup.around(level, center, viewDistance)) {
 			if (ServerPlayNetworking.canSend(viewer, ExplosionFxPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);
 			}
+		}
+	}
+
+	/** A low boom, then a rumble rolling after it; the Howitzer's core also gets a thunder crack and its echo. */
+	private static void boom(ServerLevel level, Vec3 center, float radius, Style style) {
+		// Cluster and ground blasts go off by the dozen, so only single big blasts get their own boom.
+		if (style != Style.BIG_SHOT && style != Style.HOWITZER_CORE || radius < BOOM_MIN_RADIUS) {
+			return;
+		}
+		float pitch = 1.0f - Math.min(BOOM_MAX_PITCH_DROP, radius * BOOM_PITCH_DROP_PER_RADIUS);
+		level.playSound(null, center.x, center.y, center.z, DekuSounds.EXPLOSION_BOOM, SoundSource.PLAYERS,
+			Math.min(BOOM_MAX_VOLUME, 1 + radius * BOOM_VOLUME_PER_RADIUS), pitch);
+		if (radius >= RUMBLE_MIN_RADIUS) {
+			Blasts.later(level.getServer(), RUMBLE_DELAY_TICKS, () -> level.playSound(null, center.x, center.y, center.z,
+				DekuSounds.EXPLOSION_RUMBLE, SoundSource.PLAYERS, Math.min(RUMBLE_MAX_VOLUME, radius * RUMBLE_VOLUME_PER_RADIUS), 1.0f));
+		}
+		if (style == Style.HOWITZER_CORE) {
+			Blasts.later(level.getServer(), THUNDER_DELAY_TICKS, () -> level.playSound(null, center.x, center.y, center.z,
+				DekuSounds.EXPLOSION_THUNDER, SoundSource.PLAYERS, THUNDER_VOLUME, 1.0f));
+			Blasts.later(level.getServer(), THUNDER_ECHO_DELAY_TICKS, () -> level.playSound(null, center.x, center.y, center.z,
+				DekuSounds.EXPLOSION_THUNDER, SoundSource.PLAYERS, THUNDER_ECHO_VOLUME, THUNDER_ECHO_PITCH));
 		}
 	}
 }
