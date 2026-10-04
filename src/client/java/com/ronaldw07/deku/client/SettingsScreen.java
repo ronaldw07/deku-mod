@@ -14,6 +14,7 @@ public class SettingsScreen extends Screen {
 	private static final int WIDGET_WIDTH = 200;
 	private static final int WIDGET_HEIGHT = 20;
 	private static final int ROW_SPACING = 24;
+	private static final int COLUMN_GAP = 10;
 	private static final double SECONDS_STEP = 0.1;
 
 	public SettingsScreen() {
@@ -22,40 +23,44 @@ public class SettingsScreen extends Screen {
 
 	@Override
 	protected void init() {
-		int x = this.width / 2 - WIDGET_WIDTH / 2;
+		int left = this.width / 2 - WIDGET_WIDTH - COLUMN_GAP / 2;
+		int right = this.width / 2 + COLUMN_GAP / 2;
 		int y = this.height / 4;
 		DekuSettings settings = DekuSettings.get();
 
-		addSlider(x, y, "Cowling power", 1, 100, 1, settings.cowlingPower(), SettingsScreen::percent,
+		addSlider(left, y, "Cowling power", 1, 100, 1, settings.cowlingPower(), SettingsScreen::percent,
 			v -> DekuSettings.set(DekuSettings.get().withCowlingPower((int) v)));
-		addSlider(x, y + ROW_SPACING, "Cowling ramp-up", 0, DekuSettings.MAX_SECONDS, SECONDS_STEP,
+		addSlider(left, y + ROW_SPACING, "Cowling ramp-up", 0, DekuSettings.MAX_SECONDS, SECONDS_STEP,
 			settings.cowlingRampSeconds(), SettingsScreen::seconds,
 			v -> DekuSettings.set(DekuSettings.get().withCowlingRampSeconds(v)));
-		addSlider(x, y + ROW_SPACING * 2, "Punch power", 1, 100, 1, settings.punchPower(), SettingsScreen::percent,
+		addSlider(left, y + ROW_SPACING * 2, "Punch power", 1, 100, 1, settings.punchPower(), SettingsScreen::percent,
 			v -> DekuSettings.set(DekuSettings.get().withPunchPower((int) v)));
-		addSlider(x, y + ROW_SPACING * 3, "Punch charge time", 0, DekuSettings.MAX_SECONDS, SECONDS_STEP,
+		addSlider(left, y + ROW_SPACING * 3, "Punch charge time", 0, DekuSettings.MAX_SECONDS, SECONDS_STEP,
 			settings.punchChargeSeconds(), SettingsScreen::seconds,
 			v -> DekuSettings.set(DekuSettings.get().withPunchChargeSeconds(v)));
+		addSlider(left, y + ROW_SPACING * 4, "Smash max range", DekuSettings.MIN_SMASH_RANGE, DekuSettings.MAX_SMASH_RANGE, 1,
+			settings.smashMaxRange(), SettingsScreen::blocks,
+			v -> DekuSettings.set(DekuSettings.get().withSmashMaxRange((int) v)));
 
 		addRenderableWidget(CycleButton.onOffBuilder(settings.dangerSense())
-			.create(x, y + ROW_SPACING * 4, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Danger Sense"),
+			.create(right, y, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Danger Sense"),
 				(button, on) -> DekuSettings.set(DekuSettings.get().withDangerSense(on))));
 
 		addRenderableWidget(CycleButton.onOffBuilder(!settings.noCooldowns())
-			.create(x, y + ROW_SPACING * 5, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Cooldowns"),
+			.create(right, y + ROW_SPACING, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Cooldowns"),
 				(button, on) -> DekuSettings.set(DekuSettings.get().withNoCooldowns(!on))));
 
 		addRenderableWidget(CycleButton.<Integer>builder(SettingsScreen::detailName, settings.particleDetail())
 			.withValues(DekuSettings.LOW_DETAIL, DekuSettings.NORMAL_DETAIL, DekuSettings.HIGH_DETAIL)
-			.create(x, y + ROW_SPACING * 6, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Particle detail"),
+			.create(right, y + ROW_SPACING * 2, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Particle detail"),
 				(button, detail) -> DekuSettings.set(DekuSettings.get().withParticleDetail(detail))));
 
 		addRenderableWidget(CycleButton.onOffBuilder(!settings.noScreenEffects())
-			.create(x, y + ROW_SPACING * 7, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Screen shake and flash"),
+			.create(right, y + ROW_SPACING * 3, WIDGET_WIDTH, WIDGET_HEIGHT, Component.literal("Screen shake and flash"),
 				(button, on) -> DekuSettings.set(DekuSettings.get().withNoScreenEffects(!on))));
 
 		addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose())
-			.bounds(x, y + ROW_SPACING * 8 + 12, WIDGET_WIDTH, WIDGET_HEIGHT)
+			.bounds(this.width / 2 - WIDGET_WIDTH / 2, y + ROW_SPACING * 5 + 12, WIDGET_WIDTH, WIDGET_HEIGHT)
 			.build());
 	}
 
@@ -86,6 +91,10 @@ public class SettingsScreen extends Screen {
 
 	private static String percent(double value) {
 		return (int) value + "%";
+	}
+
+	private static String blocks(double value) {
+		return (int) value + " blocks";
 	}
 
 	private static String seconds(double value) {

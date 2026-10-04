@@ -15,13 +15,15 @@ import net.minecraft.util.Mth;
  * Powers are percentages (1-100); times are seconds (0 = instant).
  */
 public record DekuSettings(int cowlingPower, double cowlingRampSeconds, int punchPower, double punchChargeSeconds,
-		boolean dangerSense, boolean noCooldowns, int particleDetail, boolean noScreenEffects) {
+		boolean dangerSense, boolean noCooldowns, int particleDetail, boolean noScreenEffects, int smashMaxRange) {
 	public static final double MAX_SECONDS = 5.0;
+	public static final int MIN_SMASH_RANGE = 12;
+	public static final int MAX_SMASH_RANGE = 150;
 	public static final int LOW_DETAIL = 1;
 	public static final int NORMAL_DETAIL = 2;
 	public static final int HIGH_DETAIL = 3;
 	private static final double[] DETAIL_SCALES = {0.4, 1.0, 1.6};
-	private static final DekuSettings DEFAULTS = new DekuSettings(100, 1.0, 100, 1.0, true, false, NORMAL_DETAIL, false);
+	private static final DekuSettings DEFAULTS = new DekuSettings(100, 1.0, 100, 1.0, true, false, NORMAL_DETAIL, false, MAX_SMASH_RANGE);
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("deku.json");
 
@@ -59,35 +61,39 @@ public record DekuSettings(int cowlingPower, double cowlingRampSeconds, int punc
 	}
 
 	public DekuSettings withCowlingPower(int value) {
-		return new DekuSettings(value, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, noScreenEffects);
+		return new DekuSettings(value, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, noScreenEffects, smashMaxRange);
 	}
 
 	public DekuSettings withCowlingRampSeconds(double value) {
-		return new DekuSettings(cowlingPower, value, punchPower, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, noScreenEffects);
+		return new DekuSettings(cowlingPower, value, punchPower, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, noScreenEffects, smashMaxRange);
 	}
 
 	public DekuSettings withPunchPower(int value) {
-		return new DekuSettings(cowlingPower, cowlingRampSeconds, value, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, noScreenEffects);
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, value, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, noScreenEffects, smashMaxRange);
 	}
 
 	public DekuSettings withPunchChargeSeconds(double value) {
-		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, value, dangerSense, noCooldowns, particleDetail, noScreenEffects);
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, value, dangerSense, noCooldowns, particleDetail, noScreenEffects, smashMaxRange);
 	}
 
 	public DekuSettings withDangerSense(boolean value) {
-		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, value, noCooldowns, particleDetail, noScreenEffects);
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, value, noCooldowns, particleDetail, noScreenEffects, smashMaxRange);
 	}
 
 	public DekuSettings withNoCooldowns(boolean value) {
-		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, value, particleDetail, noScreenEffects);
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, value, particleDetail, noScreenEffects, smashMaxRange);
 	}
 
 	public DekuSettings withParticleDetail(int value) {
-		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, noCooldowns, value, noScreenEffects);
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, noCooldowns, value, noScreenEffects, smashMaxRange);
 	}
 
 	public DekuSettings withNoScreenEffects(boolean value) {
-		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, value);
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, value, smashMaxRange);
+	}
+
+	public DekuSettings withSmashMaxRange(int value) {
+		return new DekuSettings(cowlingPower, cowlingRampSeconds, punchPower, punchChargeSeconds, dangerSense, noCooldowns, particleDetail, noScreenEffects, value);
 	}
 
 	/** How much to multiply particle counts by: below 1 on Low, above 1 on High. */
@@ -105,7 +111,9 @@ public record DekuSettings(int cowlingPower, double cowlingRampSeconds, int punc
 			noCooldowns,
 			// An older config file has no detail, which reads back as 0: treat that as Normal.
 			particleDetail < LOW_DETAIL || particleDetail > HIGH_DETAIL ? NORMAL_DETAIL : particleDetail,
-			noScreenEffects
+			noScreenEffects,
+			// An older config file has no range, which reads back as 0: treat that as the full 150.
+			smashMaxRange < MIN_SMASH_RANGE ? MAX_SMASH_RANGE : Math.min(smashMaxRange, MAX_SMASH_RANGE)
 		);
 	}
 }

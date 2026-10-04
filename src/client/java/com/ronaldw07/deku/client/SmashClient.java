@@ -51,7 +51,7 @@ public final class SmashClient {
 
 		if (charging && !held) {
 			if (ClientPlayNetworking.canSend(SmashPayload.TYPE)) {
-				ClientPlayNetworking.send(new SmashPayload(Math.max(1, (int) Math.round(charge))));
+				ClientPlayNetworking.send(new SmashPayload(Math.max(1, (int) Math.round(charge)), DekuSettings.get().smashMaxRange()));
 			}
 			Cooldowns.start(Cooldowns.Ability.SMASH);
 			Poses.play(Poses.Pose.PUNCH, PUNCH_POSE_TICKS);

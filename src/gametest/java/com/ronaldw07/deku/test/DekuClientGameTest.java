@@ -622,6 +622,16 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitTicks(10);
 		boolean farHoled = singleplayer.getServer().computeOnServer(server -> server.overworld().getBlockState(wallCenter.south(35)).isAir());
 		check(farHoled, "a 100% Smash should tunnel through a wall 40 blocks away too");
+
+		// With the max range slider turned down to 20 blocks, the same punch stops well short of the far wall.
+		command(singleplayer, "execute at @p run fill ~-2 ~ ~40 ~2 ~4 ~40 minecraft:stone");
+		DekuSettings.set(DekuSettings.get().withSmashMaxRange(20));
+		context.waitTicks(60);
+		context.getInput().holdKeyFor(DekuModClient.SMASH_KEY, 2);
+		context.waitTicks(15);
+		boolean farStillThere = singleplayer.getServer().computeOnServer(server -> !server.overworld().getBlockState(wallCenter.south(35)).isAir());
+		check(farStillThere, "a Smash limited to 20 blocks shouldn't reach a wall 40 blocks away");
+		DekuSettings.set(DekuSettings.get().withSmashMaxRange(DekuSettings.MAX_SMASH_RANGE));
 		camera(context, CameraType.FIRST_PERSON);
 	}
 

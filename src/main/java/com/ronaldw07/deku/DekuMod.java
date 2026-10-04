@@ -54,7 +54,7 @@ public class DekuMod implements ModInitializer {
 
 		PayloadTypeRegistry.serverboundPlay().register(SmashPayload.TYPE, SmashPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(SmashPayload.TYPE,
-			(payload, context) -> Smash.perform(context.player(), payload.percent()));
+			(payload, context) -> Smash.perform(context.player(), payload.percent(), payload.maxRange()));
 		PayloadTypeRegistry.clientboundPlay().register(SmashFxPayload.TYPE, SmashFxPayload.CODEC);
 
 		PayloadTypeRegistry.serverboundPlay().register(SmokescreenPayload.TYPE, SmokescreenPayload.CODEC);

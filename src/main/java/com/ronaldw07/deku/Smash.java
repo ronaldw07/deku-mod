@@ -26,7 +26,7 @@ public final class Smash {
 	// extras kick in steeply near the top: barely noticeable at 50%, everything at 100%.
 	private static final double MIN_RANGE = 3.0;
 	private static final double MAX_RANGE = 12.0;
-	private static final double FULL_POWER_EXTRA_RANGE = 138.0; // 150 blocks at 100%
+	private static final int LONGEST_RANGE = 150; // blocks at 100% power, unless the player asks for less
 	private static final double FULL_POWER_EXTRA_KNOCKBACK = 8.0;
 	private static final double FULL_POWER_CURVE = 8.0;
 	private static final float MIN_DAMAGE = 3.0f;
@@ -77,10 +77,12 @@ public final class Smash {
 	private Smash() {
 	}
 
-	public static void perform(ServerPlayer player, int percent) {
+	/** @param maxRange the longest reach this player wants a full-power punch to have, in blocks */
+	public static void perform(ServerPlayer player, int percent, int maxRange) {
 		double power = Mth.clamp(percent, 1, 100) / 100.0;
 		double fullPower = Math.pow(power, FULL_POWER_CURVE);
-		double range = Mth.lerp(power, MIN_RANGE, MAX_RANGE) + FULL_POWER_EXTRA_RANGE * fullPower;
+		double fullPowerExtraRange = Mth.clamp(maxRange, MAX_RANGE, LONGEST_RANGE) - MAX_RANGE;
+		double range = Mth.lerp(power, MIN_RANGE, MAX_RANGE) + fullPowerExtraRange * fullPower;
 		float damage = (float) (Mth.lerp(power, MIN_DAMAGE, MAX_DAMAGE) + FULL_POWER_EXTRA_DAMAGE * Math.pow(power, FULL_POWER_CURVE));
 		double coneCos = Mth.lerp(power, NARROW_CONE_COS, WIDE_CONE_COS);
 		ServerLevel level = player.level();
