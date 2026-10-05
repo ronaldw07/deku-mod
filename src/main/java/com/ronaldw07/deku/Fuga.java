@@ -26,6 +26,10 @@ public final class Fuga {
 	private static final double BURN_REACH_PER_RADIUS = 1.6;
 	private static final int BURN_TICKS = 160;
 	private static final int RUMBLE_DELAY_TICKS = 20;
+	private static final int SPREAD_WAVES = 8;
+	private static final int SPREAD_DELAY_TICKS = 6;
+	private static final double SPREAD_REACH = 2.2;
+	private static final int FIRES_PER_WAVE = 220;
 
 	private Fuga() {
 	}
@@ -51,6 +55,33 @@ public final class Fuga {
 		});
 	}
 
+	/** Sets fires on the ground at random spots within reach, so the burning spreads far from the crater. */
+	private static void spreadFire(ServerLevel level, ServerPlayer player, Vec3 center, double reach) {
+		var random = level.getRandom();
+		for (int i = 0; i < FIRES_PER_WAVE; i++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double distance = Math.sqrt(random.nextDouble()) * reach;
+			int x = Mth.floor(center.x + Math.cos(angle) * distance);
+			int z = Mth.floor(center.z + Math.sin(angle) * distance);
+			net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(x, Mth.floor(center.y) + 6, z);
+			if (!level.isLoaded(pos)) {
+				continue;
+			}
+			while (pos.getY() > level.getMinY() && level.getBlockState(pos).isAir()) {
+				pos = pos.below();
+			}
+			net.minecraft.core.BlockPos above = pos.above();
+			if (level.getBlockState(above).isAir() && level.getBlockState(pos).isFaceSturdy(level, pos, net.minecraft.core.Direction.UP)) {
+				level.setBlockAndUpdate(above, net.minecraft.world.level.block.Blocks.FIRE.defaultBlockState());
+			}
+		}
+		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(reach), entity -> entity != player && entity.isAlive())) {
+			if (entity.position().distanceTo(center) <= reach) {
+				entity.setRemainingFireTicks(BURN_TICKS);
+			}
+		}
+	}
+
 	/** The arrow lands: a fire blast with a cloud, a shockwave, and everything near it set alight. */
 	private static void land(ServerPlayer player, Vec3 center, float radius) {
 		ServerLevel level = player.level();
@@ -62,6 +93,11 @@ public final class Fuga {
 			entity.setRemainingFireTicks(BURN_TICKS);
 		}
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 6.0f, 0.7f);
+		// Fire races outward over the next few seconds, catching on everything that can burn.
+		for (int wave = 1; wave <= SPREAD_WAVES; wave++) {
+			double reachNow = radius * SPREAD_REACH * wave / SPREAD_WAVES;
+			Blasts.later(level.getServer(), wave * SPREAD_DELAY_TICKS, () -> spreadFire(level, player, center, reachNow));
+		}
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.EXPLOSION_BOOM, SoundSource.PLAYERS, 8.0f, 0.6f);
 		Blasts.later(level.getServer(), RUMBLE_DELAY_TICKS, () -> level.playSound(null, center.x, center.y, center.z, DekuSounds.EXPLOSION_RUMBLE,
 			SoundSource.PLAYERS, 8.0f, 1.0f));

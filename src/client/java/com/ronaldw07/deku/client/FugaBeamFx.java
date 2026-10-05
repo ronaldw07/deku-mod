@@ -17,9 +17,9 @@ import net.minecraft.world.phys.Vec3;
  * step, so it reads as one great roaring fire rather than a pillar or a cloud of sparks.
  */
 final class FugaBeamFx {
-	static final int LIFETIME_TICKS = 640;
+	static final int LIFETIME_TICKS = 360;
 	private static final int RISE_TICKS = 70;
-	private static final int FADE_TICKS = 120;
+	private static final int FADE_TICKS = 90;
 	private static final double HEIGHT = 300.0;
 	private static final double MIN_RADIUS = 9.0;
 	private static final double MAX_RADIUS = 26.0;
@@ -38,9 +38,9 @@ final class FugaBeamFx {
 	private static final int SMALL_TONGUES = 60;
 	// The colour of a flame from its root to its tip.
 	private static final float[][] HEAT = {
-		{1.0f, 0.72f, 0.28f},
-		{1.0f, 0.46f, 0.08f},
-		{0.95f, 0.28f, 0.04f},
+		{1.0f, 0.93f, 0.6f},
+		{1.0f, 0.66f, 0.2f},
+		{1.0f, 0.42f, 0.06f},
 		{0.8f, 0.12f, 0.03f},
 		{0.5f, 0.05f, 0.02f},
 	};
