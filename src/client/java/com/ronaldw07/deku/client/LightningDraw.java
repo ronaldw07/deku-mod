@@ -118,6 +118,11 @@ final class LightningDraw {
 		}
 	}
 
+	/** One flat-colored four-sided face, visible from both sides. */
+	static void drawFlatQuad(Matrix4fc pose, VertexConsumer buffer, Vec3 a, Vec3 b, Vec3 c, Vec3 d, float red, float green, float blue, float alpha) {
+		quad(pose, buffer, a, b, c, d, new Layer(0, red, green, blue, alpha));
+	}
+
 	static Vec3 randomDirection(RandomSource random) {
 		return new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1).normalize();
 	}

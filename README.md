@@ -56,7 +56,7 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Hold V: Red, charge up to 2 seconds and throw a red sphere that bursts and hurls everything away
 - Hold X: Hollow Purple, a blue and a red orb draw together over 3 seconds into a purple orb; let go and it erases everything in a line 150 blocks long, then collapses
 - Z: Infinity on/off, nothing that touches you can hurt you and anything close is pushed away
-- C: Domain Expansion (Infinite Void), a 40 block dome where everything but you is frozen for 10 seconds
+- C: Domain Expansion (Infinite Void), a 40 block black ball of stars where everything but you is lifted into the air and frozen for 20 seconds
 
 ## Sukuna (slot 7)
 

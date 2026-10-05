@@ -25,21 +25,25 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Gojo's Domain Expansion, Infinite Void: a dome in which everything but the caster is stopped
- * dead. Mobs freeze in place, players can't move or swing, and arrows hang in the air.
+ * dead. Everything is lifted into the air and held there, mobs frozen, players unable to move
+ * or swing, and arrows hanging.
  */
 public final class InfiniteVoid {
 	public static final float RADIUS = 40.0f;
-	public static final int TICKS = 200;
+	public static final int TICKS = 400;
 	private static final double FX_VIEW_DISTANCE = 300.0;
 	private static final int EFFECT_TICKS = 8; // refreshed every tick; short so it wears off quickly once the void closes
 	private static final int FREEZE_SLOWNESS = 9; // enough to stop all walking
 	private static final int FREEZE_FATIGUE = 4;
+	private static final int LIFT_BLOCKS = 6;
+	private static final int SOFT_LANDING_TICKS = 100;
 
 	private record Void(UUID owner, ResourceKey<Level> dimension, Vec3 center, long endTick) {
 	}
 
 	private static List<Void> voids = List.of();
 	private static final Set<UUID> frozenMobs = new HashSet<>();
+	private static final Set<UUID> hovering = new HashSet<>();
 
 	private InfiniteVoid() {
 	}
@@ -66,7 +70,7 @@ public final class InfiniteVoid {
 	}
 
 	public static void tick(MinecraftServer server) {
-		if (voids.isEmpty() && frozenMobs.isEmpty()) {
+		if (voids.isEmpty() && hovering.isEmpty()) {
 			return;
 		}
 		List<Void> ended = voids.stream().filter(dome -> finished(server, dome)).toList();
@@ -85,7 +89,7 @@ public final class InfiniteVoid {
 				freezeAll(level, dome, stillFrozen);
 			}
 		}
-		for (UUID id : Set.copyOf(frozenMobs)) {
+		for (UUID id : Set.copyOf(hovering)) {
 			if (!stillFrozen.contains(id)) {
 				release(server, id);
 			}
@@ -102,35 +106,54 @@ public final class InfiniteVoid {
 		AABB box = new AABB(dome.center(), dome.center()).inflate(RADIUS);
 		for (Entity entity : level.getEntities((Entity) null, box,
 				entity -> entity.isAlive() && !entity.getUUID().equals(dome.owner()) && entity.position().distanceTo(dome.center()) <= RADIUS)) {
-			if (entity instanceof Mob mob) {
-				if (!mob.isNoAi()) {
-					mob.setNoAi(true);
-					frozenMobs.add(mob.getUUID());
-				}
-				if (frozenMobs.contains(mob.getUUID())) {
-					stillFrozen.add(mob.getUUID());
-				}
-				mob.setDeltaMovement(Vec3.ZERO);
-			} else if (entity instanceof ServerPlayer player) {
-				player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, EFFECT_TICKS, FREEZE_SLOWNESS, false, false));
-				player.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, EFFECT_TICKS, FREEZE_FATIGUE, false, false));
-				player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, EFFECT_TICKS, FREEZE_FATIGUE, false, false));
-				player.setDeltaMovement(Vec3.ZERO);
-				player.hurtMarked = true;
-			} else if (entity instanceof Projectile) {
+			if (entity instanceof Projectile) {
 				entity.setDeltaMovement(Vec3.ZERO);
 				entity.hurtMarked = true;
 			} else if (entity instanceof LivingEntity living) {
-				living.setDeltaMovement(Vec3.ZERO);
+				hover(level, living);
+				stillFrozen.add(living.getUUID());
 			}
 		}
 	}
 
+	/** Lifts a creature into the air the moment it is caught, then holds it there, motionless. */
+	private static void hover(ServerLevel level, LivingEntity living) {
+		if (hovering.add(living.getUUID())) {
+			living.teleportTo(level, living.getX(), living.getY() + liftFor(level, living), living.getZ(), Set.of(), living.getYRot(), living.getXRot(), true);
+			living.setNoGravity(true);
+			if (living instanceof Mob mob && !mob.isNoAi()) {
+				mob.setNoAi(true);
+				frozenMobs.add(mob.getUUID());
+			}
+		}
+		living.setDeltaMovement(Vec3.ZERO);
+		if (living instanceof ServerPlayer player) {
+			player.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, EFFECT_TICKS, FREEZE_SLOWNESS, false, false));
+			player.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, EFFECT_TICKS, FREEZE_FATIGUE, false, false));
+			player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, EFFECT_TICKS, FREEZE_FATIGUE, false, false));
+			player.hurtMarked = true;
+		}
+	}
+
+	/** How far up there is room to lift the creature, up to the usual height. */
+	private static double liftFor(ServerLevel level, LivingEntity living) {
+		double lift = 0;
+		while (lift < LIFT_BLOCKS && level.noCollision(living, living.getBoundingBox().move(0, lift + 1, 0))) {
+			lift++;
+		}
+		return lift;
+	}
+
 	private static void release(MinecraftServer server, UUID id) {
-		frozenMobs.remove(id);
+		hovering.remove(id);
+		boolean wasFrozenMob = frozenMobs.remove(id);
 		for (ServerLevel level : server.getAllLevels()) {
-			if (level.getEntity(id) instanceof Mob mob) {
-				mob.setNoAi(false);
+			if (level.getEntity(id) instanceof LivingEntity living) {
+				living.setNoGravity(false);
+				living.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, SOFT_LANDING_TICKS, 0, false, false));
+				if (wasFrozenMob && living instanceof Mob mob) {
+					mob.setNoAi(false);
+				}
 				return;
 			}
 		}

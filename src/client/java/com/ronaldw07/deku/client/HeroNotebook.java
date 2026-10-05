@@ -65,7 +65,7 @@ final class HeroNotebook {
 				Hold V: Red, charge, then burst everything away
 				Hold X: Hollow Purple, charge until the orbs fuse, then let go to erase everything in a line
 				Z: Infinity on/off
-				C: Domain Expansion, Infinite Void. Everything inside the dome freezes for 10 seconds, except you."""),
+				C: Domain Expansion, Infinite Void. Everything inside the black dome floats up and freezes for 20 seconds, except you."""),
 			page("Sukuna", """
 				Right-click: Dismantle, a flurry of slashes
 				V: Cleave, one heavy cut on your target

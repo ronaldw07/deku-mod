@@ -480,9 +480,12 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		selectSlot(context, 5);
 		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~14 {Tags:[\"void\"],PersistenceRequired:1b,Silent:1b}");
 		context.waitTicks(10);
+		double groundY = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().getY());
 		context.getInput().pressKey(DekuModClient.COWLING_KEY);
 		context.waitTicks(30);
 		check(singleplayer.getServer().computeOnServer(server -> InfiniteVoid.open(player(server).getUUID())), "C should open the Infinite Void");
+		double hoverY = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().getY());
+		check(hoverY - groundY >= 4, "the husk should be lifted into the air, it only rose " + (hoverY - groundY));
 		context.takeScreenshot("void-inside");
 		Vec3 before = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().position());
 		context.waitTicks(40);
@@ -492,8 +495,8 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitTicks(5);
 		context.takeScreenshot("void-dome");
 		camera(context, CameraType.FIRST_PERSON);
-		context.waitTicks(150);
-		check(!singleplayer.getServer().computeOnServer(server -> InfiniteVoid.open(player(server).getUUID())), "the void should close after ten seconds");
+		context.waitTicks(345);
+		check(!singleplayer.getServer().computeOnServer(server -> InfiniteVoid.open(player(server).getUUID())), "the void should close after twenty seconds");
 		boolean thawed = singleplayer.getServer().computeOnServer(server -> !server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().isNoAi());
 		check(thawed, "the husk should be released when the void closes");
 	}

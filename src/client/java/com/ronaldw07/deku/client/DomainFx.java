@@ -48,6 +48,16 @@ final class DomainFx {
 	private static final double ASH_RANGE = 25.0;
 	private static final DustParticleOptions EMBER = new DustParticleOptions(0xFF2030, 1.5f);
 	// Infinite Void.
+	private static final float VOID_SPHERE_ALPHA = 0.93f;
+	private static final int VOID_SPHERE_LATITUDES = 16;
+	private static final int VOID_SPHERE_LONGITUDES = 32;
+	private static final double VOID_STAR_SHELL = 0.97; // just inside the black, so the stars are never buried
+	private static final int VOID_STAR_GROUPS = 3;
+	private static final int VOID_STARS_PER_GROUP = 140;
+	private static final double VOID_STAR_SIZE = 0.7;
+	private static final float VOID_STAR_WIDTH = 7f;
+	private static final long VOID_STAR_SEED = 4242;
+	private static final float VOID_EDGE_WIDTH = 3f;
 	private static final int VOID_RINGS = 3;
 	private static final double VOID_RING_SHARE = 0.85; // of the dome's radius
 	private static final double VOID_SPIN_PER_TICK = 0.02;
@@ -55,10 +65,10 @@ final class DomainFx {
 	private static final double VOID_STAR_RADIUS = 5.0;
 	private static final double VOID_STAR_HEIGHT = 20.0;
 	private static final int VOID_STAR_RAYS = 24;
-	private static final float VOID_DARKNESS = 0.45f;
+	private static final float VOID_DARKNESS = 0.25f;
 	private static final int VOID_DARK_COLOR = 0x000018;
 	private static final int VOID_FLICKER_COLOR = 0xE8F0FF;
-	private static final float VOID_FLICKER_ALPHA = 0.55f;
+	private static final float VOID_FLICKER_ALPHA = 0.3f;
 	private static final int VOID_FLICKER_ODDS = 6; // one tick in this many flashes white
 	private static final DustParticleOptions STARDUST = new DustParticleOptions(0xC8E0FF, 1.2f);
 
@@ -150,7 +160,11 @@ final class DomainFx {
 		});
 	}
 
-	/** The void: a cold lattice, great rings turning inside it and a blinding star where it began. */
+	/**
+	 * The void: a black ball closing all the way around, no sky or ground beyond it, scattered with
+	 * twinkling stars, edged in a thin cold light, with great rings turning inside and a blinding
+	 * star where it began.
+	 */
 	private static void renderVoid(LevelRenderContext context, List<Segment> lattice, Vec3 center, double radius, double age, float fade) {
 		List<Segment> rings = new ArrayList<>();
 		for (int ring = 0; ring < VOID_RINGS; ring++) {
@@ -167,11 +181,51 @@ final class DomainFx {
 		for (int i = 0; i < VOID_STAR_RAYS; i++) {
 			star.addAll(LimbLightning.jagged(random, starAt, starAt.add(LightningDraw.randomDirection(random).scale(VOID_STAR_RADIUS * (0.5 + random.nextDouble()))), 4, 0.5));
 		}
+		List<List<Segment>> starGroups = stars(center, radius * VOID_STAR_SHELL);
+		float darkness = VOID_SPHERE_ALPHA * fade;
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(),
+			(pose, buffer) -> blackSphere(pose.pose(), buffer, center, radius, darkness));
 		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
-			LightningDraw.draw(pose.pose(), buffer, lattice, LATTICE_WIDTH, LightningDraw.ICE, 0.6f * fade);
-			LightningDraw.draw(pose.pose(), buffer, rings, VOID_RING_WIDTH, LightningDraw.BLUE, fade);
+			LightningDraw.draw(pose.pose(), buffer, lattice, VOID_EDGE_WIDTH, LightningDraw.ICE, 0.5f * fade);
+			LightningDraw.draw(pose.pose(), buffer, rings, VOID_RING_WIDTH, LightningDraw.BLUE, fade * 0.8f);
 			LightningDraw.draw(pose.pose(), buffer, star, SHRINE_WIDTH * 2, LightningDraw.ICE, fade);
+			for (int group = 0; group < starGroups.size(); group++) {
+				float twinkle = (float) (0.55 + 0.45 * Math.sin(age * 0.25 + group * 2.1));
+				LightningDraw.draw(pose.pose(), buffer, starGroups.get(group), VOID_STAR_WIDTH, LightningDraw.ICE, twinkle * fade);
+			}
 		});
+	}
+
+	/** The inside of a ball in plain black, drawn as a mesh of faces. */
+	private static void blackSphere(org.joml.Matrix4fc pose, com.mojang.blaze3d.vertex.VertexConsumer buffer, Vec3 center, double radius, float alpha) {
+		for (int i = 0; i < VOID_SPHERE_LATITUDES; i++) {
+			double polar0 = Math.PI * i / VOID_SPHERE_LATITUDES;
+			double polar1 = Math.PI * (i + 1) / VOID_SPHERE_LATITUDES;
+			for (int j = 0; j < VOID_SPHERE_LONGITUDES; j++) {
+				double around0 = Math.PI * 2 * j / VOID_SPHERE_LONGITUDES;
+				double around1 = Math.PI * 2 * (j + 1) / VOID_SPHERE_LONGITUDES;
+				LightningDraw.drawFlatQuad(pose, buffer, onSphere(center, radius, polar0, around0), onSphere(center, radius, polar0, around1),
+					onSphere(center, radius, polar1, around1), onSphere(center, radius, polar1, around0), 0.0f, 0.0f, 0.02f, alpha);
+			}
+		}
+	}
+
+	/** Specks of light scattered over the inside of the ball, in a few groups that twinkle out of step. */
+	private static List<List<Segment>> stars(Vec3 center, double radius) {
+		RandomSource random = RandomSource.create(VOID_STAR_SEED);
+		List<List<Segment>> groups = new ArrayList<>();
+		for (int group = 0; group < VOID_STAR_GROUPS; group++) {
+			List<Segment> specks = new ArrayList<>();
+			for (int i = 0; i < VOID_STARS_PER_GROUP; i++) {
+				Vec3 direction = LightningDraw.randomDirection(random);
+				Vec3 at = center.add(direction.scale(radius));
+				Vec3 helper = Math.abs(direction.y) > 0.95 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+				Vec3 along = direction.cross(helper).normalize().scale(VOID_STAR_SIZE * (0.5 + random.nextDouble()));
+				specks.add(new Segment(at.subtract(along), at.add(along)));
+			}
+			groups.add(specks);
+		}
+		return groups;
 	}
 
 	/** A circle in a plane tilted around the x axis, turned by the angle. */
