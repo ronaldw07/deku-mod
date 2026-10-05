@@ -1,13 +1,17 @@
 package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.DomainPayload;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -20,12 +24,15 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * Gojo's Domain Expansion, Infinite Void: a dome in which everything but the caster is stopped
- * dead. Everything is lifted into the air and held there, mobs frozen, players unable to move
+ * dead. The caster and everything near them are carried high into the sky, the caster on an
+ * invisible floor, and everything else is held there, mobs frozen, players unable to move
  * or swing, and arrows hanging.
  */
 public final class InfiniteVoid {
@@ -35,10 +42,14 @@ public final class InfiniteVoid {
 	private static final int EFFECT_TICKS = 8; // refreshed every tick; short so it wears off quickly once the void closes
 	private static final int FREEZE_SLOWNESS = 9; // enough to stop all walking
 	private static final int FREEZE_FATIGUE = 4;
-	private static final int LIFT_BLOCKS = 6;
+	private static final double SKY_LIFT = 160.0;
+	private static final double SKY_HEADROOM = 50.0;
+	private static final int PLATFORM_RADIUS = 3;
 	private static final int SOFT_LANDING_TICKS = 100;
 
-	private record Void(UUID owner, ResourceKey<Level> dimension, Vec3 center, long endTick) {
+	/** One open void: where it sits in the sky, how far it was lifted, who was brought up, and the platform under the caster. */
+	private record Void(UUID owner, ResourceKey<Level> dimension, Vec3 center, long endTick, double lift, Map<UUID, Vec3> origins,
+			List<BlockPos> platform) {
 	}
 
 	private static List<Void> voids = List.of();
@@ -53,7 +64,25 @@ public final class InfiniteVoid {
 			return;
 		}
 		ServerLevel level = player.level();
-		Void dome = new Void(player.getUUID(), level.dimension(), player.position(), level.getGameTime() + TICKS);
+		Vec3 ground = player.position();
+		double lift = Math.max(0, Math.min(ground.y + SKY_LIFT, level.getMaxY() - SKY_HEADROOM) - ground.y);
+		// Everything caught is carried up into the sky with the caster, keeping where it stood relative to them.
+		Map<UUID, Vec3> origins = new HashMap<>();
+		origins.put(player.getUUID(), ground);
+		for (LivingEntity caught : level.getEntitiesOfClass(LivingEntity.class, new AABB(ground, ground).inflate(RADIUS),
+				caught -> caught != player && caught.isAlive() && !caught.isSpectator() && caught.position().distanceTo(ground) <= RADIUS)) {
+			origins.put(caught.getUUID(), caught.position());
+		}
+		List<BlockPos> platform = platform(level, BlockPos.containing(ground.add(0, lift, 0)).below());
+		for (Map.Entry<UUID, Vec3> entry : origins.entrySet()) {
+			if (level.getEntity(entry.getKey()) instanceof LivingEntity moved) {
+				Vec3 to = entry.getValue().add(0, lift, 0);
+				moved.teleportTo(level, to.x, to.y, to.z, Set.of(), moved.getYRot(), moved.getXRot(), true);
+				moved.setDeltaMovement(Vec3.ZERO);
+				moved.fallDistance = 0;
+			}
+		}
+		Void dome = new Void(player.getUUID(), level.dimension(), ground.add(0, lift, 0), level.getGameTime() + TICKS, lift, origins, platform);
 		voids = Stream.concat(voids.stream(), Stream.of(dome)).toList();
 		announce(level, dome.center(), TICKS, dome.owner());
 		level.playSound(null, dome.center().x, dome.center().y, dome.center().z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 10.0f, 0.3f);
@@ -79,6 +108,7 @@ public final class InfiniteVoid {
 			ServerLevel level = server.getLevel(dome.dimension());
 			if (level != null) {
 				announce(level, dome.center(), 0, dome.owner());
+				bringDown(level, dome);
 			}
 		}
 
@@ -116,10 +146,38 @@ public final class InfiniteVoid {
 		}
 	}
 
+	/** An invisible floor under the caster, so they stand in the sky level with everything they caught. */
+	private static List<BlockPos> platform(ServerLevel level, BlockPos center) {
+		List<BlockPos> placed = new ArrayList<>();
+		for (BlockPos pos : BlockPos.betweenClosed(center.offset(-PLATFORM_RADIUS, 0, -PLATFORM_RADIUS), center.offset(PLATFORM_RADIUS, 0, PLATFORM_RADIUS))) {
+			if (level.getBlockState(pos).isAir()) {
+				level.setBlock(pos, Blocks.BARRIER.defaultBlockState(), Block.UPDATE_CLIENTS);
+				placed.add(pos.immutable());
+			}
+		}
+		return placed;
+	}
+
+	/** The void closes: the platform goes and everyone carried up is set back where they were. */
+	private static void bringDown(ServerLevel level, Void dome) {
+		for (BlockPos pos : dome.platform()) {
+			if (level.getBlockState(pos).is(Blocks.BARRIER)) {
+				level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+			}
+		}
+		for (Map.Entry<UUID, Vec3> entry : dome.origins().entrySet()) {
+			if (level.getEntity(entry.getKey()) instanceof LivingEntity moved && moved.isAlive() && moved.getY() > entry.getValue().y + dome.lift() / 2) {
+				// Back to the same spot below wherever they ended up, so a creature knocked about lands near where it was.
+				moved.teleportTo(level, moved.getX(), moved.getY() - dome.lift(), moved.getZ(), Set.of(), moved.getYRot(), moved.getXRot(), true);
+				moved.setDeltaMovement(Vec3.ZERO);
+				moved.fallDistance = 0;
+			}
+		}
+	}
+
 	/** Lifts a creature into the air the moment it is caught, then holds it there, motionless. */
 	private static void hover(ServerLevel level, LivingEntity living) {
 		if (hovering.add(living.getUUID())) {
-			living.teleportTo(level, living.getX(), living.getY() + liftFor(level, living), living.getZ(), Set.of(), living.getYRot(), living.getXRot(), true);
 			living.setNoGravity(true);
 			if (living instanceof Mob mob && !mob.isNoAi()) {
 				mob.setNoAi(true);
@@ -133,15 +191,6 @@ public final class InfiniteVoid {
 			player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, EFFECT_TICKS, FREEZE_FATIGUE, false, false));
 			player.hurtMarked = true;
 		}
-	}
-
-	/** How far up there is room to lift the creature, up to the usual height. */
-	private static double liftFor(ServerLevel level, LivingEntity living) {
-		double lift = 0;
-		while (lift < LIFT_BLOCKS && level.noCollision(living, living.getBoundingBox().move(0, lift + 1, 0))) {
-			lift++;
-		}
-		return lift;
 	}
 
 	private static void release(MinecraftServer server, UUID id) {
@@ -165,6 +214,7 @@ public final class InfiniteVoid {
 	}
 
 	public static void forget(ServerPlayer player) {
+		voids.stream().filter(dome -> dome.owner().equals(player.getUUID())).forEach(dome -> bringDown(player.level(), dome));
 		voids = voids.stream().filter(dome -> !dome.owner().equals(player.getUUID())).toList();
 	}
 }

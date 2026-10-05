@@ -55,8 +55,8 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Hold right-click: Blue, a blue sphere lands at the crosshair and drags everything nearby into it, rips up blocks; hold up to 3 seconds for a bigger sphere with a pull radius out to 48 blocks
 - Hold V: Red, charge up to 2 seconds and throw a red sphere that bursts and hurls everything away
 - Hold X: Hollow Purple, a blue and a red orb draw together over 3 seconds into a purple orb; let go and it erases everything in a line 150 blocks long, spraying lightning and leaving a trail of dark purple fire that burns and zaps everything beside the path, then collapses
-- M: Infinity on/off, nothing that touches you can hurt you and anything close is pushed away
-- C: Domain Expansion (Infinite Void), a 40 block black ball of stars where everything but you is lifted into the air and frozen for 20 seconds
+- M: Infinity on/off, nothing that touches you can hurt you, anything close is pushed away, and darkness, blindness and nausea are kept off you
+- C: Domain Expansion: Infinite Void. You and everything within 40 blocks are carried high into the sky inside a black ball of stars, you on an invisible floor; everything but you is frozen for 20 seconds, then everyone is set back down
 
 ## Sukuna (slot 7)
 

@@ -4,10 +4,12 @@ import com.ronaldw07.deku.network.ExplosionFxPayload.Style;
 import com.ronaldw07.deku.network.FireballFlightPayload.Kind;
 import com.ronaldw07.deku.network.JujutsuPayload.Move;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +18,8 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
@@ -91,6 +95,8 @@ public final class Gojo {
 	private static final double DEFLECTED_SPEED = 0.8;
 
 	private static final Set<UUID> infinity = new HashSet<>();
+	// Infinity keeps out anything that would blind or daze: the Warden's darkness, blindness, nausea.
+	private static final List<Holder<MobEffect>> BLINDING = List.of(MobEffects.BLINDNESS, MobEffects.DARKNESS, MobEffects.NAUSEA);
 
 	private Gojo() {
 	}
@@ -304,6 +310,7 @@ public final class Gojo {
 				return true;
 			}
 			repel(player);
+			BLINDING.forEach(player::removeEffect);
 			return false;
 		});
 	}

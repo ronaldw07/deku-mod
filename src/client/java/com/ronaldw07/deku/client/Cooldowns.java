@@ -38,7 +38,7 @@ public final class Cooldowns {
 		GOJO_RED("Red", 60),
 		GOJO_PURPLE("Hollow Purple", 200),
 		INFINITY("Infinity", 0),
-		INFINITE_VOID("Infinite Void", 200),
+		INFINITE_VOID("Domain Expansion: Infinite Void", 200),
 		DISMANTLE("Dismantle", 20),
 		CLEAVE("Cleave", 40),
 		DEMON_ARMS("Demon Arms", 0),

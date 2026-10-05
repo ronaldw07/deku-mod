@@ -531,6 +531,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(singleplayer.getServer().computeOnServer(server -> InfiniteVoid.open(player(server).getUUID())), "C should open the Infinite Void");
 		double hoverY = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().getY());
 		check(hoverY - groundY >= 4, "the husk should be lifted into the air, it only rose " + (hoverY - groundY));
+		double playerY = singleplayer.getServer().computeOnServer(server -> player(server).getY());
+		check(Math.abs(playerY - hoverY) < 2, "the caster should stand in the sky level with the husk, caster " + playerY + " husk " + hoverY);
+		command(singleplayer, "effect give @p minecraft:darkness 10");
 		context.takeScreenshot("void-inside");
 		Vec3 before = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().position());
 		context.waitTicks(40);
@@ -544,6 +547,8 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(!singleplayer.getServer().computeOnServer(server -> InfiniteVoid.open(player(server).getUUID())), "the void should close after twenty seconds");
 		boolean thawed = singleplayer.getServer().computeOnServer(server -> !server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().isNoAi());
 		check(thawed, "the husk should be released when the void closes");
+		double backY = singleplayer.getServer().computeOnServer(server -> player(server).getY());
+		check(Math.abs(backY - groundY) < 3, "the caster should be set back on the ground when the void closes, at " + backY);
 	}
 
 	private static void fuga(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
@@ -775,7 +780,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		// M: Infinity keeps a husk's hits off the player.
 		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(5);
-		check(context.computeOnClient(client -> GojoClient.infinity()), "Z should switch Infinity on");
+		check(context.computeOnClient(client -> GojoClient.infinity()), "M should switch Infinity on");
 		command(singleplayer, "difficulty normal");
 		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~2");
 		camera(context, CameraType.THIRD_PERSON_FRONT);
@@ -783,6 +788,12 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("gojo-infinity");
 		float health = context.computeOnClient(client -> client.player.getHealth());
 		check(health >= 20, "Infinity should keep the husk from hurting the player, health " + health);
+		command(singleplayer, "effect give @p minecraft:darkness 10");
+		command(singleplayer, "effect give @p minecraft:blindness 10");
+		context.waitTicks(3);
+		boolean clear = singleplayer.getServer().computeOnServer(server -> !player(server).hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS)
+			&& !player(server).hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS));
+		check(clear, "Infinity should keep darkness and blindness off the player");
 		command(singleplayer, "kill @e[type=minecraft:husk]");
 		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(5);
