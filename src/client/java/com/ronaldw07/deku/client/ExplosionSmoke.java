@@ -148,6 +148,9 @@ final class ExplosionSmoke {
 	private static final double ASH_VIEW_DISTANCE = 300.0;
 
 	private static final int FUGA_FIRE_TICKS = 12;
+	private static final int SMASH_RING_PUFFS = 90;
+	private static final int SMASH_SPARKS = 120;
+	private static final DustParticleOptions SMASH_RED = new DustParticleOptions(0xFF1818, 3.0f);
 	// Decay: a dark crumbling cloud rolling out with the wave, and a column of dust where it started.
 	private static final int DECAY_TICKS = 60;
 	private static final int DECAY_COLUMN_TICKS = 40;
@@ -198,6 +201,9 @@ final class ExplosionSmoke {
 		if (blast.style() == Style.FUGA) {
 			return FUGA_FIRE_TICKS + 1;
 		}
+		if (blast.style() == Style.SMASH_HIT) {
+			return 1;
+		}
 		if (isCore(blast.style())) {
 			return CORE_RISE_TICKS + 1;
 		}
@@ -239,6 +245,12 @@ final class ExplosionSmoke {
 		}
 		if (blast.style() == Style.FUGA) {
 			fuga(level, blast, age, random);
+			return;
+		}
+		if (blast.style() == Style.SMASH_HIT) {
+			if (age == 0) {
+				smashHit(level, blast, random);
+			}
 			return;
 		}
 		if (blast.style() == Style.HEATWAVE && age >= 1 && age <= ICE_RAIN_TICKS) {
@@ -293,6 +305,7 @@ final class ExplosionSmoke {
 			case PURPLE -> 0.0;
 			case DECAY_WAVE, DECAY_CATASTROPHE -> 0.0;
 			case FUGA -> 1.0;
+			case SMASH_HIT -> 0.0;
 		};
 	}
 
@@ -431,6 +444,22 @@ final class ExplosionSmoke {
 		}
 		if (age <= FUGA_FIRE_TICKS) {
 			fireball(level, blast, 1.0, random);
+		}
+	}
+
+	/** A Smash landing: a ring of red dust racing out, sparks, and a flash. */
+	private static void smashHit(ClientLevel level, Blast blast, RandomSource random) {
+		Vec3 c = blast.center();
+		spawn(level, ParticleTypes.EXPLOSION_EMITTER, c, Vec3.ZERO, 1f);
+		int ringPuffs = scaled(SMASH_RING_PUFFS);
+		for (int i = 0; i < ringPuffs; i++) {
+			double angle = Math.PI * 2 * i / ringPuffs;
+			Vec3 out = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+			spawn(level, SMASH_RED, c, out.scale(blast.radius() * 0.12), 1f);
+		}
+		for (int i = 0; i < scaled(SMASH_SPARKS); i++) {
+			Vec3 v = LightningDraw.randomDirection(random).scale(0.4 + random.nextDouble() * 1.2);
+			spawn(level, i % 2 == 0 ? ParticleTypes.ELECTRIC_SPARK : SMASH_RED, c, v, 1f);
 		}
 	}
 

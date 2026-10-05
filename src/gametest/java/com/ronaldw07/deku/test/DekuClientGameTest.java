@@ -79,6 +79,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("smash")) {
 				smash(context, singleplayer);
 			}
+			if (wanted("smashRing")) {
+				smashRing(context, singleplayer);
+			}
 			if (wanted("blackwhip")) {
 				blackwhip(context, singleplayer);
 			}
@@ -294,9 +297,13 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		double charge = context.computeOnClient(client -> SmashClient.charge());
 		check(charge > 30 && charge < 70, "smash should be about half charged after 10 ticks, was " + charge);
 		context.takeScreenshot("smash-charging");
+		context.waitTicks(10);
+		context.takeScreenshot("smash-charging-more");
 		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
 		context.waitTicks(2);
 		context.takeScreenshot("smash-lightning");
+		context.waitTicks(3);
+		context.takeScreenshot("smash-ring");
 		camera(context, CameraType.FIRST_PERSON);
 		context.waitTicks(2);
 		context.takeScreenshot("smash-blast");
@@ -690,6 +697,29 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(10);
 		check(!context.computeOnClient(client -> DemonArmsClient.active()), "Z again should put the Demon Arms away");
+	}
+
+	private static void smashRing(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Deku Smash on a golem 12 blocks ahead: a red ring bursts from it and it, and a pig beside it, are launched.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 9000 -59 9000 0 0");
+		context.waitTicks(40);
+		selectSlot(context, 0);
+		command(singleplayer, "execute at @p run summon minecraft:iron_golem ~ ~ ~12 {NoAI:1b}");
+		command(singleplayer, "execute at @p run summon minecraft:pig ~4 ~ ~12 {NoAI:1b}");
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(5);
+		context.getInput().holdKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(45);
+		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(4);
+		context.takeScreenshot("smash-ring-early");
+		context.waitTicks(4);
+		context.takeScreenshot("smash-ring-wide");
+		boolean pigMoved = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.PIG, pig -> true)
+			.stream().allMatch(pig -> pig.position().distanceTo(new Vec3(9004.5, -60, 9012.5)) > 3 || !pig.isAlive()));
+		check(pigMoved, "the Smash's ring should launch the pig beside the golem");
+		camera(context, CameraType.FIRST_PERSON);
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

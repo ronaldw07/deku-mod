@@ -57,6 +57,12 @@ final class LightningDraw {
 		new Layer(0.05f, 0.6f, 0.85f, 1.0f, 0.5f),
 		new Layer(0.02f, 0.95f, 1.0f, 1.0f, 0.9f),
 	};
+	// Deku's charge: pale cyan lightning with a white-hot core.
+	static final Layer[] CYAN = {
+		new Layer(0.1f, 0.15f, 0.65f, 1.0f, 0.3f),
+		new Layer(0.05f, 0.45f, 0.88f, 1.0f, 0.6f),
+		new Layer(0.02f, 0.9f, 1.0f, 1.0f, 0.95f),
+	};
 	// Gojo's Blue, and the violet of Hollow Purple.
 	static final Layer[] BLUE = {
 		new Layer(0.12f, 0.05f, 0.25f, 1.0f, 0.3f),

@@ -9,7 +9,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 ## One For All (slot 1)
 
 - M: Full Cowling on/off
-- Hold V: charge Smash, release to throw (100% blasts through terrain)
+- Hold V: charge Smash, light-blue lightning crackles around you and red energy gathers in your arm; release to throw (100% blasts through terrain). Where it hits something a huge red shockwave ring bursts out, strikes it with lightning and launches it and everything near it
 - Z: Smokescreen; keep holding and the cloud keeps growing, up to 30 blocks wide
 - Hold R, or double-tap and hold space: Float
 - B: Blackwhip

@@ -32,6 +32,10 @@ final class ExplosionFx {
 	private static final double DECAY_WAVE_SPEED = 1.5;
 	private static final double DECAY_CATASTROPHE_SPEED = 2.5;
 	private static final int DECAY_LIFETIME_TICKS = 70;
+	private static final int SMASH_HIT_LIFETIME_TICKS = 16;
+	private static final int SMASH_HIT_BOLTS = 26;
+	private static final int SMASH_HIT_SKY_BOLTS = 3;
+	private static final double SMASH_HIT_SKY_HEIGHT = 40.0;
 	private static final float DECAY_RING_WIDTH = 6f;
 	// Howitzer Impact is in a league of its own: it lasts longer, and its shockwave races
 	// out to the edge of its 400-block reach, with a second ring chasing the first.
@@ -125,6 +129,10 @@ final class ExplosionFx {
 				drawDome(context, blast, center, age);
 				continue;
 			}
+			if (blast.style() == Style.SMASH_HIT) {
+				drawSmashHit(context, blast, center, age);
+				continue;
+			}
 			if (isDecay(blast.style())) {
 				List<Segment> front = ring(center, decayFront(blast, age));
 				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) ->
@@ -207,7 +215,51 @@ final class ExplosionFx {
 		return Math.min(blast.radius(), age * speed);
 	}
 
+	/**
+	 * Where a Smash lands on something: a huge red ring racing outward along the ground and two more
+	 * standing upright, red and pale blue lightning bursting from the point, and bolts striking it from above.
+	 */
+	private static void drawSmashHit(LevelRenderContext context, Blast blast, Vec3 center, double age) {
+		double progress = Math.min(1, age / SMASH_HIT_LIFETIME_TICKS);
+		double outward = 1 - Math.pow(1 - progress, 3);
+		float fade = (float) Math.max(0, 1 - progress);
+		double radius = blast.radius() * outward;
+		List<Segment> rings = new ArrayList<>(ring(center, radius));
+		rings.addAll(ring(center, radius * 0.7));
+		for (int i = 0; i < 2; i++) {
+			double turn = Math.PI * i / 2;
+			for (int j = 0; j < RING_SEGMENTS; j++) {
+				double a0 = j * Math.PI * 2 / RING_SEGMENTS;
+				double a1 = (j + 1) * Math.PI * 2 / RING_SEGMENTS;
+				rings.add(new Segment(
+					center.add(Math.cos(a0) * radius * Math.cos(turn), Math.sin(a0) * radius, Math.cos(a0) * radius * Math.sin(turn)),
+					center.add(Math.cos(a1) * radius * Math.cos(turn), Math.sin(a1) * radius, Math.cos(a1) * radius * Math.sin(turn))));
+			}
+		}
+		RandomSource random = RandomSource.create(blast.startTick() * 37 + Double.hashCode(blast.center().y));
+		List<Segment> red = new ArrayList<>();
+		List<Segment> blue = new ArrayList<>();
+		for (int i = 0; i < SMASH_HIT_BOLTS; i++) {
+			Vec3 direction = LightningDraw.randomDirection(random);
+			Vec3 end = center.add(direction.scale(blast.radius() * (0.5 + random.nextDouble() * 0.7) * Math.min(1, age / 3 + 0.3)));
+			(i % 2 == 0 ? red : blue).addAll(LimbLightning.jagged(random, center, end, 5, blast.radius() * 0.05));
+		}
+		for (int i = 0; i < SMASH_HIT_SKY_BOLTS; i++) {
+			Vec3 top = center.add((random.nextDouble() - 0.5) * blast.radius() * 0.6, SMASH_HIT_SKY_HEIGHT, (random.nextDouble() - 0.5) * blast.radius() * 0.6);
+			blue.addAll(LimbLightning.jagged(random, top, center.add((random.nextDouble() - 0.5) * 1.5, 0, (random.nextDouble() - 0.5) * 1.5), 12, 1.6));
+		}
+		float width = Math.max(2f, blast.radius() * 0.35f);
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
+			LightningDraw.draw(pose.pose(), buffer, rings, width, LightningDraw.RED, fade);
+			LightningDraw.draw(pose.pose(), buffer, red, width * 0.6f, LightningDraw.RED, fade);
+			LightningDraw.draw(pose.pose(), buffer, blue, width * 0.5f, LightningDraw.CYAN, fade);
+		});
+	}
+
 	private static int lifetime(Blast blast) {
+		if (blast.style() == Style.SMASH_HIT) {
+			return SMASH_HIT_LIFETIME_TICKS;
+		}
 		if (isDecay(blast.style())) {
 			return DECAY_LIFETIME_TICKS;
 		}

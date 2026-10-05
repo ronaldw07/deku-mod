@@ -1,5 +1,6 @@
 package com.ronaldw07.deku;
 
+import com.ronaldw07.deku.network.ExplosionFxPayload.Style;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import java.util.Comparator;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -72,6 +74,14 @@ public final class Smash {
 	private static final int IMPACT_BOLTS = 20;
 	private static final double IMPACT_BOLT_LENGTH = 10.0;
 	private static final int HIT_BOLTS = 6;
+	private static final double HIT_LAUNCH_BOOST = 1.5;
+	private static final int MAX_RINGS = 3;
+	private static final double RING_ON_TERRAIN_POWER = 0.5;
+	private static final float MIN_RING_RADIUS = 6.0f;
+	private static final float MAX_RING_RADIUS = 18.0f;
+	private static final float FULL_POWER_EXTRA_RING_RADIUS = 8.0f;
+	private static final double RING_PUSH = 2.5;
+	private static final double RING_LIFT = 1.0;
 	private static final double HIT_BOLT_LENGTH = 4.0;
 
 	private Smash() {
@@ -93,12 +103,23 @@ public final class Smash {
 		double knockback = Mth.lerp(power, MIN_KNOCKBACK, MAX_KNOCKBACK) + FULL_POWER_EXTRA_KNOCKBACK * fullPower;
 		Vec3 push = aim.scale(knockback).add(0, MAX_LIFT * power, 0);
 
+		int rings = 0;
 		for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, new AABB(eye, eye).inflate(range),
 				target -> target != player && target.isAlive() && inCone(eye, aim, target, range, coneCos))) {
 			target.hurtServer(level, player.damageSources().playerAttack(player), damage);
-			target.push(push);
+			target.push(push.scale(HIT_LAUNCH_BOOST));
 			target.hurtMarked = true;
 			lightningBurst(level, target.getBoundingBox().getCenter(), HIT_BOLTS, HIT_BOLT_LENGTH, power);
+			if (rings < MAX_RINGS) {
+				rings++;
+				shockwave(level, player, target.getBoundingBox().getCenter(), power, fullPower);
+			}
+		}
+		if (rings == 0 && power >= RING_ON_TERRAIN_POWER) {
+			HitResult terrain = Aim.trace(player, range);
+			if (terrain.getType() == HitResult.Type.BLOCK) {
+				shockwave(level, player, terrain.getLocation(), power, fullPower);
+			}
 		}
 
 		Vec3 end = locked.map(target -> target.getBoundingBox().getCenter()).orElse(eye.add(aim.scale(range)));
@@ -107,6 +128,21 @@ public final class Smash {
 
 		sendLightning(level, eye.add(aim.scale(LIGHTNING_START)), end, power, true);
 		showBlast(level, player, eye, aim, range, power);
+	}
+
+	/** A huge red ring blasting out from where the punch landed, hurling everything near it away. */
+	private static void shockwave(ServerLevel level, ServerPlayer player, Vec3 center, double power, double fullPower) {
+		float radius = (float) (Mth.lerp(power, MIN_RING_RADIUS, MAX_RING_RADIUS) + FULL_POWER_EXTRA_RING_RADIUS * fullPower);
+		BlastFx.send(level, center, radius, Style.SMASH_HIT, center, FX_VIEW_DISTANCE);
+		for (LivingEntity near : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius),
+				near -> near != player && near.isAlive() && near.position().distanceTo(center) <= radius)) {
+			Vec3 offset = near.position().subtract(center);
+			double strength = 1 - offset.length() / radius;
+			Vec3 away = offset.lengthSqr() < 1.0E-6 ? new Vec3(0, 1, 0) : offset.normalize();
+			near.push(away.scale(RING_PUSH * (0.4 + power) * strength).add(0, RING_LIFT * strength, 0));
+			near.hurtMarked = true;
+		}
+		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 2.0f + (float) power * 3, 0.9f);
 	}
 
 	/** The living thing in view nearest the crosshair, if it's close enough to the crosshair to lock onto. */
