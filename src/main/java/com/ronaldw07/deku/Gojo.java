@@ -19,6 +19,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -105,6 +106,7 @@ public final class Gojo {
 		if (!DekuItems.isHolding(player, DekuItems.GOJO)) {
 			if (move == Move.INFINITY) {
 				infinity.remove(player.getUUID());
+				fly(player, false);
 			}
 			return;
 		}
@@ -120,6 +122,7 @@ public final class Gojo {
 				} else {
 					infinity.remove(player.getUUID());
 				}
+				fly(player, active);
 			}
 			default -> {
 			}
@@ -307,8 +310,12 @@ public final class Gojo {
 		infinity.removeIf(id -> {
 			ServerPlayer player = server.getPlayerList().getPlayer(id);
 			if (player == null || player.isDeadOrDying() || !DekuItems.isHolding(player, DekuItems.GOJO)) {
+				if (player != null) {
+					fly(player, false);
+				}
 				return true;
 			}
+			fly(player, true);
 			repel(player);
 			BLINDING.forEach(player::removeEffect);
 			return false;
@@ -343,7 +350,25 @@ public final class Gojo {
 		return infinity.contains(player);
 	}
 
+	/** While Infinity is on Gojo flies like in creative mode; it is taken away when it goes off. */
+	private static void fly(ServerPlayer player, boolean on) {
+		if (player.isCreative() || player.isSpectator()) {
+			return;
+		}
+		var abilities = player.getAbilities();
+		if (abilities.mayfly == on) {
+			return;
+		}
+		abilities.mayfly = on;
+		if (!on) {
+			abilities.flying = false;
+			player.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 100, 0, false, false));
+		}
+		player.onUpdateAbilities();
+	}
+
 	public static void forget(ServerPlayer player) {
+		fly(player, false);
 		infinity.remove(player.getUUID());
 	}
 }

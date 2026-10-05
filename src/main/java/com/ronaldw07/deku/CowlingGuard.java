@@ -15,7 +15,7 @@ import java.util.ArrayList;
 /**
  * What every cowling gives on top of its own boosts: immunity to bad effects, a heavy shield of
  * extra health, much less damage taken, and extra speed and jump. Full, Explosion and Decay
- * Cowling all share it.
+ * Cowling and Sukuna's Demon Arms all share it.
  */
 public final class CowlingGuard {
 	private static final int REFRESH_TICKS = 40;
@@ -30,7 +30,7 @@ public final class CowlingGuard {
 	}
 
 	public static boolean cowled(ServerPlayer player) {
-		return FullCowling.active(player) || ExplosionCowling.active(player) || Decay.cowlingActive(player);
+		return FullCowling.active(player) || ExplosionCowling.active(player) || Decay.cowlingActive(player) || DemonArms.active(player);
 	}
 
 	public static void tick(MinecraftServer server) {

@@ -817,6 +817,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		boolean clear = singleplayer.getServer().computeOnServer(server -> !player(server).hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS)
 			&& !player(server).hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS));
 		check(clear, "Infinity should keep darkness and blindness off the player");
+		check(singleplayer.getServer().computeOnServer(server -> player(server).getAbilities().mayfly), "Infinity should let Gojo fly like in creative");
 		command(singleplayer, "kill @e[type=minecraft:husk]");
 		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(5);
