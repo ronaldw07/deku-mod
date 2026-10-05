@@ -25,6 +25,8 @@ final class GojoFx {
 	private static final double ORB_HEIGHT_OFFSET = -0.2;
 	private static final double RED_HAND_FORWARD = 0.9;
 	private static final double RED_HAND_SIDE = 0.55;
+	private static final double MIN_BLUE_BALL = 0.25;
+	private static final double MAX_BLUE_BALL = 1.5;
 	private static final double MIN_RED_BALL = 0.2;
 	private static final double MAX_RED_BALL = 1.1;
 	private static final double MIN_PURPLE_ORB = 0.25;
@@ -61,6 +63,16 @@ final class GojoFx {
 		RandomSource random = player.getRandom();
 		double purple = GojoClient.purpleCharge() / 100.0;
 		double red = GojoClient.redCharge() / 100.0;
+		double blue = GojoClient.blueCharge() / 100.0;
+		if (blue > 0) {
+			ScreenShake.rumble(RUMBLE * (float) (blue * blue));
+			Vec3 center = front(player, 1f, ORB_DISTANCE);
+			for (int i = 0; i < 3; i++) {
+				Vec3 at = center.add(LightningDraw.randomDirection(random).scale(1 + blue * 3));
+				Vec3 inward = center.subtract(at).scale(0.1);
+				player.level().addParticle(BLUE_DUST, at.x, at.y, at.z, inward.x, inward.y, inward.z);
+			}
+		}
 		if (purple > 0) {
 			ScreenShake.rumble(RUMBLE * (float) (purple * purple));
 			ScreenShake.glow(GLOW * (float) (purple * purple));
@@ -96,6 +108,11 @@ final class GojoFx {
 		RandomSource random = RandomSource.create(player.getId() * 31L + player.tickCount / TICKS_PER_SHAPE);
 		double time = player.tickCount + partialTick;
 
+		double blue = GojoClient.blueCharge() / 100.0;
+		if (blue > 0) {
+			draw(context, LightningDraw.BLUE, front(player, partialTick, ORB_DISTANCE).subtract(camera), Mth.lerp(blue, MIN_BLUE_BALL, MAX_BLUE_BALL), random,
+				ORB_RAYS + (int) (blue * ORB_RAYS), 1f + (float) blue * 3f);
+		}
 		double red = GojoClient.redCharge() / 100.0;
 		if (red > 0) {
 			draw(context, LightningDraw.RED, orbPosition(player, partialTick).subtract(camera), Mth.lerp(red, MIN_RED_BALL, MAX_RED_BALL), random, ORB_RAYS, 1f + (float) red * 3f);

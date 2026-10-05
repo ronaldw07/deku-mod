@@ -6,16 +6,21 @@ import com.ronaldw07.deku.network.JujutsuPayload.Move;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -30,15 +35,23 @@ public final class Gojo {
 	private static final double HAND_HEIGHT = 1.1;
 	// Blue.
 	private static final double BLUE_RANGE = 24.0;
-	private static final float BLUE_BALL_RADIUS = 2.5f;
+	private static final float MIN_BLUE_BALL = 2.5f;
+	private static final float MAX_BLUE_BALL = 6.0f;
 	private static final double BLUE_SPEED = 2.5;
-	private static final int BLUE_HOLD_TICKS = 50;
-	private static final double BLUE_PULL_RANGE = 16.0;
+	private static final int MIN_BLUE_HOLD_TICKS = 50;
+	private static final int MAX_BLUE_HOLD_TICKS = 90;
+	private static final double MIN_BLUE_PULL_RANGE = 16.0;
+	private static final double MAX_BLUE_PULL_RANGE = 48.0;
+	private static final int MIN_BLUE_BLOCKS_PER_TICK = 3;
+	private static final int MAX_BLUE_BLOCKS_PER_TICK = 30;
+	private static final int BLUE_RIP_ATTEMPTS = 6;
+	private static final double BLUE_RIP_SHARE = 0.5; // of the pull range, so far-off ground stays put
 	private static final double BLUE_PULL_STRENGTH = 0.9;
 	private static final double BLUE_CRUSH_RANGE = 3.0;
 	private static final int BLUE_CRUSH_INTERVAL = 4;
 	private static final float BLUE_CRUSH_DAMAGE = 3.0f;
-	private static final float BLUE_FINISH_RADIUS = 3.0f;
+	private static final float MIN_BLUE_FINISH_RADIUS = 3.0f;
+	private static final float MAX_BLUE_FINISH_RADIUS = 8.0f;
 	// Red.
 	private static final double RED_RANGE = 60.0;
 	private static final double RED_SPEED = 3.0;
@@ -83,7 +96,7 @@ public final class Gojo {
 		}
 		double power = Mth.clamp(charge, 1, 100) / 100.0;
 		switch (move) {
-			case BLUE -> blue(player);
+			case BLUE -> blue(player, power);
 			case RED -> red(player, power);
 			case PURPLE -> purple(player, power);
 			case INFINITE_VOID -> InfiniteVoid.open(player);
@@ -103,35 +116,84 @@ public final class Gojo {
 		return player.position().add(0, HAND_HEIGHT, 0).add(player.getLookAngle().scale(ORB_HAND_FORWARD));
 	}
 
-	/** A blue sphere lands at the crosshair and drags everything nearby into it. */
-	private static void blue(ServerPlayer player) {
+	/** A blue sphere lands at the crosshair and drags everything nearby into it, the more charged the wider and harder. */
+	private static void blue(ServerPlayer player, double power) {
 		ServerLevel level = player.level();
 		Vec3 target = Aim.trace(player, BLUE_RANGE).getLocation();
 		Vec3 start = handPoint(player);
-		BlastFx.sendOrb(level, start, target, BLUE_BALL_RADIUS, BLUE_SPEED, Kind.BLUE, BLUE_HOLD_TICKS, FX_VIEW_DISTANCE);
+		float ball = (float) Mth.lerp(power, MIN_BLUE_BALL, MAX_BLUE_BALL);
+		double range = Mth.lerp(power, MIN_BLUE_PULL_RANGE, MAX_BLUE_PULL_RANGE);
+		int hold = (int) Mth.lerp(power, MIN_BLUE_HOLD_TICKS, MAX_BLUE_HOLD_TICKS);
+		BlastFx.sendOrb(level, start, target, ball, BLUE_SPEED, Kind.BLUE, hold, FX_VIEW_DISTANCE);
 		int travel = (int) Math.ceil(target.distanceTo(start) / BLUE_SPEED);
-		Blasts.later(level.getServer(), travel, () -> pull(player, target, BLUE_HOLD_TICKS));
+		Blasts.later(level.getServer(), travel, () -> pull(player, target, range, power, hold));
 		level.playSound(null, start.x, start.y, start.z, DekuSounds.EXPLOSION_CHARGE, SoundSource.PLAYERS, 1.5f, 1.6f);
 	}
 
-	private static void pull(ServerPlayer player, Vec3 center, int ticksLeft) {
+	private static void pull(ServerPlayer player, Vec3 center, double range, double power, int ticksLeft) {
 		ServerLevel level = player.level();
 		if (ticksLeft <= 0) {
-			Blasts.carve(level, center, BLUE_FINISH_RADIUS, 0);
+			Blasts.carve(level, center, (float) Mth.lerp(power, MIN_BLUE_FINISH_RADIUS, MAX_BLUE_FINISH_RADIUS), 0);
+			dropRippedBlocks(level, center, range);
 			return;
 		}
-		for (Entity entity : level.getEntities(player, new AABB(center, center).inflate(BLUE_PULL_RANGE),
-				entity -> entity.isAlive() && !entity.isSpectator() && entity.position().distanceTo(center) <= BLUE_PULL_RANGE)) {
+		ripBlocks(level, center, range, power);
+		double crush = BLUE_CRUSH_RANGE * (1 + power);
+		for (Entity entity : level.getEntities(player, new AABB(center, center).inflate(range),
+				entity -> entity.isAlive() && !entity.isSpectator() && entity.position().distanceTo(center) <= range)) {
 			Vec3 toward = center.subtract(entity.position().add(0, entity.getBbHeight() / 2, 0));
 			double distance = Math.max(0.5, toward.length());
-			double strength = BLUE_PULL_STRENGTH * (1 - distance / BLUE_PULL_RANGE) + 0.1;
+			double strength = BLUE_PULL_STRENGTH * (1 - distance / range) + 0.1;
 			entity.setDeltaMovement(entity.getDeltaMovement().scale(0.5).add(toward.scale(strength / distance)));
 			entity.hurtMarked = true;
-			if (entity instanceof LivingEntity living && distance < BLUE_CRUSH_RANGE && ticksLeft % BLUE_CRUSH_INTERVAL == 0) {
+			if (entity instanceof FallingBlockEntity && distance < crush) {
+				entity.discard(); // ground into dust at the heart of the sphere
+			} else if (entity instanceof LivingEntity living && distance < crush && ticksLeft % BLUE_CRUSH_INTERVAL == 0) {
 				living.hurtServer(level, player.damageSources().playerAttack(player), BLUE_CRUSH_DAMAGE);
 			}
 		}
-		Blasts.later(level.getServer(), 1, () -> pull(player, center, ticksLeft - 1));
+		Blasts.later(level.getServer(), 1, () -> pull(player, center, range, power, ticksLeft - 1));
+	}
+
+	/** Tears loose blocks near the sphere and lets it suck them in with everything else. */
+	private static void ripBlocks(ServerLevel level, Vec3 center, double range, double power) {
+		RandomSource random = level.getRandom();
+		int budget = (int) Mth.lerp(power, MIN_BLUE_BLOCKS_PER_TICK, MAX_BLUE_BLOCKS_PER_TICK);
+		double reach = range * BLUE_RIP_SHARE;
+		int ripped = 0;
+		for (int attempt = 0; attempt < budget * BLUE_RIP_ATTEMPTS && ripped < budget; attempt++) {
+			Vec3 offset = new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1);
+			if (offset.lengthSqr() > 1) {
+				continue;
+			}
+			BlockPos pos = BlockPos.containing(center.add(offset.scale(reach)));
+			BlockState state = level.getBlockState(pos);
+			if (state.isAir() || state.hasBlockEntity() || !state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0
+					|| !exposed(level, pos)) {
+				continue;
+			}
+			FallingBlockEntity block = FallingBlockEntity.fall(level, pos, state);
+			block.disableDrop();
+			block.setNoGravity(true);
+			ripped++;
+		}
+	}
+
+	private static boolean exposed(ServerLevel level, BlockPos pos) {
+		for (Direction direction : Direction.values()) {
+			if (level.getBlockState(pos.relative(direction)).isAir()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** When Blue lets go, whatever it is still holding up falls again. */
+	private static void dropRippedBlocks(ServerLevel level, Vec3 center, double range) {
+		for (FallingBlockEntity block : level.getEntitiesOfClass(FallingBlockEntity.class, new AABB(center, center).inflate(range),
+				block -> block.isNoGravity())) {
+			block.setNoGravity(false);
+		}
 	}
 
 	/** A red sphere flies to the crosshair and bursts, hurling everything around it outward. */

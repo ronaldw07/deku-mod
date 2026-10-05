@@ -61,7 +61,7 @@ final class HeroNotebook {
 				Hold X: Cluster Bomb, grow a fireball and throw it
 				Z: Explosion Cowling on/off, bigger blasts"""),
 			page("Gojo", """
-				Right-click: Blue, pulls everything toward a point
+				Hold right-click: Blue, pulls mobs, items and blocks toward a point. Hold longer for a bigger sphere and a wider pull
 				Hold V: Red, charge, then burst everything away
 				Hold X: Hollow Purple, charge until the orbs fuse, then let go to erase everything in a line
 				Z: Infinity on/off

@@ -36,6 +36,7 @@ final class FireballFlightFx {
 	private static final int TRAIL_STEPS = 3;
 	private static final int ORB_TRAIL_DUST = 3;
 	private static final int PULL_DUST = 6;
+	private static final double BLUE_BASE_RADIUS = 2.5; // the ball size the pull ring is drawn for
 	private static final int ARROW_TRAIL_FLAMES = 3;
 	private static final double ARROW_LENGTH = 7.0;
 	private static final double ARROW_HEAD_SHARE = 0.22;
@@ -110,7 +111,7 @@ final class FireballFlightFx {
 			double spread = radius * TRAIL_SPREAD_PER_RADIUS;
 			boolean hanging = ticks > flight.flightTicks();
 			if (flight.kind() == Kind.BLUE && hanging) {
-				pullingDust(minecraft, flight.end(), random);
+				pullingDust(minecraft, flight.end(), random, flight.ballRadius() / BLUE_BASE_RADIUS);
 			}
 			for (int i = 0; i < TRAIL_STEPS && !hanging; i++) {
 				Vec3 at = flight.positionAt(ticks - i * (1.0 / TRAIL_STEPS)).add(LightningDraw.randomDirection(random).scale(spread * random.nextDouble()));
@@ -149,9 +150,9 @@ final class FireballFlightFx {
 	}
 
 	/** Specks of blue light spiralling in toward a hanging Blue sphere. */
-	private static void pullingDust(Minecraft minecraft, Vec3 center, RandomSource random) {
-		for (int i = 0; i < PULL_DUST * DekuSettings.get().detailScale(); i++) {
-			Vec3 offset = LightningDraw.randomDirection(random).scale(PULL_RING_RADIUS * (0.4 + random.nextDouble() * 0.6));
+	private static void pullingDust(Minecraft minecraft, Vec3 center, RandomSource random, double scale) {
+		for (int i = 0; i < PULL_DUST * scale * scale * DekuSettings.get().detailScale(); i++) {
+			Vec3 offset = LightningDraw.randomDirection(random).scale(PULL_RING_RADIUS * scale * (0.4 + random.nextDouble() * 0.6));
 			Vec3 at = center.add(offset);
 			Vec3 inward = offset.scale(-PULL_SPEED / Math.max(1, offset.length()));
 			minecraft.particleEngine.createParticle(BLUE_DUST, at.x, at.y, at.z, inward.x, inward.y, inward.z);

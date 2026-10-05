@@ -118,6 +118,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("villain")) {
 				villain(context, singleplayer);
 			}
+			if (wanted("blueHold")) {
+				blueHold(context, singleplayer);
+			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
 			}
@@ -580,6 +583,30 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		command(singleplayer, "kill @e[type=deku:villain]");
 		command(singleplayer, "gamemode creative @p");
 		command(singleplayer, "effect give @p minecraft:instant_health 1 10");
+	}
+
+	private static void blueHold(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Gojo: holding right-click grows Blue; let go and it rips up the ground and drags a far-off pig in.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 7400 -59 7400 0 4");
+		context.waitTicks(40);
+		selectSlot(context, 5);
+		Vec3 target = singleplayer.getServer().computeOnServer(server -> Aim.trace(player(server), 24).getLocation());
+		command(singleplayer, "summon minecraft:pig " + (target.x + 30) + " " + target.y + " " + target.z);
+		context.getInput().holdKey(options -> options.keyUse);
+		context.waitTicks(30);
+		context.takeScreenshot("blue-charging");
+		context.waitTicks(40);
+		check(context.computeOnClient(client -> GojoClient.blueCharge()) >= 90, "holding right-click should fully grow Blue");
+		context.getInput().releaseKey(options -> options.keyUse);
+		context.waitTicks(25);
+		context.takeScreenshot("blue-pulling");
+		double pigDistance = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.PIG, pig -> true).getFirst().position().distanceTo(target));
+		check(pigDistance < 25, "a full Blue should drag a pig 30 blocks away closer, it is still " + pigDistance + " away");
+		int flying = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.FALLING_BLOCK, block -> true).size());
+		check(flying > 20, "Blue should rip blocks off the ground, only " + flying + " are flying");
+		context.waitTicks(60);
+		context.takeScreenshot("blue-finished");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
