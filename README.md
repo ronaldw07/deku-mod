@@ -67,7 +67,7 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 
 ## The Villain
 
-A boss to fight: spawn it with the Villain Spawn Egg (Combat tab, or `/summon deku:villain`). It has 400 health and a boss bar. Up close it winds up a ground slam, from a distance it throws a ball of red light, and if you back away it leaps after you.
+A boss to fight: spawn it with the Villain Spawn Egg (Spawn Eggs creative tab, or `/summon deku:villain`). It has 400 health and a boss bar. Up close it winds up a ground slam, from a distance it throws a ball of red light, and if you back away it leaps after you.
 
 ## Hero costumes
 
