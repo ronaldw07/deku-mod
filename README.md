@@ -63,7 +63,7 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Right-click: Dismantle, a flurry of huge black-and-white slashes ahead (70 blocks long, 36 tall) that erase every block and entity in their path
 - V: Cleave, one heavy cut on whatever the crosshair is on, a third of a mob's health on top of the hit
 - Hold X: Fuga, draw a burning arrow for up to 2.5 seconds and loose it at the crosshair; it lands as a huge fire blast that leaves a column of molten light standing in the sky for half a minute, and sets everything near it alight
-- C: Domain Expansion (Malevolent Shrine), a 120 block dome with a towering floating shrine; the camera flies out for a short cutscene while endless slashes shred the terrain and everything inside it for 10 seconds
+- C: Domain Expansion (Malevolent Shrine), a 120 block dome. A real shrine of blocks (platform, red pillars, tiered black roof, gate) is built under you and removed when it ends; the camera flies out to the side for a short cutscene while endless slashes shred the terrain and everything inside it for 10 seconds
 
 ## The Villain
 

@@ -3,7 +3,6 @@ package com.ronaldw07.deku;
 import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.JujutsuPayload.Move;
 import com.ronaldw07.deku.network.SlashFxPayload;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -85,11 +84,10 @@ public final class Sukuna {
 	private static final double DOMAIN_SLASH_AREA_SHARE = 0.85; // how far out slashes land, of the dome's radius
 	private static final double DOMAIN_SLASH_DEPTH = 24.0; // slashes land this far above and below the caster's feet
 
-	private record Dome(UUID owner, ResourceKey<Level> dimension, Vec3 center, long endTick) {
+	private record Dome(UUID owner, ResourceKey<Level> dimension, Vec3 center, long endTick, ShrineBuilder shrine) {
 	}
 
 	private static List<Dome> domes = List.of();
-	private static final LongOpenHashSet shrineBlocks = new LongOpenHashSet();
 
 	private Sukuna() {
 	}
@@ -245,7 +243,7 @@ public final class Sukuna {
 
 	/** Blocks of a Shrine standing in the world: the slashes go round them. */
 	private static boolean spared(BlockPos pos) {
-		return shrineBlocks.contains(pos.asLong());
+		return domes.stream().anyMatch(dome -> dome.shrine().owns(pos));
 	}
 
 	/** Malevolent Shrine: a huge dome around the caster in which slashes rain down for ten seconds. */
@@ -254,7 +252,9 @@ public final class Sukuna {
 			return;
 		}
 		ServerLevel level = player.level();
-		Dome dome = new Dome(player.getUUID(), level.dimension(), player.position(), level.getGameTime() + DOMAIN_TICKS);
+		ShrineBuilder shrine = new ShrineBuilder(level);
+		Dome dome = new Dome(player.getUUID(), level.dimension(), player.position(), level.getGameTime() + DOMAIN_TICKS, shrine);
+		shrine.build(player.position(), ShrineBuilder.facing(player.getYRot()));
 		domes = Stream.concat(domes.stream(), Stream.of(dome)).toList();
 		announce(level, dome.center(), DOMAIN_TICKS, dome.owner());
 		level.playSound(null, dome.center().x, dome.center().y, dome.center().z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 10.0f, 0.4f);
@@ -277,6 +277,7 @@ public final class Sukuna {
 		List<Dome> ended = domes.stream().filter(dome -> finished(server, dome)).toList();
 		domes = domes.stream().filter(dome -> !ended.contains(dome)).toList();
 		for (Dome dome : ended) {
+			dome.shrine().remove();
 			ServerLevel level = server.getLevel(dome.dimension());
 			if (level != null) {
 				announce(level, dome.center(), 0, dome.owner());
@@ -334,6 +335,7 @@ public final class Sukuna {
 	}
 
 	public static void forget(ServerPlayer player) {
+		domes.stream().filter(dome -> dome.owner().equals(player.getUUID())).forEach(dome -> dome.shrine().remove());
 		domes = domes.stream().filter(dome -> !dome.owner().equals(player.getUUID())).toList();
 	}
 }

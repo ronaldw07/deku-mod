@@ -7,20 +7,20 @@ import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The camera leaves Sukuna the moment the Malevolent Shrine opens and flies out behind and above him
- * to look down on the area ahead, swinging slowly round and pushing in as the slashes tear
+ * The camera leaves Sukuna the moment the Malevolent Shrine opens and flies out to his side
+ * to look across the shrine at the area ahead, swinging slowly round and pushing in as the slashes tear
  * everything in front of him apart, then settles back into his eyes.
  */
 public final class DomainCutscene {
 	private static final int TICKS = 130;
 	private static final int BLEND_IN_TICKS = 14;
 	private static final int BLEND_OUT_TICKS = 16;
-	private static final double FOCUS_AHEAD = 45.0;
-	private static final double FOCUS_HEIGHT = 14.0;
-	private static final double START_DISTANCE = 115.0;
-	private static final double END_DISTANCE = 90.0;
-	private static final double START_HEIGHT = 55.0;
-	private static final double END_HEIGHT = 85.0;
+	private static final double FOCUS_AHEAD = 22.0;
+	private static final double FOCUS_HEIGHT = 9.0;
+	private static final double START_DISTANCE = 66.0;
+	private static final double END_DISTANCE = 54.0;
+	private static final double START_HEIGHT = 12.0;
+	private static final double END_HEIGHT = 24.0;
 	private static final double SWEEP = 0.55; // radians either side of straight behind
 
 	private record Shot(Vec3 position, float yaw, float pitch, float blend) {
@@ -59,7 +59,7 @@ public final class DomainCutscene {
 		// Minecraft's yaw 0 faces +z, and a yaw of a turns that to (-sin a, cos a).
 		Vec3 forward = new Vec3(-Math.sin(forwardAngle), 0, Math.cos(forwardAngle));
 		Vec3 focus = center.add(forward.scale(FOCUS_AHEAD)).add(0, FOCUS_HEIGHT, 0);
-		double swing = -SWEEP + 2 * SWEEP * u;
+		double swing = Math.PI / 2 - SWEEP + 2 * SWEEP * u; // off to one side, so the shrine and the ground ahead are both in shot
 		Vec3 behind = new Vec3(-forward.x * Math.cos(swing) - forward.z * Math.sin(swing), 0, -forward.z * Math.cos(swing) + forward.x * Math.sin(swing));
 		double distance = Mth.lerp(u, START_DISTANCE, END_DISTANCE);
 		Vec3 position = new Vec3(focus.x + behind.x * distance, center.y + Mth.lerp(u, START_HEIGHT, END_HEIGHT), focus.z + behind.z * distance);

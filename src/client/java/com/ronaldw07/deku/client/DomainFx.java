@@ -150,7 +150,7 @@ final class DomainFx {
 			renderVoid(context, lattice, center, radius, age, fade);
 			return;
 		}
-		List<Segment> shrine = shrine(center.add(0, SHRINE_HEIGHT * open, 0));
+		List<Segment> shrine = List.of(); // the shrine itself is real blocks now, built by the server
 		List<Segment> floor = new ArrayList<>();
 		for (int i = 0; i < FLOOR_RING_SEGMENTS; i++) {
 			double a = Math.PI * 2 * i / FLOOR_RING_SEGMENTS;
