@@ -1,0 +1,14 @@
+{
+	"layers": {
+		"humanoid": [
+			{
+				"texture": "deku:todoroki"
+			}
+		],
+		"humanoid_leggings": [
+			{
+				"texture": "deku:todoroki"
+			}
+		]
+	}
+}

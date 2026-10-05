@@ -111,6 +111,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("fuga")) {
 				fuga(context, singleplayer);
 			}
+			if (wanted("armor")) {
+				armor(context, singleplayer);
+			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
 			}
@@ -518,6 +521,40 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			return count;
 		});
 		check(dug > 300, "Fuga should leave a big crater, only " + dug + " blocks cleared");
+	}
+
+	private static void armor(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Each hero costume equips as four pieces, gives no protection, and has its leather-and-dye recipe.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 6600 -59 6600 0 8");
+		context.waitTicks(40);
+		selectSlot(context, 8);
+		for (String set : new String[] {"deku", "bakugo", "todoroki"}) {
+			command(singleplayer, "item replace entity @p armor.head with deku:" + set + "_helmet");
+			command(singleplayer, "item replace entity @p armor.chest with deku:" + set + "_chestplate");
+			command(singleplayer, "item replace entity @p armor.legs with deku:" + set + "_leggings");
+			command(singleplayer, "item replace entity @p armor.feet with deku:" + set + "_boots");
+			context.waitTicks(5);
+			double armorPoints = context.computeOnClient(client -> client.player.getAttributeValue(Attributes.ARMOR));
+			check(armorPoints == 0, "cosmetic armor shouldn't give protection, " + set + " gave " + armorPoints);
+			camera(context, CameraType.THIRD_PERSON_FRONT);
+			context.waitTicks(5);
+			context.takeScreenshot("armor-" + set + "-front");
+			camera(context, CameraType.THIRD_PERSON_BACK);
+			context.waitTicks(5);
+			context.takeScreenshot("armor-" + set + "-back");
+		}
+		camera(context, CameraType.FIRST_PERSON);
+		boolean recipes = singleplayer.getServer().computeOnServer(server -> {
+			for (String name : new String[] {"deku_helmet", "bakugo_boots", "todoroki_chestplate", "todoroki_leggings"}) {
+				var key = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, DekuMod.id(name));
+				if (server.getRecipeManager().byKey(key).isEmpty()) {
+					return false;
+				}
+			}
+			return true;
+		});
+		check(recipes, "the hero costumes should have crafting recipes");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

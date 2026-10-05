@@ -55,6 +55,7 @@ public class DekuMod implements ModInitializer {
 		DekuSounds.init();
 		DekuParticles.init();
 		DekuItems.init();
+		DekuArmor.init();
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> StarterKit.giveOnFirstJoin(handler.player));
 
 		PayloadTypeRegistry.serverboundPlay().register(CowlingPayload.TYPE, CowlingPayload.CODEC);

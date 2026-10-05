@@ -1,0 +1,14 @@
+{
+	"layers": {
+		"humanoid": [
+			{
+				"texture": "deku:bakugo"
+			}
+		],
+		"humanoid_leggings": [
+			{
+				"texture": "deku:bakugo"
+			}
+		]
+	}
+}

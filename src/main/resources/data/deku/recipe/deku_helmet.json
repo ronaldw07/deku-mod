@@ -1,0 +1,12 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "equipment",
+	"ingredients": [
+		"minecraft:leather_helmet",
+		"minecraft:green_dye"
+	],
+	"result": {
+		"id": "deku:deku_helmet",
+		"count": 1
+	}
+}

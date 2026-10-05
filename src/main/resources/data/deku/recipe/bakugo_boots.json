@@ -1,0 +1,12 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "equipment",
+	"ingredients": [
+		"minecraft:leather_boots",
+		"minecraft:orange_dye"
+	],
+	"result": {
+		"id": "deku:bakugo_boots",
+		"count": 1
+	}
+}

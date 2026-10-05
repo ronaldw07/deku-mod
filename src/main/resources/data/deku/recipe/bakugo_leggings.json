@@ -1,0 +1,12 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "equipment",
+	"ingredients": [
+		"minecraft:leather_leggings",
+		"minecraft:orange_dye"
+	],
+	"result": {
+		"id": "deku:bakugo_leggings",
+		"count": 1
+	}
+}

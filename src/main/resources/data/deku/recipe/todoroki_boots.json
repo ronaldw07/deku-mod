@@ -1,0 +1,13 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "equipment",
+	"ingredients": [
+		"minecraft:leather_boots",
+		"minecraft:red_dye",
+		"minecraft:white_dye"
+	],
+	"result": {
+		"id": "deku:todoroki_boots",
+		"count": 1
+	}
+}
