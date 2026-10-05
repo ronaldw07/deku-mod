@@ -124,6 +124,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("redCharge")) {
 				redCharge(context, singleplayer);
 			}
+			if (wanted("purpleRip")) {
+				purpleRip(context, singleplayer);
+			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
 			}
@@ -629,6 +632,29 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
 		context.waitTicks(3);
 		context.takeScreenshot("red-flying");
+	}
+
+	private static void purpleRip(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Gojo X: a dark purple orb sprays lightning as it rips through; a husk beside its path burns.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 8200 -59 8200 0 0");
+		context.waitTicks(40);
+		selectSlot(context, 5);
+		command(singleplayer, "execute at @p run summon minecraft:husk ~6 ~ ~25 {NoAI:1b,Silent:1b}");
+		context.getInput().holdKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(70);
+		context.takeScreenshot("purple-fused");
+		context.getInput().releaseKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(4);
+		context.takeScreenshot("purple-flight-start");
+		context.waitTicks(8);
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.takeScreenshot("purple-flight-trail");
+		context.waitTicks(10);
+		boolean scorched = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true)
+			.stream().noneMatch(husk -> husk.isAlive() && husk.getRemainingFireTicks() <= 0 && husk.getHealth() >= husk.getMaxHealth()));
+		check(scorched, "the purple fire and lightning should hurt or burn a husk beside the path");
+		camera(context, CameraType.FIRST_PERSON);
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

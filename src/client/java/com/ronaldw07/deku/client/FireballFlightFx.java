@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.PowerParticleOption;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
@@ -36,6 +37,11 @@ final class FireballFlightFx {
 	private static final int TRAIL_STEPS = 3;
 	private static final int ORB_TRAIL_DUST = 3;
 	private static final int PULL_DUST = 6;
+	private static final int PURPLE_TRAIL_FLAMES = 5;
+	private static final int PURPLE_SPRAY_BOLTS = 45;
+	private static final double PURPLE_SPRAY_REACH = 5.0;
+	private static final int PURPLE_SPRAY_STEPS = 5;
+	private static final double PURPLE_SPRAY_JAG = 0.35;
 	private static final double BLUE_BASE_RADIUS = 2.5; // the ball size the pull ring is drawn for
 	private static final int ARROW_TRAIL_FLAMES = 3;
 	private static final double ARROW_LENGTH = 7.0;
@@ -46,7 +52,7 @@ final class FireballFlightFx {
 	private static final double PULL_SPEED = 0.5;
 	private static final DustParticleOptions BLUE_DUST = new DustParticleOptions(0x3080FF, 2.0f);
 	private static final DustParticleOptions RED_DUST = new DustParticleOptions(0xFF2020, 2.0f);
-	private static final DustParticleOptions PURPLE_DUST = new DustParticleOptions(0xA040FF, 2.5f);
+	private static final DustParticleOptions PURPLE_DUST = new DustParticleOptions(0x5A12C0, 2.5f);
 
 	private record Flight(Vec3 start, Vec3 end, float ballRadius, float speed, Kind kind, int holdTicks, long startTick) {
 		double length() {
@@ -143,6 +149,8 @@ final class FireballFlightFx {
 				puff(minecraft, DekuParticles.SOOT_SMOKE, at, (float) (radius * 0.6), main ? 1 : 0);
 			}
 			case PURPLE -> {
+				// A path of dark violet fire left burning behind the orb.
+				puff(minecraft, PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0f), at, 1.6f, PURPLE_TRAIL_FLAMES);
 				puff(minecraft, PURPLE_DUST, at, 1f, ORB_TRAIL_DUST + 2);
 				puff(minecraft, ParticleTypes.REVERSE_PORTAL, at, 1f, 2);
 			}
@@ -165,6 +173,15 @@ final class FireballFlightFx {
 			if (particle != null && scale != 1f) {
 				particle.scale(Math.max(0.2f, scale));
 			}
+		}
+	}
+
+	/** A great spray of jagged bolts shooting out in every direction from the orb. */
+	private static void addSpray(List<Segment> rays, RandomSource random, Vec3 center, double radius) {
+		for (int i = 0; i < PURPLE_SPRAY_BOLTS; i++) {
+			Vec3 out = LightningDraw.randomDirection(random);
+			Vec3 end = center.add(out.scale(radius * (1.5 + random.nextDouble() * PURPLE_SPRAY_REACH)));
+			rays.addAll(LimbLightning.jagged(random, center.add(out.scale(radius * 0.7)), end, PURPLE_SPRAY_STEPS, PURPLE_SPRAY_JAG));
 		}
 	}
 
@@ -211,6 +228,9 @@ final class FireballFlightFx {
 				Vec3 at = flight.positionAt(ticks).subtract(camera);
 				if (kind == Kind.RED) {
 					FireballChargeFx.addSmoothBall(sphere, at, flight.radiusAt(now + partialTick));
+				} else if (kind == Kind.PURPLE) {
+					FireballChargeFx.addBall(sphere, rays, random, at, flight.radiusAt(now + partialTick), BALL_RAYS);
+					addSpray(rays, random, at, flight.radiusAt(now + partialTick));
 				} else if (kind == Kind.ARROW) {
 					addArrow(sphere, rays, random, at, flight.end().subtract(flight.start()).normalize(), flight.radiusAt(now + partialTick));
 				} else {

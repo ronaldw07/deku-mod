@@ -60,9 +60,9 @@ final class LightningDraw {
 		new Layer(0.025f, 0.8f, 0.95f, 1.0f, 0.9f),
 	};
 	static final Layer[] PURPLE = {
-		new Layer(0.14f, 0.5f, 0.0f, 0.9f, 0.35f),
-		new Layer(0.07f, 0.7f, 0.2f, 1.0f, 0.6f),
-		new Layer(0.03f, 1.0f, 0.8f, 1.0f, 0.9f),
+		new Layer(0.16f, 0.2f, 0.0f, 0.42f, 0.4f),
+		new Layer(0.08f, 0.36f, 0.02f, 0.68f, 0.65f),
+		new Layer(0.03f, 0.7f, 0.35f, 1.0f, 0.9f),
 	};
 	// Sukuna's cuts: a blood red edge around a white-hot line.
 	static final Layer[] SLASH = {

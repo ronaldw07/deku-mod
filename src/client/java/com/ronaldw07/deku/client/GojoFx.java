@@ -44,7 +44,7 @@ final class GojoFx {
 	private static final double INFINITY_RADIUS = 1.7;
 	private static final double INFINITY_PULSE = 0.08;
 	private static final float INFINITY_ALPHA = 0.35f;
-	private static final DustParticleOptions PURPLE_DUST = new DustParticleOptions(0xB060FF, 1.4f);
+	private static final DustParticleOptions PURPLE_DUST = new DustParticleOptions(0x6A20D0, 1.4f);
 	private static final DustParticleOptions BLUE_DUST = new DustParticleOptions(0x4090FF, 1.4f);
 	private static final DustParticleOptions RED_DUST = new DustParticleOptions(0xFF2020, 1.4f);
 

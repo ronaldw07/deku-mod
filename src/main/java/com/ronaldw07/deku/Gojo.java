@@ -76,6 +76,13 @@ public final class Gojo {
 	private static final float PURPLE_DAMAGE = 40.0f;
 	private static final double PURPLE_REACH = 2.0;
 	private static final double PURPLE_PUSH = 2.5;
+	private static final double PURPLE_FLAME_SHARE = 2.2; // how far the fire and lightning reach, of the erase radius
+	private static final int PURPLE_BURN_TICKS = 200;
+	private static final int PURPLE_ZAP_INTERVAL = 2;
+	private static final float PURPLE_ZAP_DAMAGE = 8.0f;
+	private static final int PURPLE_SCORCH_INTERVAL = 3;
+	private static final float PURPLE_SCORCH_SHARE = 1.5f;
+	private static final int PURPLE_SCORCH_FIRES = 2;
 	// Infinity.
 	private static final double INFINITY_RADIUS = 3.5;
 	private static final double INFINITY_PROJECTILE_RADIUS = 6.0;
@@ -251,6 +258,19 @@ public final class Gojo {
 				entity.hurtServer(level, player.damageSources().playerAttack(player), PURPLE_DAMAGE);
 				entity.push(aim.scale(PURPLE_PUSH));
 				entity.hurtMarked = true;
+			}
+			// The violet fire and lightning around the orb scorch everything near the path, whether or not it was in the way.
+			double flameReach = eraseRadius * PURPLE_FLAME_SHARE;
+			for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(flameReach),
+					entity -> entity != player && entity.isAlive() && entity.position().distanceTo(at) <= flameReach)) {
+				entity.setRemainingFireTicks(PURPLE_BURN_TICKS);
+				if (tick % PURPLE_ZAP_INTERVAL == 0) {
+					entity.invulnerableTime = 0;
+					entity.hurtServer(level, player.damageSources().playerAttack(player), PURPLE_ZAP_DAMAGE);
+				}
+			}
+			if (tick % PURPLE_SCORCH_INTERVAL == 0) {
+				Blasts.carve(level, at, eraseRadius * PURPLE_SCORCH_SHARE, PURPLE_SCORCH_FIRES);
 			}
 			if (travelled >= PURPLE_RANGE) {
 				purpleCollapse(player, at, blastRadius);
