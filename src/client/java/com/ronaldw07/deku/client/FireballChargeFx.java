@@ -38,6 +38,8 @@ public final class FireballChargeFx {
 	private static final float MAX_HALO_RUMBLE = 0.35f;
 	private static final float MAX_HALO_GLOW = 0.18f;
 	private static final int SPHERE_SEGMENTS = 16;
+	private static final int SMOOTH_GREAT_CIRCLES = 6;
+	private static final int SMOOTH_LATITUDES = 6;
 	private static final int MIN_RAYS = 8;
 	private static final int EXTRA_RAYS = 12;
 	private static final double MIN_RAY_LENGTH = 1.2;
@@ -182,6 +184,34 @@ public final class FireballChargeFx {
 			double length = radius * (MIN_RAY_LENGTH + random.nextDouble() * EXTRA_RAY_LENGTH);
 			rays.addAll(LimbLightning.jagged(random, center.add(out.scale(radius * 0.6)), center.add(out.scale(length)), RAY_STEPS, RAY_JAG));
 		}
+	}
+
+	/** A glossy sphere drawn as many tilted great circles and latitude rings, with no loose rays, for a ball of solid light. */
+	static void addSmoothBall(List<Segment> sphere, Vec3 center, double radius) {
+		for (int i = 0; i < SMOOTH_GREAT_CIRCLES; i++) {
+			double tilt = Math.PI * i / SMOOTH_GREAT_CIRCLES;
+			for (int j = 0; j < SPHERE_SEGMENTS * 2; j++) {
+				sphere.add(new Segment(tiltedPoint(center, radius, tilt, Math.PI * j / SPHERE_SEGMENTS),
+					tiltedPoint(center, radius, tilt, Math.PI * (j + 1) / SPHERE_SEGMENTS)));
+			}
+		}
+		for (int lat = 1; lat < SMOOTH_LATITUDES; lat++) {
+			double polar = Math.PI * lat / SMOOTH_LATITUDES;
+			double ringRadius = radius * Math.sin(polar);
+			double y = radius * Math.cos(polar);
+			for (int j = 0; j < SPHERE_SEGMENTS * 2; j++) {
+				double a = Math.PI * j / SPHERE_SEGMENTS;
+				double b = Math.PI * (j + 1) / SPHERE_SEGMENTS;
+				sphere.add(new Segment(center.add(Math.cos(a) * ringRadius, y, Math.sin(a) * ringRadius),
+					center.add(Math.cos(b) * ringRadius, y, Math.sin(b) * ringRadius)));
+			}
+		}
+	}
+
+	private static Vec3 tiltedPoint(Vec3 center, double radius, double tilt, double angle) {
+		double a = Math.cos(angle) * radius;
+		double b = Math.sin(angle) * radius;
+		return center.add(a, b * Math.cos(tilt), b * Math.sin(tilt));
 	}
 
 	/** A circle around the ball in one of its three planes. */

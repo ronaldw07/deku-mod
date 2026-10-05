@@ -121,6 +121,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("blueHold")) {
 				blueHold(context, singleplayer);
 			}
+			if (wanted("redCharge")) {
+				redCharge(context, singleplayer);
+			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
 			}
@@ -607,6 +610,22 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(flying > 20, "Blue should rip blocks off the ground, only " + flying + " are flying");
 		context.waitTicks(60);
 		context.takeScreenshot("blue-finished");
+	}
+
+	private static void redCharge(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Gojo V: Red builds as a storm of bolts, packs into a smooth red ball, then flies out.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 7800 -59 7800 0 4");
+		context.waitTicks(40);
+		selectSlot(context, 5);
+		context.getInput().holdKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(14);
+		context.takeScreenshot("red-storm");
+		context.waitTicks(30);
+		context.takeScreenshot("red-solid");
+		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(3);
+		context.takeScreenshot("red-flying");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

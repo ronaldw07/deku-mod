@@ -209,7 +209,9 @@ final class FireballFlightFx {
 				palette = flight.palette();
 				RandomSource random = RandomSource.create(flight.startTick() * 31 + now / TICKS_PER_SHAPE);
 				Vec3 at = flight.positionAt(ticks).subtract(camera);
-				if (kind == Kind.ARROW) {
+				if (kind == Kind.RED) {
+					FireballChargeFx.addSmoothBall(sphere, at, flight.radiusAt(now + partialTick));
+				} else if (kind == Kind.ARROW) {
 					addArrow(sphere, rays, random, at, flight.end().subtract(flight.start()).normalize(), flight.radiusAt(now + partialTick));
 				} else {
 					FireballChargeFx.addBall(sphere, rays, random, at, flight.radiusAt(now + partialTick), BALL_RAYS);

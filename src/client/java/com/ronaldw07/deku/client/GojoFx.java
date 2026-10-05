@@ -23,10 +23,15 @@ final class GojoFx {
 	private static final int TICKS_PER_SHAPE = 2;
 	private static final double ORB_DISTANCE = 2.4;
 	private static final double ORB_HEIGHT_OFFSET = -0.2;
-	private static final double RED_HAND_FORWARD = 0.9;
-	private static final double RED_HAND_SIDE = 0.55;
+	private static final double RED_HAND_FORWARD = 2.4;
+	private static final double RED_HAND_SIDE = 0.9;
 	private static final double MIN_BLUE_BALL = 0.25;
 	private static final double MAX_BLUE_BALL = 1.5;
+	private static final double SOLID_STARTS = 0.55;
+	private static final int RED_BOLTS = 30;
+	private static final double RED_BOLT_REACH = 1.6;
+	private static final int RED_BOLT_STEPS = 5;
+	private static final double RED_BOLT_JAG = 0.25;
 	private static final double MIN_RED_BALL = 0.2;
 	private static final double MAX_RED_BALL = 1.1;
 	private static final double MIN_PURPLE_ORB = 0.25;
@@ -115,7 +120,7 @@ final class GojoFx {
 		}
 		double red = GojoClient.redCharge() / 100.0;
 		if (red > 0) {
-			draw(context, LightningDraw.RED, orbPosition(player, partialTick).subtract(camera), Mth.lerp(red, MIN_RED_BALL, MAX_RED_BALL), random, ORB_RAYS, 1f + (float) red * 3f);
+			drawRed(context, orbPosition(player, partialTick).subtract(camera), red, random);
 		}
 
 		double purple = GojoClient.purpleCharge() / 100.0;
@@ -141,6 +146,33 @@ final class GojoFx {
 			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(),
 				(pose, buffer) -> LightningDraw.draw(pose.pose(), buffer, rings, 2f, LightningDraw.BLUE, INFINITY_ALPHA));
 		}
+	}
+
+	/**
+	 * Red building: first a storm of long bolts crackling in from all around onto the hand; past the
+	 * halfway point they die down as the light packs into a smooth ball of red.
+	 */
+	private static void drawRed(LevelRenderContext context, Vec3 center, double red, RandomSource random) {
+		double radius = Mth.lerp(red, MIN_RED_BALL, MAX_RED_BALL);
+		List<Segment> sphere = new ArrayList<>();
+		List<Segment> bolts = new ArrayList<>();
+		double storm = Math.max(0, 1 - Math.max(0, red - SOLID_STARTS) / (1 - SOLID_STARTS));
+		int count = (int) (RED_BOLTS * storm);
+		for (int i = 0; i < count; i++) {
+			Vec3 out = LightningDraw.randomDirection(random);
+			Vec3 start = center.add(out.scale(radius * (RED_BOLT_REACH + random.nextDouble() * RED_BOLT_REACH)));
+			bolts.addAll(LimbLightning.jagged(random, start, center.add(out.scale(radius * 0.7)), RED_BOLT_STEPS, RED_BOLT_JAG));
+		}
+		if (red >= SOLID_STARTS) {
+			FireballChargeFx.addSmoothBall(sphere, center, radius);
+		} else {
+			FireballChargeFx.addBall(sphere, bolts, random, center, radius, 0);
+		}
+		float width = 0.6f + (float) red * 1.4f;
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
+			LightningDraw.draw(pose.pose(), buffer, sphere, width, LightningDraw.RED, 0.6f);
+			LightningDraw.draw(pose.pose(), buffer, bolts, width * 0.8f, LightningDraw.RED, 1f);
+		});
 	}
 
 	private static void draw(LevelRenderContext context, Layer[] palette, Vec3 center, double radius, RandomSource random, int rays, float width) {
