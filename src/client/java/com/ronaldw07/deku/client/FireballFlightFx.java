@@ -246,10 +246,10 @@ final class FireballFlightFx {
 			Layer[] colors = palette;
 			if (!solidCenters.isEmpty()) {
 				// Hollow Purple is a solid ball of deep violet with a brighter heart, not just a glow.
-				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(), (pose, buffer) -> {
+				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE), (pose, buffer) -> {
 					for (int i = 0; i < solidCenters.size(); i++) {
-						FireballChargeFx.drawSolidSphere(pose.pose(), buffer, solidCenters.get(i), solidRadii.get(i), 0.32f, 0.04f, 0.62f, 0.97f);
-						FireballChargeFx.drawSolidSphere(pose.pose(), buffer, solidCenters.get(i), solidRadii.get(i) * 0.55, 0.62f, 0.3f, 1.0f, 0.97f);
+						FireballChargeFx.drawLitSphere(pose, buffer, solidCenters.get(i), solidRadii.get(i), 0.32f, 0.04f, 0.62f, 0.97f);
+						FireballChargeFx.drawLitSphere(pose, buffer, solidCenters.get(i), solidRadii.get(i) * 0.55, 0.62f, 0.3f, 1.0f, 0.97f);
 					}
 				});
 			}

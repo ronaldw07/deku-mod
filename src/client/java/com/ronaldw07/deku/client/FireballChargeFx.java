@@ -1,6 +1,10 @@
 package com.ronaldw07.deku.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.ronaldw07.deku.DekuMod;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.Identifier;
 import com.ronaldw07.deku.client.LightningDraw.Segment;
 import org.joml.Matrix4fc;
 import java.util.ArrayList;
@@ -40,6 +44,8 @@ public final class FireballChargeFx {
 	private static final float MAX_HALO_RUMBLE = 0.35f;
 	private static final float MAX_HALO_GLOW = 0.18f;
 	private static final int SPHERE_SEGMENTS = 16;
+	static final Identifier WHITE = DekuMod.id("textures/misc/white.png");
+	private static final int FULL_BRIGHT = 0xF000F0;
 	private static final int SOLID_LATITUDES = 12;
 	private static final int SOLID_LONGITUDES = 20;
 	private static final int SMOOTH_GREAT_CIRCLES = 6;
@@ -203,6 +209,36 @@ public final class FireballChargeFx {
 					sphere(center, radius, polar1, around1), sphere(center, radius, polar1, around0), red * light, green * light, blue * light, alpha);
 			}
 		}
+	}
+
+	/**
+	 * The same solid ball drawn as an entity-style translucent, fully bright surface, which every
+	 * shader setup draws like any mob, instead of as a debug overlay.
+	 */
+	static void drawLitSphere(PoseStack.Pose pose, VertexConsumer buffer, Vec3 center, double radius, float red, float green, float blue, float alpha) {
+		for (int i = 0; i < SOLID_LATITUDES; i++) {
+			double polar0 = Math.PI * i / SOLID_LATITUDES;
+			double polar1 = Math.PI * (i + 1) / SOLID_LATITUDES;
+			float light = (float) (0.78 + 0.22 * Math.cos((polar0 + polar1) / 2));
+			for (int j = 0; j < SOLID_LONGITUDES; j++) {
+				double around0 = Math.PI * 2 * j / SOLID_LONGITUDES;
+				double around1 = Math.PI * 2 * (j + 1) / SOLID_LONGITUDES;
+				Vec3[] corners = {sphere(center, radius, polar0, around0), sphere(center, radius, polar0, around1),
+					sphere(center, radius, polar1, around1), sphere(center, radius, polar1, around0)};
+				Vec3 normal = corners[0].add(corners[2]).scale(0.5).subtract(center).normalize();
+				for (int k = 0; k < 4; k++) {
+					litVertex(pose, buffer, corners[k], normal, red * light, green * light, blue * light, alpha);
+				}
+				for (int k = 3; k >= 0; k--) {
+					litVertex(pose, buffer, corners[k], normal.scale(-1), red * light, green * light, blue * light, alpha);
+				}
+			}
+		}
+	}
+
+	private static void litVertex(PoseStack.Pose pose, VertexConsumer buffer, Vec3 point, Vec3 normal, float red, float green, float blue, float alpha) {
+		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z).setColor(red, green, blue, alpha).setUv(0f, 0f)
+			.setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(pose, (float) normal.x, (float) normal.y, (float) normal.z);
 	}
 
 	private static Vec3 sphere(Vec3 center, double radius, double polar, double around) {

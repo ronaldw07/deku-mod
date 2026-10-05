@@ -128,9 +128,9 @@ final class GojoFx {
 			Vec3 center = front(player, partialTick, ORB_DISTANCE).subtract(camera);
 			double size = Mth.lerp(purple, MIN_PURPLE_ORB, MAX_PURPLE_ORB);
 			if (purple >= FUSE_AT) {
-				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(), (pose, buffer) -> {
-					FireballChargeFx.drawSolidSphere(pose.pose(), buffer, center, size * 1.2, 0.32f, 0.04f, 0.62f, 0.97f);
-					FireballChargeFx.drawSolidSphere(pose.pose(), buffer, center, size * 0.7, 0.62f, 0.3f, 1.0f, 0.97f);
+				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE), (pose, buffer) -> {
+					FireballChargeFx.drawLitSphere(pose, buffer, center, size * 1.2, 0.32f, 0.04f, 0.62f, 0.97f);
+					FireballChargeFx.drawLitSphere(pose, buffer, center, size * 0.7, 0.62f, 0.3f, 1.0f, 0.97f);
 				});
 				drawRaysOnly(context, LightningDraw.PURPLE, center, size * 1.2, random, ORB_RAYS * 3);
 			} else {
