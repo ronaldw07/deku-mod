@@ -87,6 +87,10 @@ final class HeroNotebook {
 				Hold space: ice slide.
 				C: a giant wall of ice.
 				X: Flashfreeze Heatwave. Ice, then a huge blast of fire."""),
+			page("Hero costumes", """
+				Deku, Bakugo and Todoroki, each a full set of four pieces. They look the part and give no protection.
+
+				Craft a leather piece with a dye: green for Deku, orange for Bakugo, red and white for Todoroki. Also in the Combat tab of the creative menu."""),
 			page("Settings (K)", """
 				Full Cowling power and ramp-up time.
 
