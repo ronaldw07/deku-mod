@@ -21,7 +21,7 @@ import net.minecraft.world.phys.Vec3;
  */
 final class GojoFx {
 	private static final int TICKS_PER_SHAPE = 2;
-	private static final double ORB_DISTANCE = 2.4;
+	private static final double ORB_DISTANCE = 4.2;
 	private static final double ORB_HEIGHT_OFFSET = -0.2;
 	private static final double RED_HAND_FORWARD = 2.4;
 	private static final double RED_HAND_SIDE = 0.9;
@@ -35,7 +35,7 @@ final class GojoFx {
 	private static final double MIN_RED_BALL = 0.2;
 	private static final double MAX_RED_BALL = 1.1;
 	private static final double MIN_PURPLE_ORB = 0.25;
-	private static final double MAX_PURPLE_ORB = 1.6;
+	private static final double MAX_PURPLE_ORB = 1.4;
 	private static final double ORBIT_START_SPREAD = 2.2;
 	private static final double FUSE_AT = 0.85;
 	private static final int ORB_RAYS = 8;
@@ -128,7 +128,11 @@ final class GojoFx {
 			Vec3 center = front(player, partialTick, ORB_DISTANCE).subtract(camera);
 			double size = Mth.lerp(purple, MIN_PURPLE_ORB, MAX_PURPLE_ORB);
 			if (purple >= FUSE_AT) {
-				draw(context, LightningDraw.PURPLE, center, size * 1.2, random, ORB_RAYS * 2, 2f + (float) purple * 3f);
+				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(), (pose, buffer) -> {
+					FireballChargeFx.drawSolidSphere(pose.pose(), buffer, center, size * 1.2, 0.32f, 0.04f, 0.62f, 0.97f);
+					FireballChargeFx.drawSolidSphere(pose.pose(), buffer, center, size * 0.7, 0.62f, 0.3f, 1.0f, 0.97f);
+				});
+				drawRaysOnly(context, LightningDraw.PURPLE, center, size * 1.2, random, ORB_RAYS * 3);
 			} else {
 				// A blue orb on one side and a red one on the other, drawing together as the charge builds.
 				double spread = ORBIT_START_SPREAD * (1 - purple / FUSE_AT);
@@ -173,6 +177,15 @@ final class GojoFx {
 			LightningDraw.draw(pose.pose(), buffer, sphere, width, LightningDraw.RED, 0.6f);
 			LightningDraw.draw(pose.pose(), buffer, bolts, width * 0.8f, LightningDraw.RED, 1f);
 		});
+	}
+
+	/** Thin rays leaping off a solid ball, with no glow rings over it, so the ball itself stays solid. */
+	private static void drawRaysOnly(LevelRenderContext context, Layer[] palette, Vec3 center, double radius, RandomSource random, int rays) {
+		List<Segment> sphere = new ArrayList<>();
+		List<Segment> spokes = new ArrayList<>();
+		FireballChargeFx.addBall(sphere, spokes, random, center, radius, rays);
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(),
+			(pose, buffer) -> LightningDraw.draw(pose.pose(), buffer, spokes, 1.5f, palette, 1f));
 	}
 
 	private static void draw(LevelRenderContext context, Layer[] palette, Vec3 center, double radius, RandomSource random, int rays, float width) {

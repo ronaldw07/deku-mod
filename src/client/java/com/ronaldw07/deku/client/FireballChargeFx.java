@@ -1,6 +1,8 @@
 package com.ronaldw07.deku.client;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.ronaldw07.deku.client.LightningDraw.Segment;
+import org.joml.Matrix4fc;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
@@ -38,6 +40,8 @@ public final class FireballChargeFx {
 	private static final float MAX_HALO_RUMBLE = 0.35f;
 	private static final float MAX_HALO_GLOW = 0.18f;
 	private static final int SPHERE_SEGMENTS = 16;
+	private static final int SOLID_LATITUDES = 12;
+	private static final int SOLID_LONGITUDES = 20;
 	private static final int SMOOTH_GREAT_CIRCLES = 6;
 	private static final int SMOOTH_LATITUDES = 6;
 	private static final int MIN_RAYS = 8;
@@ -184,6 +188,25 @@ public final class FireballChargeFx {
 			double length = radius * (MIN_RAY_LENGTH + random.nextDouble() * EXTRA_RAY_LENGTH);
 			rays.addAll(LimbLightning.jagged(random, center.add(out.scale(radius * 0.6)), center.add(out.scale(length)), RAY_STEPS, RAY_JAG));
 		}
+	}
+
+	/** A solid ball: a mesh of flat-coloured faces, lit a little brighter on its top so it reads as round. */
+	static void drawSolidSphere(Matrix4fc pose, VertexConsumer buffer, Vec3 center, double radius, float red, float green, float blue, float alpha) {
+		for (int i = 0; i < SOLID_LATITUDES; i++) {
+			double polar0 = Math.PI * i / SOLID_LATITUDES;
+			double polar1 = Math.PI * (i + 1) / SOLID_LATITUDES;
+			float light = (float) (0.75 + 0.25 * Math.cos((polar0 + polar1) / 2));
+			for (int j = 0; j < SOLID_LONGITUDES; j++) {
+				double around0 = Math.PI * 2 * j / SOLID_LONGITUDES;
+				double around1 = Math.PI * 2 * (j + 1) / SOLID_LONGITUDES;
+				LightningDraw.drawFlatQuad(pose, buffer, sphere(center, radius, polar0, around0), sphere(center, radius, polar0, around1),
+					sphere(center, radius, polar1, around1), sphere(center, radius, polar1, around0), red * light, green * light, blue * light, alpha);
+			}
+		}
+	}
+
+	private static Vec3 sphere(Vec3 center, double radius, double polar, double around) {
+		return center.add(radius * Math.sin(polar) * Math.cos(around), radius * Math.cos(polar), radius * Math.sin(polar) * Math.sin(around));
 	}
 
 	/** A glossy sphere drawn as many tilted great circles and latitude rings, with no loose rays, for a ball of solid light. */

@@ -37,6 +37,7 @@ final class FireballFlightFx {
 	private static final int TRAIL_STEPS = 3;
 	private static final int ORB_TRAIL_DUST = 3;
 	private static final int PULL_DUST = 6;
+	private static final float PURPLE_RAY_WIDTH = 2f;
 	private static final int PURPLE_TRAIL_FLAMES = 5;
 	private static final int PURPLE_SPRAY_BOLTS = 45;
 	private static final double PURPLE_SPRAY_REACH = 5.0;
@@ -216,6 +217,8 @@ final class FireballFlightFx {
 		for (Kind kind : Kind.values()) {
 			List<Segment> sphere = new ArrayList<>();
 			List<Segment> rays = new ArrayList<>();
+			List<Vec3> solidCenters = new ArrayList<>();
+			List<Double> solidRadii = new ArrayList<>();
 			Layer[] palette = null;
 			for (Flight flight : flights) {
 				double ticks = now - flight.startTick() + partialTick;
@@ -228,7 +231,8 @@ final class FireballFlightFx {
 				if (kind == Kind.RED) {
 					FireballChargeFx.addSmoothBall(sphere, at, flight.radiusAt(now + partialTick));
 				} else if (kind == Kind.PURPLE) {
-					FireballChargeFx.addBall(sphere, rays, random, at, flight.radiusAt(now + partialTick), BALL_RAYS);
+					solidCenters.add(at);
+					solidRadii.add(flight.radiusAt(now + partialTick));
 					addSpray(rays, random, at, flight.radiusAt(now + partialTick));
 				} else if (kind == Kind.ARROW) {
 					addArrow(sphere, rays, random, at, flight.end().subtract(flight.start()).normalize(), flight.radiusAt(now + partialTick));
@@ -240,9 +244,18 @@ final class FireballFlightFx {
 				continue;
 			}
 			Layer[] colors = palette;
+			if (!solidCenters.isEmpty()) {
+				// Hollow Purple is a solid ball of deep violet with a brighter heart, not just a glow.
+				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(), (pose, buffer) -> {
+					for (int i = 0; i < solidCenters.size(); i++) {
+						FireballChargeFx.drawSolidSphere(pose.pose(), buffer, solidCenters.get(i), solidRadii.get(i), 0.32f, 0.04f, 0.62f, 0.97f);
+						FireballChargeFx.drawSolidSphere(pose.pose(), buffer, solidCenters.get(i), solidRadii.get(i) * 0.55, 0.62f, 0.3f, 1.0f, 0.97f);
+					}
+				});
+			}
 			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
 				LightningDraw.draw(pose.pose(), buffer, sphere, 6f, colors, 0.7f);
-				LightningDraw.draw(pose.pose(), buffer, rays, 4f, colors, 1f);
+				LightningDraw.draw(pose.pose(), buffer, rays, kind == Kind.PURPLE ? PURPLE_RAY_WIDTH : 4f, colors, 1f);
 			});
 		}
 	}

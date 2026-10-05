@@ -66,6 +66,7 @@ public final class Gojo {
 	private static final int RED_DEBRIS = 60;
 	// Hollow Purple.
 	private static final double PURPLE_RANGE = 150.0;
+	private static final double PURPLE_START_FORWARD = 4.2;
 	private static final double PURPLE_SPEED = 4.0;
 	private static final float MIN_PURPLE_BALL = 1.5f;
 	private static final float MAX_PURPLE_BALL = 3.5f;
@@ -237,8 +238,8 @@ public final class Gojo {
 	/** Hollow Purple: a purple orb that erases everything along its path, then collapses where it ends. */
 	private static void purple(ServerPlayer player, double power) {
 		ServerLevel level = player.level();
-		Vec3 start = handPoint(player);
 		Vec3 aim = player.getLookAngle();
+		Vec3 start = player.position().add(0, HAND_HEIGHT, 0).add(aim.scale(PURPLE_START_FORWARD)); // where the orb was held while charging
 		Vec3 end = start.add(aim.scale(PURPLE_RANGE));
 		BlastFx.sendOrb(level, start, end, (float) Mth.lerp(power, MIN_PURPLE_BALL, MAX_PURPLE_BALL), PURPLE_SPEED, Kind.PURPLE, 0, FX_VIEW_DISTANCE);
 		float eraseRadius = (float) (MIN_ERASE_RADIUS + EXTRA_ERASE_RADIUS * power);
