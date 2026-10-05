@@ -32,5 +32,7 @@
 	"item.deku.todoroki_helmet": "Todoroki Hero Helmet",
 	"item.deku.todoroki_chestplate": "Todoroki Hero Chestplate",
 	"item.deku.todoroki_leggings": "Todoroki Hero Leggings",
-	"item.deku.todoroki_boots": "Todoroki Hero Boots"
+	"item.deku.todoroki_boots": "Todoroki Hero Boots",
+	"entity.deku.villain": "The Villain",
+	"item.deku.villain_spawn_egg": "Villain Spawn Egg"
 }

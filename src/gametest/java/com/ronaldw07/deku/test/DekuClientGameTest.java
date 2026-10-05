@@ -2,6 +2,7 @@ package com.ronaldw07.deku.test;
 
 import com.ronaldw07.deku.Aim;
 import com.ronaldw07.deku.InfiniteVoid;
+import com.ronaldw07.deku.DekuEntities;
 import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
@@ -113,6 +114,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			}
 			if (wanted("armor")) {
 				armor(context, singleplayer);
+			}
+			if (wanted("villain")) {
+				villain(context, singleplayer);
 			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
@@ -555,6 +559,27 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			return true;
 		});
 		check(recipes, "the hero costumes should have crafting recipes");
+	}
+
+	private static void villain(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// The villain spawns from its egg's entity, shows a boss bar, and hurts a survival player with its slam, orb or leap.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "gamemode survival @p");
+		command(singleplayer, "execute as @p run tp @s 7000 -59 7000 0 6");
+		context.waitTicks(40);
+		selectSlot(context, 8);
+		command(singleplayer, "execute at @p run summon deku:villain ~ ~ ~18");
+		context.waitTicks(30);
+		context.takeScreenshot("villain-appears");
+		boolean spawned = singleplayer.getServer().computeOnServer(server -> !server.overworld().getEntities(DekuEntities.VILLAIN, villain -> true).isEmpty());
+		check(spawned, "the villain should spawn");
+		context.waitTicks(60);
+		context.takeScreenshot("villain-attacking");
+		float health = singleplayer.getServer().computeOnServer(server -> player(server).getHealth());
+		check(health < 20, "the villain should have hurt the player by now, health " + health);
+		command(singleplayer, "kill @e[type=deku:villain]");
+		command(singleplayer, "gamemode creative @p");
+		command(singleplayer, "effect give @p minecraft:instant_health 1 10");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

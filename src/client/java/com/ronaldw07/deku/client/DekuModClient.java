@@ -1,6 +1,7 @@
 package com.ronaldw07.deku.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.ronaldw07.deku.DekuEntities;
 import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.DekuParticles;
@@ -22,6 +23,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -72,6 +74,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionCowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballChargeFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FugaFx::render);
+		EntityRendererRegistry.register(DekuEntities.VILLAIN, VillainRenderer::new);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballFlightFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GojoFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SlashFx::render);

@@ -65,6 +65,10 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Hold X: Fuga, draw a burning arrow for up to 2.5 seconds and loose it at the crosshair; it lands as a huge fire blast with a cloud and sets everything near it alight
 - C: Domain Expansion (Malevolent Shrine), a 60 block dome with a floating shrine; for 10 seconds endless slashes shred the terrain and everything inside it
 
+## The Villain
+
+A boss to fight: spawn it with the Villain Spawn Egg (Combat tab, or `/summon deku:villain`). It has 400 health and a boss bar. Up close it winds up a ground slam, from a distance it throws a ball of red light, and if you back away it leaps after you.
+
 ## Hero costumes
 
 Deku, Bakugo and Todoroki armor sets, four pieces each. Cosmetic only: no protection, never wears out. Craft a leather piece with a dye (green for Deku, orange for Bakugo, red and white for Todoroki) or find them in the Combat creative tab.
