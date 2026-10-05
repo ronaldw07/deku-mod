@@ -25,6 +25,11 @@ final class SolidRender {
 		return shadersOn() ? RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE) : RenderTypes.debugQuads();
 	}
 
+	/** For black and dark effects: a shader pack would light or glow an emissive surface, so these use a plain lit one. */
+	static RenderType darkType() {
+		return shadersOn() ? RenderTypes.entityTranslucent(FireballChargeFx.WHITE) : RenderTypes.debugQuads();
+	}
+
 	private static boolean shadersOn() {
 		if (!looked) {
 			looked = true;

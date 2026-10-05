@@ -13,8 +13,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Sukuna's slashes: a thin sheet of black that shoots out along its path, outlined in white with
- * a glow of red, with a trail of sweeping cuts and sparks left behind, fading in a few ticks.
+ * Sukuna's slashes: black cuts that shoot out along their path, outlined thinly in white, with a trail of sweeping cuts and sparks left behind, fading in a few ticks.
  */
 final class SlashFx {
 	private static final int LIFETIME_TICKS = 12;
@@ -22,10 +21,10 @@ final class SlashFx {
 	private static final float BIG_CUT_HEIGHT = 10f;
 	private static final int PARTICLE_ODDS = 3;
 	private static final double CROWD_FILL = 14; // how many sheets can be filled solid black at once
-	private static final float EDGE = 0.04f;
-	private static final float BIG_EDGE = 0.06f;
-	private static final float RED_EDGE = 0.025f;
-	private static final float EDGE_PER_HEIGHT = 0.003f; // a bigger cut gets a heavier outline
+	private static final float EDGE = 0.18f;
+	private static final float BIG_EDGE = 0.3f;
+	private static final float WHITE_EDGE = 0.05f;
+	private static final float EDGE_PER_HEIGHT = 0.012f; // a bigger cut gets a heavier outline
 	private static final float RUMBLE = 0.25f;
 	private static final double PARTICLE_SPACING = 5.0;
 
@@ -84,17 +83,18 @@ final class SlashFx {
 			Vec3 b = origin.subtract(top);
 			Vec3 c = tip.subtract(top);
 			Vec3 d = tip.add(top);
-			// The cut is a black sheet, outlined along its four edges in white with a thin red glow outside that.
-			List<Segment> border = List.of(new Segment(a, d), new Segment(d, c), new Segment(c, b), new Segment(b, a));
+			// The cut is black: a black sheet, thick black blades along its edges and down its middle so it
+			// reads black from any angle, each blade outlined thinly in white.
+			List<Segment> blades = List.of(new Segment(a, d), new Segment(b, c), new Segment(origin, tip), new Segment(d, c), new Segment(b, a));
 			float fade = (float) Math.max(0, 1 - age / LIFETIME_TICKS);
-			float core = Math.max(slash.big() ? BIG_EDGE : EDGE, slash.halfHeight() * EDGE_PER_HEIGHT);
-			float outer = core + RED_EDGE;
-			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.type(),
-				(pose, buffer) -> LightningDraw.drawFlatQuad(pose.pose(), buffer, a, b, c, d, 0.0f, 0.0f, 0.0f, 0.93f * fade * fillShare));
-			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
-				LightningDraw.drawEdges(pose.pose(), buffer, border, 0f, core, 1.0f, 0.97f, 0.95f, fade);
-				LightningDraw.drawEdges(pose.pose(), buffer, border, core, outer, 0.6f, 0.0f, 0.04f, 0.3f * fade);
+			float black = Math.max(slash.big() ? BIG_EDGE : EDGE, slash.halfHeight() * EDGE_PER_HEIGHT);
+			float white = black + WHITE_EDGE;
+			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.darkType(), (pose, buffer) -> {
+				LightningDraw.drawFlatQuad(pose.pose(), buffer, a, b, c, d, 0.0f, 0.0f, 0.0f, 0.93f * fade * fillShare);
+				LightningDraw.drawFlat(pose.pose(), buffer, blades, black, 0.0f, 0.0f, 0.0f, fade);
 			});
+			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(),
+				(pose, buffer) -> LightningDraw.drawEdges(pose.pose(), buffer, blades, black, white, 1.0f, 1.0f, 1.0f, 0.9f * fade));
 		}
 	}
 }
