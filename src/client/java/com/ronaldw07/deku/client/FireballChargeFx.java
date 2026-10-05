@@ -5,7 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Player;
+import com.ronaldw07.deku.network.FireballChargeFxPayload;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -17,7 +23,7 @@ import net.minecraft.world.phys.Vec3;
  * The Cluster Bomb's fireball while it's being charged: a glowing red sphere floating in front of
  * the player, crackling with red rays and shedding embers, bigger and angrier the longer X is held.
  */
-final class FireballChargeFx {
+public final class FireballChargeFx {
 	private static final double BALL_DISTANCE = 2.0;
 	private static final double BALL_DISTANCE_PER_RADIUS = 1.3; // a bigger ball floats farther out, clear of the camera
 	private static final double BALL_DROP = 0.4;
@@ -45,10 +51,42 @@ final class FireballChargeFx {
 	private static final int EXTRA_EMBERS = 6;
 	private static final DustParticleOptions EMBER = new DustParticleOptions(0xFF1000, 1.6f);
 
+	private static final int REMOTE_EXPIRY_TICKS = 40; // a charge nobody has heard about for this long is dropped
+
+	private record Remote(int charge, long at) {
+	}
+
+	private static Map<UUID, Remote> others = Map.of();
+
 	private FireballChargeFx() {
 	}
 
-	private static Vec3 ballCenter(LocalPlayer player, float partialTick, double radius) {
+	/** Someone nearby is growing, or let go of, their fireball. */
+	static void add(FireballChargeFxPayload fx) {
+		ClientLevel level = Minecraft.getInstance().level;
+		if (level == null) {
+			return;
+		}
+		Map<UUID, Remote> next = new HashMap<>(others);
+		if (fx.charge() > 0) {
+			next.put(fx.player(), new Remote(fx.charge(), level.getGameTime()));
+		} else {
+			next.remove(fx.player());
+		}
+		others = Map.copyOf(next);
+	}
+
+	/** How far someone else's fireball is grown, as far as this client has been told; 0 if none. */
+	public static int remoteCharge(UUID player) {
+		Remote remote = others.get(player);
+		return remote == null ? 0 : remote.charge();
+	}
+
+	static void reset() {
+		others = Map.of();
+	}
+
+	private static Vec3 ballCenter(Player player, float partialTick, double radius) {
 		double distance = BALL_DISTANCE + radius * BALL_DISTANCE_PER_RADIUS;
 		return player.getEyePosition(partialTick).add(player.getViewVector(partialTick).scale(distance)).add(0, -BALL_DROP, 0);
 	}
@@ -60,15 +98,33 @@ final class FireballChargeFx {
 
 	/** Embers shedding off the ball's surface. */
 	static void tick(LocalPlayer player) {
+		if (player == null) {
+			reset();
+			return;
+		}
+		long now = player.level().getGameTime();
+		others = others.entrySet().stream().filter(entry -> now - entry.getValue().at() < REMOTE_EXPIRY_TICKS)
+			.collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+		for (Map.Entry<UUID, Remote> entry : others.entrySet()) {
+			Player other = player.level().getPlayerByUUID(entry.getKey());
+			if (other != null && other != player) {
+				embers(other, entry.getValue().charge());
+			}
+		}
 		int charge = ExplosionClient.fireballCharge();
-		if (player == null || charge == 0) {
+		if (charge == 0) {
 			return;
 		}
 		double power = charge / 100.0;
-		double radius = radius(power, player.tickCount);
-		Vec3 center = ballCenter(player, 1f, radius);
 		ScreenShake.rumble(MAX_HALO_RUMBLE * (float) (power * power));
 		ScreenShake.glow(MAX_HALO_GLOW * (float) (power * power));
+		embers(player, charge);
+	}
+
+	private static void embers(Player player, int charge) {
+		double power = charge / 100.0;
+		double radius = radius(power, player.tickCount);
+		Vec3 center = ballCenter(player, 1f, radius);
 		RandomSource random = player.getRandom();
 		int count = Math.max(1, (int) Math.round((MIN_EMBERS + EXTRA_EMBERS * power) * DekuSettings.get().detailScale()));
 		for (int i = 0; i < count; i++) {
@@ -80,11 +136,22 @@ final class FireballChargeFx {
 	static void render(LevelRenderContext context) {
 		Minecraft minecraft = Minecraft.getInstance();
 		LocalPlayer player = minecraft.player;
-		int charge = ExplosionClient.fireballCharge();
-		if (player == null || charge == 0) {
+		if (player == null) {
 			return;
 		}
 		float partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+		if (ExplosionClient.fireballCharge() > 0) {
+			draw(context, player, ExplosionClient.fireballCharge(), partialTick);
+		}
+		for (Map.Entry<UUID, Remote> entry : others.entrySet()) {
+			Player other = minecraft.level.getPlayerByUUID(entry.getKey());
+			if (other != null && other != player) {
+				draw(context, other, entry.getValue().charge(), partialTick);
+			}
+		}
+	}
+
+	private static void draw(LevelRenderContext context, Player player, int charge, float partialTick) {
 		double power = charge / 100.0;
 		double radius = radius(power, player.tickCount + partialTick);
 		Vec3 camera = context.levelState().cameraRenderState.pos;

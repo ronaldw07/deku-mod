@@ -2,6 +2,7 @@ package com.ronaldw07.deku.client;
 
 import com.ronaldw07.deku.DekuSounds;
 import com.ronaldw07.deku.network.ExplosionPayload;
+import com.ronaldw07.deku.network.FireballChargePayload;
 import com.ronaldw07.deku.network.ExplosionPayload.Move;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.player.LocalPlayer;
@@ -46,6 +47,9 @@ public final class ExplosionClient {
 	private static double spinAngle;
 	private static int groundCharge;
 	private static int fireballTicks;
+	private static int reportedFireball;
+	private static final int FIREBALL_REPORT_STEP = 10;
+	private static final int FIREBALL_REPORT_REPEAT_TICKS = 20;
 	private static int spinTicks;
 
 	private ExplosionClient() {
@@ -101,6 +105,7 @@ public final class ExplosionClient {
 			spinning = false;
 			groundCharge = 0;
 			fireballTicks = 0;
+			reportedFireball = 0;
 			spinTicks = 0;
 			return;
 		}
@@ -111,6 +116,19 @@ public final class ExplosionClient {
 		howitzer(player, able && howitzerDown);
 		groundBlast(player, able && groundBlastDown);
 		fireball(player, able && clusterDown);
+		reportFireball(player);
+	}
+
+	/** Lets other players see the fireball: sent when it grows a notch, and now and then so it doesn't time out. */
+	private static void reportFireball(LocalPlayer player) {
+		int charge = fireballCharge();
+		boolean changed = charge / FIREBALL_REPORT_STEP != reportedFireball / FIREBALL_REPORT_STEP;
+		if (charge > 0 && (changed || player.tickCount % FIREBALL_REPORT_REPEAT_TICKS == 0) || charge == 0 && reportedFireball > 0) {
+			if (ClientPlayNetworking.canSend(FireballChargePayload.TYPE)) {
+				ClientPlayNetworking.send(new FireballChargePayload(charge));
+			}
+		}
+		reportedFireball = charge;
 	}
 
 	/** Holding X grows a red fireball in front of the player; letting go throws it at the crosshair. */

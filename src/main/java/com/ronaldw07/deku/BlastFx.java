@@ -2,6 +2,7 @@ package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload.Style;
+import com.ronaldw07.deku.network.FireballChargeFxPayload;
 import com.ronaldw07.deku.network.FireballFlightPayload;
 import com.ronaldw07.deku.network.FireballFlightPayload.Kind;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -12,6 +13,8 @@ import net.minecraft.world.phys.Vec3;
 
 /** Tells the players near a blast to draw its big fiery look; see ExplosionFx on the client. */
 public final class BlastFx {
+	private static final double CHARGE_VIEW_DISTANCE = 128.0;
+
 	private BlastFx() {
 	}
 
@@ -19,6 +22,19 @@ public final class BlastFx {
 		ExplosionFxPayload fx = new ExplosionFxPayload(center, radius, style, from);
 		for (ServerPlayer viewer : PlayerLookup.around(level, center, viewDistance)) {
 			if (ServerPlayNetworking.canSend(viewer, ExplosionFxPayload.TYPE)) {
+				ServerPlayNetworking.send(viewer, fx);
+			}
+		}
+	}
+
+	/** Lets everyone nearby see a player's Cluster Bomb fireball growing. */
+	public static void showFireballCharge(ServerPlayer player, int charge) {
+		if (!DekuItems.isHolding(player, DekuItems.EXPLOSION)) {
+			return;
+		}
+		FireballChargeFxPayload fx = new FireballChargeFxPayload(player.getUUID(), Math.max(0, Math.min(100, charge)));
+		for (ServerPlayer viewer : PlayerLookup.around(player.level(), player.position(), CHARGE_VIEW_DISTANCE)) {
+			if (ServerPlayNetworking.canSend(viewer, FireballChargeFxPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);
 			}
 		}

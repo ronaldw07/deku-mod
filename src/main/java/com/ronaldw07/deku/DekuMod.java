@@ -9,6 +9,8 @@ import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
 import com.ronaldw07.deku.network.ExplosionCowlingPayload;
+import com.ronaldw07.deku.network.FireballChargeFxPayload;
+import com.ronaldw07.deku.network.FireballChargePayload;
 import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.JujutsuPayload;
 import com.ronaldw07.deku.network.SlashFxPayload;
@@ -145,6 +147,11 @@ public class DekuMod implements ModInitializer {
 				&& !(entity instanceof ServerPlayer player && Gojo.blocks(player, source)));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Bakugo.forget(handler.player));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Smokescreen.forget(handler.player));
+
+		PayloadTypeRegistry.serverboundPlay().register(FireballChargePayload.TYPE, FireballChargePayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(FireballChargeFxPayload.TYPE, FireballChargeFxPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(FireballChargePayload.TYPE,
+			(payload, context) -> BlastFx.showFireballCharge(context.player(), payload.charge()));
 
 		PayloadTypeRegistry.serverboundPlay().register(ExplosionCowlingPayload.TYPE, ExplosionCowlingPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ExplosionCowlingFxPayload.TYPE, ExplosionCowlingFxPayload.CODEC);

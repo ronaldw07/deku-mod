@@ -12,6 +12,7 @@ import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DelawareClient;
 import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.ExplosionClient;
+import com.ronaldw07.deku.client.FireballChargeFx;
 import com.ronaldw07.deku.client.ExplosionCowlingClient;
 import com.ronaldw07.deku.client.FullCowlingClient;
 import com.ronaldw07.deku.client.GojoClient;
@@ -98,6 +99,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			}
 			if (wanted("decayWave")) {
 				decayWave(context, singleplayer);
+			}
+			if (wanted("fireballRemote")) {
+				fireballRemote(context, singleplayer);
 			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
@@ -428,6 +432,23 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("decay-wave-rolling");
 		context.waitTicks(30);
 		context.takeScreenshot("decay-wave-late");
+	}
+
+	private static void fireballRemote(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// The server relays how far a fireball is grown to everyone who can see the player; the charger's own client hears it too.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 5400 -59 5400 0 0");
+		context.waitTicks(40);
+		selectSlot(context, 1);
+		context.getInput().holdKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(40);
+		context.takeScreenshot("fireball-charge-own");
+		int heard = context.computeOnClient(client -> FireballChargeFx.remoteCharge(client.player.getUUID()));
+		check(heard > 30, "the server should relay a growing fireball to nearby clients, heard " + heard);
+		context.getInput().releaseKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(10);
+		int after = context.computeOnClient(client -> FireballChargeFx.remoteCharge(client.player.getUUID()));
+		check(after == 0, "letting go should clear the fireball for nearby clients, still " + after);
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

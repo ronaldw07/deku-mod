@@ -13,6 +13,7 @@ import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
 import com.ronaldw07.deku.network.ExplosionFxPayload;
 import com.ronaldw07.deku.network.SlashFxPayload;
+import com.ronaldw07.deku.network.FireballChargeFxPayload;
 import com.ronaldw07.deku.network.FireballFlightPayload;
 import com.ronaldw07.deku.network.SmashFxPayload;
 import com.ronaldw07.deku.network.ShootStylePayload;
@@ -81,6 +82,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
 		ClientPlayNetworking.registerGlobalReceiver(ExplosionFxPayload.TYPE, (payload, context) -> ExplosionFx.add(payload));
+		ClientPlayNetworking.registerGlobalReceiver(FireballChargeFxPayload.TYPE, (payload, context) -> FireballChargeFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(ExplosionCowlingFxPayload.TYPE, (payload, context) -> ExplosionCowlingFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(SlashFxPayload.TYPE, (payload, context) -> SlashFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(DomainPayload.TYPE, (payload, context) -> DomainFx.add(payload));
