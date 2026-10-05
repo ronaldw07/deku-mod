@@ -766,6 +766,14 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			return pigs.isEmpty() || pigs.getFirst().getHealth() < pigs.getFirst().getMaxHealth();
 		});
 		check(pigHurt, "Dismantle should hurt the pig in front");
+		int wallLeft = singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			for (BlockPos pos : BlockPos.betweenClosed(wall.offset(-6, -3, 0), wall.offset(6, 4, 0))) {
+				count += server.overworld().getBlockState(pos).isAir() ? 0 : 1;
+			}
+			return count;
+		});
+		check(wallLeft < 75, "a Dismantle should wipe most of the wall away, " + wallLeft + " blocks left");
 
 		command(singleplayer, "kill @e[type=minecraft:pig]");
 		command(singleplayer, "execute at @p run summon minecraft:iron_golem ~ ~ ~9 {NoAI:1b}");
@@ -775,8 +783,8 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.getInput().pressKey(DekuModClient.SMASH_KEY);
 		context.waitTicks(4);
 		context.takeScreenshot("sukuna-cleave");
-		float golemHealth = singleplayer.getServer().computeOnServer(server -> golem(server).getHealth());
-		check(golemHealth < 75, "Cleave should take a big bite out of the golem, health " + golemHealth);
+		boolean golemDown = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.IRON_GOLEM, golem -> golem.isAlive() && golem.getHealth() > 40).isEmpty());
+		check(golemDown, "Cleave should cut the golem down");
 		command(singleplayer, "kill @e[type=!minecraft:player]");
 
 		// C: Domain Expansion.

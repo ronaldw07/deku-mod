@@ -17,11 +17,14 @@ import net.minecraft.world.phys.Vec3;
  * a glow of red, with a trail of sweeping cuts and sparks left behind, fading in a few ticks.
  */
 final class SlashFx {
-	private static final int LIFETIME_TICKS = 8;
+	private static final int LIFETIME_TICKS = 12;
 	private static final int GROW_TICKS = 2;
-	private static final float EDGE = 0.06f;
-	private static final float BIG_EDGE = 0.1f;
-	private static final float RED_EDGE = 0.1f;
+	private static final float BIG_CUT_HEIGHT = 10f;
+	private static final float EDGE = 0.04f;
+	private static final float BIG_EDGE = 0.06f;
+	private static final float RED_EDGE = 0.05f;
+	private static final float EDGE_PER_HEIGHT = 0.003f; // a bigger cut gets a heavier outline
+	private static final float RUMBLE = 0.25f;
 	private static final double PARTICLE_SPACING = 5.0;
 
 	private record Slash(Vec3 origin, Vec3 aim, Vec3 blade, float length, float halfHeight, boolean big, long startTick) {
@@ -36,6 +39,9 @@ final class SlashFx {
 		ClientLevel level = Minecraft.getInstance().level;
 		if (level == null) {
 			return;
+		}
+		if (fx.halfHeight() >= BIG_CUT_HEIGHT) {
+			ScreenShake.rumble(RUMBLE);
 		}
 		slashes = Stream.concat(slashes.stream(), Stream.of(new Slash(fx.origin(), fx.aim(), fx.blade(), fx.length(), fx.halfHeight(), fx.big(), level.getGameTime()))).toList();
 		// Sweeping cuts and sparks left along the path.
@@ -76,7 +82,7 @@ final class SlashFx {
 			// The cut is a black sheet, outlined along its four edges in white with a thin red glow outside that.
 			List<Segment> border = List.of(new Segment(a, d), new Segment(d, c), new Segment(c, b), new Segment(b, a));
 			float fade = (float) Math.max(0, 1 - age / LIFETIME_TICKS);
-			float core = slash.big() ? BIG_EDGE : EDGE;
+			float core = Math.max(slash.big() ? BIG_EDGE : EDGE, slash.halfHeight() * EDGE_PER_HEIGHT);
 			float outer = core + RED_EDGE;
 			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(),
 				(pose, buffer) -> LightningDraw.drawFlatQuad(pose.pose(), buffer, a, b, c, d, 0.0f, 0.0f, 0.0f, 0.93f * fade));

@@ -435,7 +435,7 @@ final class ExplosionSmoke {
 		if (age <= FUGA_FIRE_TICKS) {
 			fireball(level, blast, 1.0, random);
 		}
-		double radius = Mth.clamp(blast.radius() * 0.25, 2.5, 7.0);
+		double radius = Mth.clamp(blast.radius() * 0.5, 5.0, 14.0);
 		for (int i = 0; i < scaled(FUGA_EMBERS_PER_TICK); i++) {
 			double angle = random.nextDouble() * Math.PI * 2;
 			double out = radius * (0.3 + random.nextDouble() * 1.4);

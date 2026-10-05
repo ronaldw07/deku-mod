@@ -16,7 +16,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -36,28 +38,30 @@ public final class Sukuna {
 	private static final double SLASH_REACH = 400.0;
 	// Dismantle.
 	private static final int DISMANTLE_SLASHES = 8;
-	private static final double DISMANTLE_LENGTH = 28.0;
-	private static final double DISMANTLE_HALF_HEIGHT = 4.0;
+	private static final double DISMANTLE_LENGTH = 70.0;
+	private static final double DISMANTLE_HALF_HEIGHT = 18.0;
 	private static final double DISMANTLE_SPREAD = 0.2;
 	private static final double DISMANTLE_START = 2.0;
-	private static final float DISMANTLE_DAMAGE = 14.0f;
+	private static final float DISMANTLE_DAMAGE = 60.0f;
 	// Cleave.
 	private static final double CLEAVE_RANGE = 40.0;
-	private static final double CLEAVE_LENGTH = 10.0;
-	private static final double CLEAVE_HALF_HEIGHT = 8.0;
-	private static final int CLEAVE_THICKNESS = 1;
-	private static final float CLEAVE_BASE_DAMAGE = 12.0f;
+	private static final double CLEAVE_LENGTH = 30.0;
+	private static final double CLEAVE_HALF_HEIGHT = 24.0;
+	private static final int CLEAVE_THICKNESS = 2;
+	private static final float CLEAVE_BASE_DAMAGE = 60.0f;
 	private static final float CLEAVE_HEALTH_SHARE = 0.3f;
-	private static final double CLEAVE_SPLASH = 4.0;
+	private static final double CLEAVE_SPLASH = 12.0;
+	private static final float SLASH_VOLUME = 5.0f;
+	private static final double SLASH_SOUND_RANGE_SHARE = 0.5; // the crack is heard from the middle of the cut
 	// Domain Expansion.
 	private static final float DOMAIN_RADIUS = 60.0f;
 	private static final int DOMAIN_TICKS = 200;
 	private static final int DOMAIN_SLASH_INTERVAL = 2;
 	private static final int DOMAIN_SLASHES = 4;
-	private static final double DOMAIN_SLASH_MIN_LENGTH = 18.0;
-	private static final double DOMAIN_SLASH_EXTRA_LENGTH = 14.0;
-	private static final double DOMAIN_SLASH_HALF_HEIGHT = 5.0;
-	private static final float DOMAIN_SLASH_DAMAGE = 10.0f;
+	private static final double DOMAIN_SLASH_MIN_LENGTH = 30.0;
+	private static final double DOMAIN_SLASH_EXTRA_LENGTH = 25.0;
+	private static final double DOMAIN_SLASH_HALF_HEIGHT = 12.0;
+	private static final float DOMAIN_SLASH_DAMAGE = 40.0f;
 	private static final int DOMAIN_CLEAVE_INTERVAL = 10;
 	private static final float DOMAIN_CLEAVE_BASE = 3.0f;
 	private static final float DOMAIN_CLEAVE_HEALTH_SHARE = 0.08f;
@@ -160,6 +164,18 @@ public final class Sukuna {
 				entity.hurtServer(level, owner.damageSources().playerAttack(owner), damage);
 			}
 		}
+		// Everything that isn't alive in the way, from boats to dropped items, is simply gone.
+		for (Entity thing : level.getEntitiesOfClass(Entity.class, reach, thing -> !(thing instanceof LivingEntity) && !(thing instanceof Player) && thing.isAlive())) {
+			Vec3 offset = thing.getBoundingBox().getCenter().subtract(origin);
+			if (offset.dot(aim) >= -1 && offset.dot(aim) <= length + 1 && Math.abs(offset.dot(blade)) <= halfHeight + 1 && Math.abs(offset.dot(normal)) <= thickness + 1.2) {
+				thing.discard();
+			}
+		}
+		Vec3 middle = origin.add(aim.scale(length * SLASH_SOUND_RANGE_SHARE));
+		level.playSound(null, middle.x, middle.y, middle.z, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, SLASH_VOLUME, 0.4f + level.getRandom().nextFloat() * 0.3f);
+		if (big) {
+			level.playSound(null, middle.x, middle.y, middle.z, DekuSounds.EXPLOSION_BOOM, SoundSource.PLAYERS, SLASH_VOLUME, 0.5f);
+		}
 		SlashFxPayload fx = new SlashFxPayload(origin, aim, blade, (float) length, (float) halfHeight, big);
 		for (ServerPlayer viewer : PlayerLookup.around(level, origin, FX_VIEW_DISTANCE)) {
 			if (ServerPlayNetworking.canSend(viewer, SlashFxPayload.TYPE)) {
@@ -173,7 +189,7 @@ public final class Sukuna {
 			return;
 		}
 		BlockState state = level.getBlockState(pos);
-		if (state.isAir() || state.hasBlockEntity() || !state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0) {
+		if (state.isAir() || !state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0) {
 			return;
 		}
 		level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
