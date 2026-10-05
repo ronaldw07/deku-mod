@@ -1,6 +1,7 @@
 package com.ronaldw07.deku.test;
 
 import com.ronaldw07.deku.Aim;
+import com.ronaldw07.deku.InfiniteVoid;
 import com.ronaldw07.deku.DekuItems;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
@@ -103,6 +104,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("fireballRemote")) {
 				fireballRemote(context, singleplayer);
 			}
+			if (wanted("infiniteVoid")) {
+				infiniteVoid(context, singleplayer);
+			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
 			}
@@ -164,7 +168,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.setScreen(() -> null);
 
 		// Deku's moves need One For All in hand: with an empty hand, C does nothing.
-		selectSlot(context, 5);
+		selectSlot(context, 8);
 		context.getInput().pressKey(DekuModClient.COWLING_KEY);
 		context.waitTicks(5);
 		check(context.computeOnClient(client -> FullCowlingClient.percent()) == 0, "full cowling shouldn't start without One For All in hand");
@@ -449,6 +453,32 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitTicks(10);
 		int after = context.computeOnClient(client -> FireballChargeFx.remoteCharge(client.player.getUUID()));
 		check(after == 0, "letting go should clear the fireball for nearby clients, still " + after);
+	}
+
+	private static void infiniteVoid(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Gojo C: Infinite Void freezes a husk that was walking at the player; it moves again once the dome closes.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 5800 -59 5800 0 8");
+		context.waitTicks(40);
+		selectSlot(context, 5);
+		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~14 {Tags:[\"void\"],PersistenceRequired:1b,Silent:1b}");
+		context.waitTicks(10);
+		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.waitTicks(30);
+		check(singleplayer.getServer().computeOnServer(server -> InfiniteVoid.open(player(server).getUUID())), "C should open the Infinite Void");
+		context.takeScreenshot("void-inside");
+		Vec3 before = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().position());
+		context.waitTicks(40);
+		Vec3 after = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().position());
+		check(before.distanceTo(after) < 0.3, "the husk should be frozen in the void, it moved " + before.distanceTo(after));
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(5);
+		context.takeScreenshot("void-dome");
+		camera(context, CameraType.FIRST_PERSON);
+		context.waitTicks(150);
+		check(!singleplayer.getServer().computeOnServer(server -> InfiniteVoid.open(player(server).getUUID())), "the void should close after ten seconds");
+		boolean thawed = singleplayer.getServer().computeOnServer(server -> !server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().isNoAi());
+		check(thawed, "the husk should be released when the void closes");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

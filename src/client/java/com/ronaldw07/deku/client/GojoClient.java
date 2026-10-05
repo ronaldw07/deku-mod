@@ -9,7 +9,7 @@ import net.minecraft.sounds.SoundSource;
 
 /**
  * Client side of Gojo, used while his item is in hand: right-click for Blue, hold V to charge Red,
- * hold X to charge Hollow Purple, and Z to switch Infinity on and off.
+ * hold X to charge Hollow Purple, Z to switch Infinity on and off, and C for Infinite Void.
  */
 public final class GojoClient {
 	private static final int FULL_RED_TICKS = 40;
@@ -17,6 +17,7 @@ public final class GojoClient {
 	private static final int CHARGE_SOUND_INTERVAL = 10;
 	private static final int POSE_REPEAT_TICKS = 8;
 	private static final int POSE_TICKS = 10;
+	private static final int VOID_POSE_TICKS = 40;
 
 	private static int redTicks;
 	private static int purpleTicks;
@@ -40,7 +41,8 @@ public final class GojoClient {
 		return infinity;
 	}
 
-	static void tick(LocalPlayer player, boolean holding, boolean useDown, boolean redDown, boolean purpleDown, boolean infinityPressed) {
+	static void tick(LocalPlayer player, boolean holding, boolean useDown, boolean redDown, boolean purpleDown, boolean infinityPressed,
+			boolean voidPressed) {
 		if (player == null) {
 			redTicks = 0;
 			purpleTicks = 0;
@@ -59,6 +61,12 @@ public final class GojoClient {
 
 		redTicks = charge(player, able && redDown, redTicks, FULL_RED_TICKS, Cooldowns.Ability.GOJO_RED, Move.RED, Poses.Pose.AIM_LEFT, 0.8f);
 		purpleTicks = charge(player, able && purpleDown, purpleTicks, FULL_PURPLE_TICKS, Cooldowns.Ability.GOJO_PURPLE, Move.PURPLE, Poses.Pose.AIM_BOTH, 0.5f);
+
+		if (able && voidPressed && Cooldowns.ready(Cooldowns.Ability.INFINITE_VOID)) {
+			send(Move.INFINITE_VOID, true, 0);
+			Cooldowns.start(Cooldowns.Ability.INFINITE_VOID);
+			Poses.play(Poses.Pose.CROSS, VOID_POSE_TICKS);
+		}
 
 		boolean was = infinity;
 		if (!able) {

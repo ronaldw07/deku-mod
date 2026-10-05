@@ -3,6 +3,7 @@ package com.ronaldw07.deku.client;
 import com.ronaldw07.deku.DekuParticles;
 import com.ronaldw07.deku.client.LightningDraw.Segment;
 import com.ronaldw07.deku.network.DomainPayload;
+import com.ronaldw07.deku.network.DomainPayload.Kind;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
@@ -13,14 +14,16 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Malevolent Shrine: a vast dome of blood-red lattice closing over the area, a shrine of
+ * Sukuna's Malevolent Shrine: a vast dome of blood-red lattice closing over the area, a shrine of
  * glowing red tiers floating at its heart, a darkness over the screen of anyone caught inside, and
- * ash and embers drifting through the air.
+ * ash and embers drifting through the air. Gojo's Infinite Void is the same dome in cold white:
+ * orbiting rings, a blinding star at the center, and static flickering over the screen.
  */
 final class DomainFx {
 	private static final int OPEN_TICKS = 20;
@@ -44,8 +47,22 @@ final class DomainFx {
 	private static final int ASH_PER_TICK = 6;
 	private static final double ASH_RANGE = 25.0;
 	private static final DustParticleOptions EMBER = new DustParticleOptions(0xFF2030, 1.5f);
+	// Infinite Void.
+	private static final int VOID_RINGS = 3;
+	private static final double VOID_RING_SHARE = 0.85; // of the dome's radius
+	private static final double VOID_SPIN_PER_TICK = 0.02;
+	private static final float VOID_RING_WIDTH = 6f;
+	private static final double VOID_STAR_RADIUS = 5.0;
+	private static final double VOID_STAR_HEIGHT = 20.0;
+	private static final int VOID_STAR_RAYS = 24;
+	private static final float VOID_DARKNESS = 0.45f;
+	private static final int VOID_DARK_COLOR = 0x000018;
+	private static final int VOID_FLICKER_COLOR = 0xE8F0FF;
+	private static final float VOID_FLICKER_ALPHA = 0.55f;
+	private static final int VOID_FLICKER_ODDS = 6; // one tick in this many flashes white
+	private static final DustParticleOptions STARDUST = new DustParticleOptions(0xC8E0FF, 1.2f);
 
-	private record Dome(Vec3 center, float radius, long startTick, int ticks) {
+	private record Dome(Vec3 center, float radius, long startTick, int ticks, Kind kind) {
 	}
 
 	private static Dome current;
@@ -55,7 +72,7 @@ final class DomainFx {
 
 	static void add(DomainPayload fx) {
 		ClientLevel level = Minecraft.getInstance().level;
-		current = fx.ticks() <= 0 || level == null ? null : new Dome(fx.center(), fx.radius(), level.getGameTime(), fx.ticks());
+		current = fx.ticks() <= 0 || level == null ? null : new Dome(fx.center(), fx.radius(), level.getGameTime(), fx.ticks(), fx.kind());
 	}
 
 	static boolean inside() {
@@ -80,7 +97,11 @@ final class DomainFx {
 		int count = Math.max(1, (int) Math.round(ASH_PER_TICK * DekuSettings.get().detailScale()));
 		for (int i = 0; i < count; i++) {
 			Vec3 at = player.position().add((random.nextDouble() * 2 - 1) * ASH_RANGE, random.nextDouble() * 12, (random.nextDouble() * 2 - 1) * ASH_RANGE);
-			level.addParticle(i % 2 == 0 ? DekuParticles.ASH_FLAKE : EMBER, at.x, at.y, at.z, 0, -0.05, 0);
+			if (current.kind() == Kind.VOID) {
+				level.addParticle(i % 2 == 0 ? ParticleTypes.END_ROD : STARDUST, at.x, at.y, at.z, 0, 0, 0);
+			} else {
+				level.addParticle(i % 2 == 0 ? DekuParticles.ASH_FLAKE : EMBER, at.x, at.y, at.z, 0, -0.05, 0);
+			}
 		}
 	}
 
@@ -110,6 +131,10 @@ final class DomainFx {
 					onSphere(center, radius, Math.PI * (j + 1) / (ARC_SEGMENTS / 2), around)));
 			}
 		}
+		if (current.kind() == Kind.VOID) {
+			renderVoid(context, lattice, center, radius, age, fade);
+			return;
+		}
 		List<Segment> shrine = shrine(center.add(0, SHRINE_HEIGHT * open, 0));
 		List<Segment> floor = new ArrayList<>();
 		for (int i = 0; i < FLOOR_RING_SEGMENTS; i++) {
@@ -123,6 +148,37 @@ final class DomainFx {
 			LightningDraw.draw(pose.pose(), buffer, shrine, SHRINE_WIDTH, LightningDraw.RED, fade);
 			LightningDraw.draw(pose.pose(), buffer, floor, SHRINE_WIDTH, LightningDraw.CRIMSON, fade);
 		});
+	}
+
+	/** The void: a cold lattice, great rings turning inside it and a blinding star where it began. */
+	private static void renderVoid(LevelRenderContext context, List<Segment> lattice, Vec3 center, double radius, double age, float fade) {
+		List<Segment> rings = new ArrayList<>();
+		for (int ring = 0; ring < VOID_RINGS; ring++) {
+			double tilt = Math.PI * ring / VOID_RINGS;
+			double spin = age * VOID_SPIN_PER_TICK * (ring % 2 == 0 ? 1 : -1);
+			for (int i = 0; i < ARC_SEGMENTS * 2; i++) {
+				rings.add(new Segment(onRing(center, radius * VOID_RING_SHARE, tilt, spin + Math.PI * i / ARC_SEGMENTS),
+					onRing(center, radius * VOID_RING_SHARE, tilt, spin + Math.PI * (i + 1) / ARC_SEGMENTS)));
+			}
+		}
+		List<Segment> star = new ArrayList<>();
+		RandomSource random = RandomSource.create((long) (age * 0.5) * 31);
+		Vec3 starAt = center.add(0, VOID_STAR_HEIGHT, 0);
+		for (int i = 0; i < VOID_STAR_RAYS; i++) {
+			star.addAll(LimbLightning.jagged(random, starAt, starAt.add(LightningDraw.randomDirection(random).scale(VOID_STAR_RADIUS * (0.5 + random.nextDouble()))), 4, 0.5));
+		}
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
+			LightningDraw.draw(pose.pose(), buffer, lattice, LATTICE_WIDTH, LightningDraw.ICE, 0.6f * fade);
+			LightningDraw.draw(pose.pose(), buffer, rings, VOID_RING_WIDTH, LightningDraw.BLUE, fade);
+			LightningDraw.draw(pose.pose(), buffer, star, SHRINE_WIDTH * 2, LightningDraw.ICE, fade);
+		});
+	}
+
+	/** A circle in a plane tilted around the x axis, turned by the angle. */
+	private static Vec3 onRing(Vec3 center, double radius, double tilt, double angle) {
+		double a = Math.cos(angle) * radius;
+		double b = Math.sin(angle) * radius;
+		return center.add(a, b * Math.sin(tilt), b * Math.cos(tilt));
 	}
 
 	/** Stacked tiers, each a smaller glowing box, joined by corner pillars and topped with a pointed roof. */
@@ -181,6 +237,15 @@ final class DomainFx {
 	/** A darkness over the screen while inside the dome. */
 	static void extractOverlay(GuiGraphicsExtractor graphics, DeltaTracker delta) {
 		if (!inside()) {
+			return;
+		}
+		if (current.kind() == Kind.VOID) {
+			// Dark space with static flashing white through it.
+			Minecraft minecraft = Minecraft.getInstance();
+			boolean flash = minecraft.level != null && (minecraft.level.getGameTime() * 7919L) % VOID_FLICKER_ODDS == 0;
+			int color = flash ? VOID_FLICKER_COLOR : VOID_DARK_COLOR;
+			float amount = flash ? VOID_FLICKER_ALPHA : VOID_DARKNESS;
+			graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), (int) (amount * 255) << 24 | color);
 			return;
 		}
 		int alpha = (int) (Mth.clamp(MAX_DARKNESS, 0, 1) * 255);

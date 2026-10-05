@@ -170,6 +170,8 @@ public class DekuMod implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(DomainPayload.TYPE, DomainPayload.CODEC);
 		ServerTickEvents.END_SERVER_TICK.register(Gojo::tick);
 		ServerTickEvents.END_SERVER_TICK.register(Sukuna::tick);
+		ServerTickEvents.END_SERVER_TICK.register(InfiniteVoid::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> InfiniteVoid.forget(handler.player));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Sukuna.forget(handler.player));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Gojo.forget(handler.player));
 

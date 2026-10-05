@@ -176,7 +176,7 @@ public class DekuModClient implements ClientModInitializer {
 		HalfColdHalfHotClient.tick(player, halfColdHalfHot, client.options.keyUse.isDown(), SMASH_KEY.isDown(),
 			halfColdHalfHot && cowlingClicks > 0, halfColdHalfHot && clusterClicks > 0, client.options.keyJump.isDown());
 		GojoClient.tick(player, gojo, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
-			gojo && smokescreenClicks % 2 == 1);
+			gojo && smokescreenClicks % 2 == 1, gojo && cowlingClicks > 0);
 		GojoFx.tick(player);
 		SukunaClient.tick(player, sukuna, client.options.keyUse.isDown(), sukuna && smashClicks > 0, sukuna && cowlingClicks > 0);
 		SlashFx.tick(client.level);

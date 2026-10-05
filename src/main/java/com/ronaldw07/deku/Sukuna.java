@@ -192,7 +192,7 @@ public final class Sukuna {
 	}
 
 	private static void announce(ServerLevel level, Vec3 center, int ticks) {
-		DomainPayload fx = new DomainPayload(center, DOMAIN_RADIUS, ticks);
+		DomainPayload fx = new DomainPayload(center, DOMAIN_RADIUS, ticks, DomainPayload.Kind.SHRINE);
 		for (ServerPlayer viewer : PlayerLookup.around(level, center, DOMAIN_RADIUS + FX_VIEW_DISTANCE)) {
 			if (ServerPlayNetworking.canSend(viewer, DomainPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);

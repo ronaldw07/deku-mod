@@ -86,6 +86,7 @@ public final class Gojo {
 			case BLUE -> blue(player);
 			case RED -> red(player, power);
 			case PURPLE -> purple(player, power);
+			case INFINITE_VOID -> InfiniteVoid.open(player);
 			case INFINITY -> {
 				if (active) {
 					infinity.add(player.getUUID());

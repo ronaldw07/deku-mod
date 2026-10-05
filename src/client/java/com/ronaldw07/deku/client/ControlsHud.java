@@ -85,6 +85,7 @@ final class ControlsHud {
 		new Row(Ability.GOJO_RED, () -> hold(DekuModClient.SMASH_KEY)),
 		new Row(Ability.GOJO_PURPLE, () -> hold(DekuModClient.CLUSTER_KEY)),
 		new Row(Ability.INFINITY, () -> key(DekuModClient.SMOKESCREEN_KEY)),
+		new Row(Ability.INFINITE_VOID, () -> key(DekuModClient.COWLING_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private static final Panel SUKUNA = new Panel("Sukuna", SUKUNA_COLOR, List.of(

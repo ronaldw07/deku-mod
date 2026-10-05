@@ -12,7 +12,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  */
 public record JujutsuPayload(Move move, boolean active, int charge) implements CustomPacketPayload {
 	public enum Move {
-		BLUE, RED, PURPLE, INFINITY, DISMANTLE, CLEAVE, DOMAIN
+		BLUE, RED, PURPLE, INFINITY, DISMANTLE, CLEAVE, DOMAIN, INFINITE_VOID, FUGA
 	}
 
 	public static final Type<JujutsuPayload> TYPE = new Type<>(DekuMod.id("jujutsu"));
