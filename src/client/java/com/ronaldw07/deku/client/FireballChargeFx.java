@@ -238,7 +238,7 @@ public final class FireballChargeFx {
 
 	private static void litVertex(PoseStack.Pose pose, VertexConsumer buffer, Vec3 point, Vec3 normal, float red, float green, float blue, float alpha) {
 		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z).setColor(red, green, blue, alpha).setUv(0f, 0f)
-			.setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(pose, (float) normal.x, (float) normal.y, (float) normal.z);
+			.setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(pose, (float) normal.x, (float) normal.y, (float) normal.z).setLineWidth(1f);
 	}
 
 	private static Vec3 sphere(Vec3 center, double radius, double polar, double around) {

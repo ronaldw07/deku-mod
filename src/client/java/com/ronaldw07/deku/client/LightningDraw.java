@@ -144,8 +144,7 @@ final class LightningDraw {
 	}
 
 	private static void gradientVertex(Matrix4fc pose, VertexConsumer buffer, Vec3 point, float[] color, float alpha) {
-		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z).setColor(color[0], color[1], color[2], alpha).setUv(0f, 0f)
-			.setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(0f, 1f, 0f);
+		finish(buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z).setColor(color[0], color[1], color[2], alpha));
 	}
 
 	static Vec3 randomDirection(RandomSource random) {
@@ -184,8 +183,15 @@ final class LightningDraw {
 	}
 
 	private static void vertex(Matrix4fc pose, VertexConsumer buffer, Vec3 point, Layer layer) {
-		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z)
-			.setColor(layer.red(), layer.green(), layer.blue(), layer.alpha()).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY)
-			.setLight(FULL_BRIGHT).setNormal(0f, 1f, 0f);
+		finish(buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z)
+			.setColor(layer.red(), layer.green(), layer.blue(), layer.alpha()));
+	}
+
+	/**
+	 * Fills in everything a vertex might need after its position and colour. Each format only takes
+	 * what it has room for, so this works for plain, entity and shader-pack formats alike.
+	 */
+	static void finish(VertexConsumer vertex) {
+		vertex.setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(0f, 1f, 0f).setLineWidth(1f);
 	}
 }

@@ -161,8 +161,8 @@ final class CowlingAura {
 	}
 
 	private static void vertex(Matrix4fc pose, VertexConsumer buffer, Vec3 point, float[] color, float shade, float alpha) {
-		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z)
-			.setColor(color[0] * shade, color[1] * shade, color[2] * shade, alpha);
+		LightningDraw.finish(buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z)
+			.setColor(color[0] * shade, color[1] * shade, color[2] * shade, alpha));
 	}
 
 	private static float[] lerpColor(float[] from, float[] to, float t) {

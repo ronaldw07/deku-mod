@@ -67,6 +67,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getClientLevel().waitForChunksRender();
 			checkSoundsResolve(context);
+			loadShaderPack(context);
 			if (wanted("starterKit")) {
 				starterKit(context, singleplayer);
 			}
@@ -176,6 +177,34 @@ public class DekuClientGameTest implements FabricClientGameTest {
 	 * Runs every section unless the game is launched with -Ddeku.only=name,name, which runs just
 	 * those (and the setup they depend on), so a change to one move doesn't need the whole suite.
 	 */
+	/**
+	 * With -Ddeku.shaderpack=/path/to/pack.zip and Iris installed, turns that shader pack on, so
+	 * effects can be checked the way players with shaders see them.
+	 */
+	private static void loadShaderPack(ClientGameTestContext context) {
+		String pack = System.getProperty("deku.shaderpack");
+		if (pack == null || pack.isBlank()) {
+			return;
+		}
+		context.runOnClient(client -> {
+			try {
+				Class<?> iris = Class.forName("net.irisshaders.iris.Iris");
+				java.nio.file.Path source = java.nio.file.Path.of(pack);
+				java.nio.file.Path folder = (java.nio.file.Path) iris.getMethod("getShaderpacksDirectory").invoke(null);
+				java.nio.file.Files.createDirectories(folder);
+				java.nio.file.Files.copy(source, folder.resolve(source.getFileName()), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				Object config = iris.getMethod("getIrisConfig").invoke(null);
+				config.getClass().getMethod("setShaderPackName", String.class).invoke(config, source.getFileName().toString());
+				config.getClass().getMethod("setShadersEnabled", boolean.class).invoke(config, true);
+				config.getClass().getMethod("save").invoke(config);
+				iris.getMethod("reload").invoke(null);
+			} catch (ReflectiveOperationException | java.io.IOException failed) {
+				throw new AssertionError("couldn't load the shader pack " + pack, failed);
+			}
+		});
+		context.waitTicks(40);
+	}
+
 	private static boolean wanted(String section) {
 		String only = System.getProperty("deku.only");
 		return only == null || only.isBlank() || List.of(only.split(",")).contains(section) || section.equals("starterKit");
