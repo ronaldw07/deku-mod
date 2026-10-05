@@ -36,7 +36,7 @@ public final class Cooldowns {
 		HEATWAVE("Flashfreeze Heatwave", 50),
 		GOJO_BLUE("Blue", 40),
 		GOJO_RED("Red", 60),
-		GOJO_PURPLE("Hollow Purple", 200),
+		GOJO_PURPLE("Hollow Purple", 60),
 		INFINITY("Infinity", 0),
 		INFINITE_VOID("Domain Expansion: Infinite Void", 200),
 		DISMANTLE("Dismantle", 20),
