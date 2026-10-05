@@ -18,11 +18,11 @@ import net.minecraft.world.phys.Vec3;
  */
 final class FugaBeamFx {
 	static final int LIFETIME_TICKS = 640;
-	private static final int RISE_TICKS = 24;
+	private static final int RISE_TICKS = 90;
 	private static final int FADE_TICKS = 120;
 	private static final double HEIGHT = 300.0;
 	private static final double MIN_RADIUS = 5.0;
-	private static final double MAX_RADIUS = 14.0;
+	private static final double MAX_RADIUS = 16.0;
 	private static final double RADIUS_PER_BLAST = 0.5;
 	private static final int CORE_LINES = 24;
 	private static final double CORE_SPREAD = 1.6;
@@ -36,7 +36,12 @@ final class FugaBeamFx {
 	private static final double TENDRIL_REACH = 5.0; // how far out they sweep, in column radii
 	private static final double TENDRIL_HEIGHT_SHARE = 0.45;
 	private static final int FOOT_RING_SEGMENTS = 40;
-	private static final double RIBBON_WIDTH_PER_RADIUS = 0.04;
+	private static final double RING_SPACING = 6.0;
+	private static final int LAVA_SIDES = 28;
+	private static final double SKIRT = 1.4; // extra width at the foot, in column radii
+	private static final double SKIRT_HEIGHT = 22.0;
+	private static final double LEAN_SHARE = 0.08;
+	private static final double RIBBON_WIDTH_PER_RADIUS = 0.07;
 	// White-gold core, then the molten orange and red it burns into.
 	private static final Layer[] CORE = {
 		new Layer(0.2f, 1.0f, 0.5f, 0.08f, 0.3f),
@@ -50,7 +55,7 @@ final class FugaBeamFx {
 	static void render(LevelRenderContext context, Blast blast, Vec3 camera, double age) {
 		double rise = Math.min(1, age / RISE_TICKS);
 		float fade = (float) Mth.clamp((LIFETIME_TICKS - age) / FADE_TICKS, 0, 1);
-		double height = HEIGHT * (1 - Math.pow(1 - rise, 3));
+		double height = HEIGHT * (1 - Math.pow(1 - rise, 2)); // climbs from the ground up
 		double radius = Mth.clamp(blast.radius() * RADIUS_PER_BLAST, MIN_RADIUS, MAX_RADIUS);
 		Vec3 base = blast.center().subtract(camera);
 		// The same seed every frame, so each strand keeps its own character while it wavers.
@@ -78,17 +83,69 @@ final class FugaBeamFx {
 			double reach = radius * 2.2 * (1 + 0.15 * Math.sin(time * 6 + i * 1.7));
 			foot.add(new Segment(base.add(Math.cos(a) * reach, 0.3, Math.sin(a) * reach), base.add(Math.cos(b) * reach, 0.3, Math.sin(b) * reach)));
 		}
-		// The flames are solid ribbons of orange and red so the colours read against the sky; only the white-hot core glows.
-		float ribbon = (float) Mth.clamp(radius * RIBBON_WIDTH_PER_RADIUS, 0.2, 0.6);
+		// All of it solid: a molten column of lava-coloured faces, with thick ribbons of flame licking round it.
+		List<Face> lava = lava(base, height, radius, time);
+		float ribbon = (float) Mth.clamp(radius * RIBBON_WIDTH_PER_RADIUS, 0.6, 1.6);
 		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(), (pose, buffer) -> {
-			LightningDraw.drawFlat(pose.pose(), buffer, flames, ribbon, 1.0f, 0.4f, 0.04f, 0.85f * fade);
-			LightningDraw.drawFlat(pose.pose(), buffer, red, ribbon, 0.9f, 0.08f, 0.04f, 0.9f * fade);
-			LightningDraw.drawFlat(pose.pose(), buffer, orange, ribbon, 1.0f, 0.5f, 0.06f, 0.9f * fade);
-			LightningDraw.drawFlat(pose.pose(), buffer, foot, ribbon, 0.95f, 0.2f, 0.05f, 0.9f * fade);
+			for (Face face : lava) {
+				LightningDraw.drawFlatQuad(pose.pose(), buffer, face.a(), face.b(), face.c(), face.d(), face.red(), face.green(), face.blue(), 0.97f * fade);
+			}
+			LightningDraw.drawFlat(pose.pose(), buffer, flames, ribbon * 1.4f, 1.0f, 0.35f, 0.04f, 0.95f * fade);
+			LightningDraw.drawFlat(pose.pose(), buffer, red, ribbon, 0.85f, 0.06f, 0.03f, 0.95f * fade);
+			LightningDraw.drawFlat(pose.pose(), buffer, orange, ribbon, 1.0f, 0.55f, 0.06f, 0.95f * fade);
+			LightningDraw.drawFlat(pose.pose(), buffer, core, ribbon * 0.7f, 1.0f, 0.9f, 0.4f, 0.95f * fade);
+			LightningDraw.drawFlat(pose.pose(), buffer, foot, ribbon * 1.5f, 0.95f, 0.25f, 0.05f, 0.95f * fade);
 		});
-		float glow = (float) Mth.clamp(radius * 0.15, 0.6, 1.8);
-		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(),
-			(pose, buffer) -> LightningDraw.draw(pose.pose(), buffer, core, glow, CORE, fade));
+	}
+
+	private record Face(Vec3 a, Vec3 b, Vec3 c, Vec3 d, float red, float green, float blue) {
+	}
+
+	/**
+	 * The column itself as a thick tube of molten rock: a skirt of fire spread wide at the foot,
+	 * bulging and shrinking as it climbs, flaring out high up, every face its own shade of dark
+	 * red, orange or yellow-white, churning as it burns.
+	 */
+	private static List<Face> lava(Vec3 base, double height, double radius, double time) {
+		List<Face> faces = new ArrayList<>();
+		int rings = (int) Math.ceil(height / RING_SPACING);
+		Vec3[] previous = null;
+		for (int ring = 0; ring <= rings; ring++) {
+			double h = Math.min(height, ring * RING_SPACING);
+			double t = h / HEIGHT;
+			Vec3[] points = new Vec3[LAVA_SIDES];
+			for (int i = 0; i < LAVA_SIDES; i++) {
+				double angle = Math.PI * 2 * i / LAVA_SIDES;
+				double skirt = 1 + SKIRT * Math.exp(-h / SKIRT_HEIGHT);
+				double bulge = 1 + 0.3 * Math.sin(h * 0.045 + time * 3 + angle * 2) + 0.15 * Math.sin(h * 0.11 - time * 5 + angle * 5);
+				double r = radius * skirt * bulge + radius * FLARE * t * t;
+				double lean = Math.sin(time * 0.8 + h * 0.01) * radius * 1.2 * t + h * LEAN_SHARE * Math.sin(time * 0.3);
+				points[i] = base.add(Math.cos(angle) * r + lean, h, Math.sin(angle) * r + lean * 0.6);
+			}
+			if (previous != null) {
+				for (int i = 0; i < LAVA_SIDES; i++) {
+					int next = (i + 1) % LAVA_SIDES;
+					double heat = 0.5 + 0.5 * (Math.sin(i * 1.3 + ring * 0.9 + time * 7) * Math.sin(ring * 0.37 - time * 4 + i * 0.5));
+					heat = Mth.clamp(heat + 0.35 * (1 - t), 0, 1); // hotter near the ground
+					faces.add(new Face(previous[i], previous[next], points[next], points[i], heatRed(heat), heatGreen(heat), heatBlue(heat)));
+				}
+			}
+			previous = points;
+		}
+		return faces;
+	}
+
+	// Dark red through orange to a yellow-white heart.
+	private static float heatRed(double heat) {
+		return (float) Mth.lerp(heat, 0.55, 1.0);
+	}
+
+	private static float heatGreen(double heat) {
+		return (float) Mth.lerp(heat, 0.04, 0.9);
+	}
+
+	private static float heatBlue(double heat) {
+		return (float) (heat > 0.8 ? Mth.lerp((heat - 0.8) / 0.2, 0.03, 0.4) : 0.03);
 	}
 
 	/** The random character of one strand: where it starts, how it twists, how it leans and how far it flares. */

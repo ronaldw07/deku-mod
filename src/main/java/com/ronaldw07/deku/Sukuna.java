@@ -56,8 +56,9 @@ public final class Sukuna {
 	// Domain Expansion.
 	private static final float DOMAIN_RADIUS = 60.0f;
 	private static final int DOMAIN_TICKS = 200;
-	private static final int DOMAIN_SLASH_INTERVAL = 2;
-	private static final int DOMAIN_SLASHES = 4;
+	private static final int DOMAIN_SLASH_INTERVAL = 1;
+	private static final int DOMAIN_SLASHES = 14;
+	private static final int DOMAIN_SOUND_EVERY = 5; // so the sound is a roar, not a thousand overlapping cracks
 	private static final double DOMAIN_SLASH_MIN_LENGTH = 30.0;
 	private static final double DOMAIN_SLASH_EXTRA_LENGTH = 25.0;
 	private static final double DOMAIN_SLASH_HALF_HEIGHT = 12.0;
@@ -99,7 +100,7 @@ public final class Sukuna {
 				Vec3 eye = player.getEyePosition();
 				Vec3 aim = player.getLookAngle().add(randomOffset(random, DISMANTLE_SPREAD)).normalize();
 				slash(level, player, eye.add(aim.scale(DISMANTLE_START)), aim, randomBlade(random, aim), DISMANTLE_LENGTH,
-					DISMANTLE_HALF_HEIGHT, 0, DISMANTLE_DAMAGE, false);
+					DISMANTLE_HALF_HEIGHT, 0, DISMANTLE_DAMAGE, false, true);
 			});
 		}
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, 1.5f, 1.8f);
@@ -117,7 +118,7 @@ public final class Sukuna {
 			damage += target.getMaxHealth() * CLEAVE_HEALTH_SHARE;
 			start = target.getBoundingBox().getCenter().subtract(aim.scale(CLEAVE_LENGTH / 2));
 		}
-		slash(level, player, start, aim, randomBlade(level.getRandom(), aim), CLEAVE_LENGTH, CLEAVE_HALF_HEIGHT, CLEAVE_THICKNESS, damage, true);
+		slash(level, player, start, aim, randomBlade(level.getRandom(), aim), CLEAVE_LENGTH, CLEAVE_HALF_HEIGHT, CLEAVE_THICKNESS, damage, true, true);
 		for (LivingEntity near : level.getEntitiesOfClass(LivingEntity.class, new AABB(point, point).inflate(CLEAVE_SPLASH),
 				entity -> entity != player && entity.isAlive())) {
 			near.hurtServer(level, player.damageSources().playerAttack(player), damage * 0.3f);
@@ -143,7 +144,7 @@ public final class Sukuna {
 	 * anything living it crosses is hurt. The sheet spans halfHeight either side along blade.
 	 */
 	private static void slash(ServerLevel level, ServerPlayer owner, Vec3 origin, Vec3 aim, Vec3 blade, double length,
-			double halfHeight, int thickness, float damage, boolean big) {
+			double halfHeight, int thickness, float damage, boolean big, boolean sound) {
 		Vec3 normal = aim.cross(blade).normalize();
 		for (double along = 0; along <= length; along += 1.0) {
 			for (double across = -halfHeight; across <= halfHeight; across += 1.0) {
@@ -172,7 +173,9 @@ public final class Sukuna {
 			}
 		}
 		Vec3 middle = origin.add(aim.scale(length * SLASH_SOUND_RANGE_SHARE));
-		level.playSound(null, middle.x, middle.y, middle.z, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, SLASH_VOLUME, 0.4f + level.getRandom().nextFloat() * 0.3f);
+		if (sound) {
+			level.playSound(null, middle.x, middle.y, middle.z, DekuSounds.SMASH_BLAST, SoundSource.PLAYERS, SLASH_VOLUME, 0.4f + level.getRandom().nextFloat() * 0.3f);
+		}
 		if (big) {
 			level.playSound(null, middle.x, middle.y, middle.z, DekuSounds.EXPLOSION_BOOM, SoundSource.PLAYERS, SLASH_VOLUME, 0.5f);
 		}
@@ -261,7 +264,7 @@ public final class Sukuna {
 				Math.sin(angle) * distance);
 			Vec3 aim = new Vec3(random.nextDouble() * 2 - 1, (random.nextDouble() - 0.5) * 0.6, random.nextDouble() * 2 - 1).normalize();
 			slash(level, owner, origin, aim, randomBlade(random, aim), DOMAIN_SLASH_MIN_LENGTH + random.nextDouble() * DOMAIN_SLASH_EXTRA_LENGTH,
-				DOMAIN_SLASH_HALF_HEIGHT, 0, DOMAIN_SLASH_DAMAGE, false);
+				DOMAIN_SLASH_HALF_HEIGHT, 0, DOMAIN_SLASH_DAMAGE, false, i % DOMAIN_SOUND_EVERY == 0);
 		}
 	}
 

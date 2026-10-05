@@ -148,8 +148,8 @@ final class ExplosionSmoke {
 	private static final double ASH_VIEW_DISTANCE = 300.0;
 
 	private static final int FUGA_FIRE_TICKS = 12;
-	private static final int FUGA_EMBERS_PER_TICK = 6;
-	private static final double FUGA_EMBER_HEIGHT = 70.0;
+	private static final int FUGA_EMBERS_PER_TICK = 30;
+	private static final double FUGA_EMBER_HEIGHT = 120.0;
 	private static final int FUGA_FOOT_FLAMES = 6;
 	// Decay: a dark crumbling cloud rolling out with the wave, and a column of dust where it started.
 	private static final int DECAY_TICKS = 60;

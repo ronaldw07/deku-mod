@@ -20,6 +20,7 @@ final class SlashFx {
 	private static final int LIFETIME_TICKS = 12;
 	private static final int GROW_TICKS = 2;
 	private static final float BIG_CUT_HEIGHT = 10f;
+	private static final int PARTICLE_ODDS = 3;
 	private static final float EDGE = 0.04f;
 	private static final float BIG_EDGE = 0.06f;
 	private static final float RED_EDGE = 0.05f;
@@ -45,7 +46,8 @@ final class SlashFx {
 		}
 		slashes = Stream.concat(slashes.stream(), Stream.of(new Slash(fx.origin(), fx.aim(), fx.blade(), fx.length(), fx.halfHeight(), fx.big(), level.getGameTime()))).toList();
 		// Sweeping cuts and sparks left along the path.
-		for (double along = 0; along <= fx.length(); along += PARTICLE_SPACING) {
+		boolean sparks = fx.halfHeight() >= BIG_CUT_HEIGHT && level.getRandom().nextInt(PARTICLE_ODDS) == 0; // the domain throws too many to spark them all
+		for (double along = 0; sparks && along <= fx.length(); along += PARTICLE_SPACING) {
 			Vec3 at = fx.origin().add(fx.aim().scale(along));
 			level.addParticle(ParticleTypes.SWEEP_ATTACK, at.x, at.y, at.z, 0, 0, 0);
 			level.addParticle(ParticleTypes.CRIT, at.x, at.y, at.z, fx.blade().x * 0.3, fx.blade().y * 0.3, fx.blade().z * 0.3);
