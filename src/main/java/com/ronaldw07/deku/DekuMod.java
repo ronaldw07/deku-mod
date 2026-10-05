@@ -5,6 +5,8 @@ import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.CowlingPayload;
 import com.ronaldw07.deku.network.DecayPayload;
 import com.ronaldw07.deku.network.DelawarePayload;
+import com.ronaldw07.deku.network.DemonArmsFxPayload;
+import com.ronaldw07.deku.network.DemonArmsPayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
@@ -154,6 +156,12 @@ public class DekuMod implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(FireballChargeFxPayload.TYPE, FireballChargeFxPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(FireballChargePayload.TYPE,
 			(payload, context) -> BlastFx.showFireballCharge(context.player(), payload.charge()));
+
+		PayloadTypeRegistry.serverboundPlay().register(DemonArmsPayload.TYPE, DemonArmsPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DemonArmsFxPayload.TYPE, DemonArmsFxPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(DemonArmsPayload.TYPE, (payload, context) -> DemonArms.set(context.player(), payload.on()));
+		ServerTickEvents.END_SERVER_TICK.register(DemonArms::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> DemonArms.forget(handler.player));
 
 		PayloadTypeRegistry.serverboundPlay().register(ExplosionCowlingPayload.TYPE, ExplosionCowlingPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ExplosionCowlingFxPayload.TYPE, ExplosionCowlingFxPayload.CODEC);

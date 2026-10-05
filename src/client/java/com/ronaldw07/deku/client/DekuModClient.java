@@ -9,6 +9,7 @@ import com.ronaldw07.deku.HeroNotebookItem;
 import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.DelawarePayload;
+import com.ronaldw07.deku.network.DemonArmsFxPayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
@@ -74,6 +75,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionCowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballChargeFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FugaFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(DemonArmsFx::render);
 		EntityRendererRegistry.register(DekuEntities.VILLAIN, VillainRenderer::new);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballFlightFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GojoFx::render);
@@ -86,6 +88,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(BlackwhipTendrils::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionFx::render);
 		ClientPlayNetworking.registerGlobalReceiver(ExplosionFxPayload.TYPE, (payload, context) -> ExplosionFx.add(payload));
+		ClientPlayNetworking.registerGlobalReceiver(DemonArmsFxPayload.TYPE, (payload, context) -> DemonArmsFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(FireballChargeFxPayload.TYPE, (payload, context) -> FireballChargeFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(ExplosionCowlingFxPayload.TYPE, (payload, context) -> ExplosionCowlingFx.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(SlashFxPayload.TYPE, (payload, context) -> SlashFx.add(payload));
@@ -182,6 +185,7 @@ public class DekuModClient implements ClientModInitializer {
 		GojoClient.tick(player, gojo, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
 			gojo && smokescreenClicks % 2 == 1, gojo && cowlingClicks > 0);
 		GojoFx.tick(player);
+		DemonArmsClient.tick(player, sukuna, sukuna && smokescreenClicks % 2 == 1);
 		SukunaClient.tick(player, sukuna, client.options.keyUse.isDown(), sukuna && smashClicks > 0, sukuna && CLUSTER_KEY.isDown(),
 			sukuna && cowlingClicks > 0);
 		FugaFx.tick(player);

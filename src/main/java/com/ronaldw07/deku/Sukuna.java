@@ -110,7 +110,8 @@ public final class Sukuna {
 	private static void dismantle(ServerPlayer player) {
 		ServerLevel level = player.level();
 		RandomSource random = level.getRandom();
-		for (int i = 0; i < DISMANTLE_SLASHES; i++) {
+		int slashes = DISMANTLE_SLASHES + (DemonArms.active(player) ? DemonArms.EXTRA_DISMANTLE_SLASHES : 0);
+		for (int i = 0; i < slashes; i++) {
 			Blasts.later(level.getServer(), i, () -> {
 				Vec3 eye = player.getEyePosition();
 				Vec3 aim = player.getLookAngle().add(randomOffset(random, DISMANTLE_SPREAD)).normalize();
@@ -191,7 +192,7 @@ public final class Sukuna {
 			double depth = offset.dot(normal);
 			if (along >= -1 && along <= length + 1 && Math.abs(across) <= halfHeight + 1 && Math.abs(depth) <= thickness + 1.2) {
 				entity.invulnerableTime = 0; // a flurry of cuts should each land
-				entity.hurtServer(level, owner.damageSources().playerAttack(owner), damage);
+				entity.hurtServer(level, owner.damageSources().playerAttack(owner), DemonArms.active(owner) ? damage * DemonArms.DAMAGE_BOOST : damage);
 				Vec3 where = entity.getBoundingBox().getCenter();
 				level.sendParticles(BLOOD, where.x, where.y, where.z, 30, WOUND_SPREAD, WOUND_SPREAD, WOUND_SPREAD, 0.3);
 				entity.push(normal.scale(depth >= 0 ? 0.6 : -0.6).add(0, 0.3, 0));

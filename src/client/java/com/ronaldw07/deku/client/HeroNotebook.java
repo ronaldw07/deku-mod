@@ -69,6 +69,7 @@ final class HeroNotebook {
 			page("Sukuna", """
 				Right-click: Dismantle, a flurry of slashes
 				V: Cleave, one heavy cut on your target
+				Z: Demon Arms on/off. Four extra arms: your cuts hit 50% harder and Dismantle throws more slashes.
 				Hold X: Fuga, draw a burning arrow, let go to loose it. It lands as a huge firestorm that sets everything near it alight.
 				C: Domain Expansion, a 120-block dome with a giant shrine. The camera pulls back to watch while endless slashes shred everything for 10 seconds"""),
 			page("Decay", """

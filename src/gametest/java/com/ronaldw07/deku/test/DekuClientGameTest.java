@@ -4,6 +4,7 @@ import com.ronaldw07.deku.Aim;
 import com.ronaldw07.deku.InfiniteVoid;
 import com.ronaldw07.deku.DekuEntities;
 import com.ronaldw07.deku.DekuItems;
+import com.ronaldw07.deku.DemonArms;
 import com.ronaldw07.deku.DekuMod;
 import com.ronaldw07.deku.FullCowling;
 import com.ronaldw07.deku.Smokescreen;
@@ -12,6 +13,7 @@ import com.ronaldw07.deku.client.Cooldowns;
 import com.ronaldw07.deku.client.DangerSenseClient;
 import com.ronaldw07.deku.client.DekuModClient;
 import com.ronaldw07.deku.client.DelawareClient;
+import com.ronaldw07.deku.client.DemonArmsClient;
 import com.ronaldw07.deku.client.DomainCutscene;
 import com.ronaldw07.deku.client.DekuSettings;
 import com.ronaldw07.deku.client.ExplosionClient;
@@ -127,6 +129,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			}
 			if (wanted("purpleRip")) {
 				purpleRip(context, singleplayer);
+			}
+			if (wanted("demonArms")) {
+				demonArms(context, singleplayer);
 			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
@@ -663,6 +668,28 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			.stream().noneMatch(husk -> husk.isAlive() && husk.getRemainingFireTicks() <= 0 && husk.getHealth() >= husk.getMaxHealth()));
 		check(scorched, "the purple fire and lightning should hurt or burn a husk beside the path");
 		camera(context, CameraType.FIRST_PERSON);
+	}
+
+	private static void demonArms(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Sukuna Z: four extra arms sprout and a Cleave hits harder; Z again puts them away.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 8600 -59 8600 0 6");
+		context.waitTicks(40);
+		selectSlot(context, 6);
+		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.waitTicks(15);
+		check(context.computeOnClient(client -> DemonArmsClient.active()), "Z should switch the Demon Arms on");
+		check(singleplayer.getServer().computeOnServer(server -> DemonArms.active(player(server))), "the server should know the Demon Arms are on");
+		camera(context, CameraType.THIRD_PERSON_FRONT);
+		context.waitTicks(10);
+		context.takeScreenshot("demon-arms-front");
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(10);
+		context.takeScreenshot("demon-arms-back");
+		camera(context, CameraType.FIRST_PERSON);
+		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.waitTicks(10);
+		check(!context.computeOnClient(client -> DemonArmsClient.active()), "Z again should put the Demon Arms away");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

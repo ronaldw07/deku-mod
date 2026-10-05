@@ -91,6 +91,7 @@ final class ControlsHud {
 	private static final Panel SUKUNA = new Panel("Sukuna", SUKUNA_COLOR, List.of(
 		new Row(Ability.DISMANTLE, () -> key(Minecraft.getInstance().options.keyUse)),
 		new Row(Ability.CLEAVE, () -> key(DekuModClient.SMASH_KEY)),
+		new Row(Ability.DEMON_ARMS, () -> key(DekuModClient.SMOKESCREEN_KEY)),
 		new Row(Ability.FUGA, () -> hold(DekuModClient.CLUSTER_KEY)),
 		new Row(Ability.DOMAIN, () -> key(DekuModClient.COWLING_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));

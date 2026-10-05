@@ -41,6 +41,7 @@ public final class Cooldowns {
 		INFINITE_VOID("Infinite Void", 200),
 		DISMANTLE("Dismantle", 20),
 		CLEAVE("Cleave", 40),
+		DEMON_ARMS("Demon Arms", 0),
 		FUGA("Fuga", 120),
 		DOMAIN("Domain Expansion", 600);
 
