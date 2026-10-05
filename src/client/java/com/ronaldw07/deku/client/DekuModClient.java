@@ -40,6 +40,7 @@ import org.lwjgl.glfw.GLFW;
 public class DekuModClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(DekuMod.id("abilities"));
 
+	public static final KeyMapping FORM_KEY = register("key.deku.form", GLFW.GLFW_KEY_M);
 	public static final KeyMapping COWLING_KEY = register("key.deku.full_cowling", GLFW.GLFW_KEY_C);
 	public static final KeyMapping SMASH_KEY = register("key.deku.smash", GLFW.GLFW_KEY_V);
 	public static final KeyMapping SMOKESCREEN_KEY = register("key.deku.smokescreen", GLFW.GLFW_KEY_Z);
@@ -144,6 +145,7 @@ public class DekuModClient implements ClientModInitializer {
 		boolean gojo = player != null && DekuItems.isHolding(player, DekuItems.GOJO);
 		boolean sukuna = player != null && DekuItems.isHolding(player, DekuItems.SUKUNA);
 		boolean halfColdHalfHot = player != null && DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT);
+		int formClicks = countClicks(FORM_KEY);
 		int cowlingClicks = countClicks(COWLING_KEY);
 		int smashClicks = countClicks(SMASH_KEY);
 		int smokescreenClicks = countClicks(SMOKESCREEN_KEY);
@@ -154,7 +156,7 @@ public class DekuModClient implements ClientModInitializer {
 		int delawareClicks = countClicks(DELAWARE_KEY);
 		int usSmashClicks = countClicks(US_SMASH_KEY);
 
-		FullCowlingClient.tick(player, oneForAll && cowlingClicks % 2 == 1, oneForAll);
+		FullCowlingClient.tick(player, oneForAll && formClicks % 2 == 1, oneForAll);
 		SmashClient.tick(player, oneForAll && SMASH_KEY.isDown(), oneForAll && smashClicks > 0);
 		SmokescreenClient.tick(player, oneForAll, SMOKESCREEN_KEY.isDown(), smokescreenClicks > 0);
 		boolean floatTapped = floatTap.tick(client.options.keyJump.isDown(), oneForAll);
@@ -175,17 +177,17 @@ public class DekuModClient implements ClientModInitializer {
 		UnitedStatesClient.tick(player, oneForAll && usSmashClicks > 0);
 		GearshiftClient.tick(player, oneForAll && gearshiftClicks % 2 == 1, oneForAll);
 
-		ExplosionCowlingClient.tick(player, explosion, explosion && smokescreenClicks % 2 == 1);
+		ExplosionCowlingClient.tick(player, explosion, explosion && formClicks % 2 == 1);
 		ExplosionClient.tick(player, explosion, client.options.keyUse.isDown(), client.options.keyJump.isDown(),
 			SMASH_KEY.isDown(), COWLING_KEY.isDown(), explosion && (CLUSTER_KEY.isDown() || clusterClicks > 0));
 		DecayClient.tick(player, decay, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
-			decay && cowlingClicks % 2 == 1);
+			decay && formClicks % 2 == 1);
 		HalfColdHalfHotClient.tick(player, halfColdHalfHot, client.options.keyUse.isDown(), SMASH_KEY.isDown(),
 			halfColdHalfHot && cowlingClicks > 0, halfColdHalfHot && clusterClicks > 0, client.options.keyJump.isDown());
 		GojoClient.tick(player, gojo, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
-			gojo && smokescreenClicks % 2 == 1, gojo && cowlingClicks > 0);
+			gojo && formClicks % 2 == 1, gojo && cowlingClicks > 0);
 		GojoFx.tick(player);
-		DemonArmsClient.tick(player, sukuna, sukuna && smokescreenClicks % 2 == 1);
+		DemonArmsClient.tick(player, sukuna, sukuna && formClicks % 2 == 1);
 		SukunaClient.tick(player, sukuna, client.options.keyUse.isDown(), sukuna && smashClicks > 0, sukuna && CLUSTER_KEY.isDown(),
 			sukuna && cowlingClicks > 0);
 		FugaFx.tick(player);

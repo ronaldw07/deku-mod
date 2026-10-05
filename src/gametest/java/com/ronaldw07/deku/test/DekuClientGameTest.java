@@ -193,9 +193,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("notebook");
 		context.setScreen(() -> null);
 
-		// Deku's moves need One For All in hand: with an empty hand, C does nothing.
+		// Deku's moves need One For All in hand: with an empty hand, M does nothing.
 		selectSlot(context, 8);
-		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(5);
 		check(context.computeOnClient(client -> FullCowlingClient.percent()) == 0, "full cowling shouldn't start without One For All in hand");
 		selectSlot(context, 0);
@@ -227,7 +227,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 
 	private static void fullCowling(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
 		// Default settings: 100% power with a 1 second ramp-up.
-		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(10);
 		double halfway = context.computeOnClient(client -> FullCowlingClient.percent());
 		check(halfway > 30 && halfway < 70, "cowling should be mid-ramp after 10 ticks, was " + halfway);
@@ -258,7 +258,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		DekuSettings.set(DekuSettings.get().withCowlingPower(100));
 		camera(context, CameraType.FIRST_PERSON);
 
-		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(2);
 		check(context.computeOnClient(client -> FullCowlingClient.percent()) == 0, "cowling should turn off instantly");
 		check(!hasSpeedBoost(singleplayer), "server should remove the speed boost when cowling turns off");
@@ -266,13 +266,13 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		// A slow 2 second ramp: red lightning climbs the body, then bursts at full power.
 		DekuSettings.set(DekuSettings.get().withCowlingRampSeconds(2.0));
 		camera(context, CameraType.THIRD_PERSON_FRONT);
-		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(25);
 		context.takeScreenshot("cowling-charging");
 		context.waitTicks(16);
 		check(context.computeOnClient(client -> FullCowlingClient.percent()) == 100, "cowling should reach full power after 2 seconds");
 		context.takeScreenshot("cowling-burst");
-		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		DekuSettings.set(DekuSettings.get().withCowlingRampSeconds(1.0));
 		camera(context, CameraType.FIRST_PERSON);
 		command(singleplayer, "time set day");
@@ -676,7 +676,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		command(singleplayer, "execute as @p run tp @s 8600 -59 8600 0 6");
 		context.waitTicks(40);
 		selectSlot(context, 6);
-		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(15);
 		check(context.computeOnClient(client -> DemonArmsClient.active()), "Z should switch the Demon Arms on");
 		check(singleplayer.getServer().computeOnServer(server -> DemonArms.active(player(server))), "the server should know the Demon Arms are on");
@@ -687,7 +687,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitTicks(10);
 		context.takeScreenshot("demon-arms-back");
 		camera(context, CameraType.FIRST_PERSON);
-		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(10);
 		check(!context.computeOnClient(client -> DemonArmsClient.active()), "Z again should put the Demon Arms away");
 	}
@@ -713,8 +713,8 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		context.waitTicks(60);
 		command(singleplayer, "kill @e[type=minecraft:pig]");
 
-		// Z: Infinity keeps a husk's hits off the player.
-		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		// M: Infinity keeps a husk's hits off the player.
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(5);
 		check(context.computeOnClient(client -> GojoClient.infinity()), "Z should switch Infinity on");
 		command(singleplayer, "difficulty normal");
@@ -725,7 +725,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		float health = context.computeOnClient(client -> client.player.getHealth());
 		check(health >= 20, "Infinity should keep the husk from hurting the player, health " + health);
 		command(singleplayer, "kill @e[type=minecraft:husk]");
-		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(5);
 		camera(context, CameraType.FIRST_PERSON);
 

@@ -1,8 +1,9 @@
 {
 	"key.category.deku.abilities": "One For All",
-	"key.deku.full_cowling": "Full Cowling / Decay Cowling (on/off)",
+	"key.deku.form": "Form / Cowling (Full Cowling, Explosion Cowling, Decay Cowling, Infinity, Demon Arms)",
+	"key.deku.full_cowling": "Domain / Ground Blast / Ice Wall / Infinite Void",
 	"key.deku.smash": "Smash (hold to charge)",
-	"key.deku.smokescreen": "Smokescreen / Explosion Cowling",
+	"key.deku.smokescreen": "Smokescreen",
 	"key.deku.float": "Float (hold)",
 	"key.deku.blackwhip": "Blackwhip",
 	"key.deku.manchester": "Manchester Smash",

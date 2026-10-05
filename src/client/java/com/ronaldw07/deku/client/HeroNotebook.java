@@ -21,11 +21,13 @@ final class HeroNotebook {
 
 				Hold a quirk item to use its moves. Its controls show in the bottom right.
 
+				M is the Form key: it switches on Full Cowling, Explosion Cowling, Decay Cowling, Infinity or Demon Arms, whichever quirk you hold.
+
 				K opens settings.
 				Change keys in
 				Options > Controls."""),
 			page("One For All", """
-				C: Full Cowling on/off
+				M: Full Cowling on/off
 				Hold V: charge Smash, let go to throw
 				Z: Smokescreen, keep holding to make the cloud grow
 				Hold R, or double-tap and hold space: Float
@@ -59,17 +61,17 @@ final class HeroNotebook {
 				Hold V: Howitzer Impact, hold longer for a bigger blast, let go to explode
 				Hold C: charge ground blast, let go
 				Hold X: Cluster Bomb, grow a fireball and throw it
-				Z: Explosion Cowling on/off, bigger blasts"""),
+				M: Explosion Cowling on/off, bigger blasts"""),
 			page("Gojo", """
 				Hold right-click: Blue, pulls mobs, items and blocks toward a point. Hold longer for a bigger sphere and a wider pull
 				Hold V: Red, charge, then burst everything away
 				Hold X: Hollow Purple, charge until the orbs fuse, then let go to erase everything in a line
-				Z: Infinity on/off
+				M: Infinity on/off
 				C: Domain Expansion, Infinite Void. Everything inside the black dome floats up and freezes for 20 seconds, except you."""),
 			page("Sukuna", """
 				Right-click: Dismantle, a flurry of slashes
 				V: Cleave, one heavy cut on your target
-				Z: Demon Arms on/off. Four extra arms: your cuts hit 50% harder and Dismantle throws more slashes.
+				M: Demon Arms on/off. Four extra arms: your cuts hit 50% harder and Dismantle throws more slashes.
 				Hold X: Fuga, draw a burning arrow, let go to loose it. It lands as a huge firestorm that sets everything near it alight.
 				C: Domain Expansion, a 120-block dome with a giant shrine. The camera pulls back to watch while endless slashes shred everything for 10 seconds"""),
 			page("Decay", """
@@ -81,7 +83,7 @@ final class HeroNotebook {
 			page("Decay at full power", """
 				Hold X: Catastrophe. Wind up for 3 seconds, let go, and everything all around you decays, out to 128 blocks.
 
-				C: Decay Cowling on/off. Faster, stronger, higher jumps, and whatever you run into crumbles."""),
+				M: Decay Cowling on/off. Faster, stronger, higher jumps, and whatever you run into crumbles."""),
 			page("Half Cold Half Hot", """
 				Right-click: ice spikes race along the ground, impaling and freezing mobs.
 				Hold V: flamethrower. It melts ice too.

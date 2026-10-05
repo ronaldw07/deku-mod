@@ -43,7 +43,7 @@ final class ControlsHud {
 	}
 
 	private static final Panel ONE_FOR_ALL = new Panel("One For All", ONE_FOR_ALL_COLOR, List.of(
-		new Row(Ability.FULL_COWLING, () -> key(DekuModClient.COWLING_KEY)),
+		new Row(Ability.FULL_COWLING, () -> key(DekuModClient.FORM_KEY)),
 		new Row(Ability.SMASH, () -> hold(DekuModClient.SMASH_KEY)),
 		new Row(Ability.SMOKESCREEN, () -> key(DekuModClient.SMOKESCREEN_KEY)),
 		new Row(Ability.FLOAT, () -> hold(DekuModClient.FLOAT_KEY).copy().append(" / ").append(doubleTap())),
@@ -62,14 +62,14 @@ final class ControlsHud {
 		new Row(Ability.HOWITZER, () -> hold(DekuModClient.SMASH_KEY)),
 		new Row(Ability.GROUND_BLAST, () -> hold(DekuModClient.COWLING_KEY)),
 		new Row(Ability.CLUSTER, () -> hold(DekuModClient.CLUSTER_KEY)),
-		new Row(Ability.EXPLOSION_COWLING, () -> key(DekuModClient.SMOKESCREEN_KEY)),
+		new Row(Ability.EXPLOSION_COWLING, () -> key(DekuModClient.FORM_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private static final Panel DECAY = new Panel("Decay", DECAY_COLOR, List.of(
 		new Row(Ability.DECAY_TOUCH, () -> key(Minecraft.getInstance().options.keyUse)),
 		new Row(Ability.DECAY_WAVE, () -> hold(DekuModClient.SMASH_KEY)),
 		new Row(Ability.CATASTROPHE, () -> hold(DekuModClient.CLUSTER_KEY)),
-		new Row(Ability.DECAY_COWLING, () -> key(DekuModClient.COWLING_KEY)),
+		new Row(Ability.DECAY_COWLING, () -> key(DekuModClient.FORM_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private static final Panel HALF_COLD_HALF_HOT = new Panel("Half Cold Half Hot", HALF_COLD_HALF_HOT_COLOR, List.of(
@@ -84,14 +84,14 @@ final class ControlsHud {
 		new Row(Ability.GOJO_BLUE, () -> key(Minecraft.getInstance().options.keyUse)),
 		new Row(Ability.GOJO_RED, () -> hold(DekuModClient.SMASH_KEY)),
 		new Row(Ability.GOJO_PURPLE, () -> hold(DekuModClient.CLUSTER_KEY)),
-		new Row(Ability.INFINITY, () -> key(DekuModClient.SMOKESCREEN_KEY)),
+		new Row(Ability.INFINITY, () -> key(DekuModClient.FORM_KEY)),
 		new Row(Ability.INFINITE_VOID, () -> key(DekuModClient.COWLING_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));
 
 	private static final Panel SUKUNA = new Panel("Sukuna", SUKUNA_COLOR, List.of(
 		new Row(Ability.DISMANTLE, () -> key(Minecraft.getInstance().options.keyUse)),
 		new Row(Ability.CLEAVE, () -> key(DekuModClient.SMASH_KEY)),
-		new Row(Ability.DEMON_ARMS, () -> key(DekuModClient.SMOKESCREEN_KEY)),
+		new Row(Ability.DEMON_ARMS, () -> key(DekuModClient.FORM_KEY)),
 		new Row(Ability.FUGA, () -> hold(DekuModClient.CLUSTER_KEY)),
 		new Row(Ability.DOMAIN, () -> key(DekuModClient.COWLING_KEY)),
 		new Row(Ability.DANGER_SENSE, () -> key(DekuModClient.DANGER_SENSE_KEY))));

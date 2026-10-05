@@ -4,11 +4,11 @@ Fabric mod for Minecraft 26.2: One For All and Explosion quirks.
 
 New players get One For All, Explosion, a notebook of instructions, Decay, Half Cold Half Hot, Gojo and Sukuna in hotbar slots 1-7.
 Keep inventory is always on, so dying never drops your items.
-Hold a quirk item to use its moves; its controls and cooldowns show in the bottom right. Keys can be changed in Options > Controls.
+Hold a quirk item to use its moves; its controls and cooldowns show in the bottom right. Keys can be changed in Options > Controls. M is the Form key: it switches on Full Cowling, Explosion Cowling, Decay Cowling, Infinity or Demon Arms, whichever quirk you hold.
 
 ## One For All (slot 1)
 
-- C: Full Cowling on/off
+- M: Full Cowling on/off
 - Hold V: charge Smash, release to throw (100% blasts through terrain)
 - Z: Smokescreen; keep holding and the cloud keeps growing, up to 30 blocks wide
 - Hold R, or double-tap and hold space: Float
@@ -30,7 +30,7 @@ Hold a quirk item to use its moves; its controls and cooldowns show in the botto
 - Hold V: Howitzer Impact, red lightning crackles out of you as you spin; a quick release is half size, hold 3 seconds for full size, under a mushroom cloud
 - Hold C: charge the cross-arm ground blast, release to fire
 - Hold X: Cluster Bomb, grow a red fireball in front of you for up to 3 seconds, let go to throw it at the crosshair (150 blocks): it lands as a nuke with a huge crater and a mushroom cloud
-- Z: Explosion Cowling on/off, a red-orange glow (other players see it too) that makes every blast 25% bigger and stronger
+- M: Explosion Cowling on/off, a red-orange glow (other players see it too) that makes every blast 25% bigger and stronger
 
 Explosions burn out as a white-hot flash, a fireball that goes orange, red and then black, and thick black smoke that hangs for ten seconds or more. Big blasts set off secondary pops, fling burning chunks, send a dust ring racing over the ground, scorch the crater rim black and shake the screen when they go off close by. A Howitzer Impact raises a mushroom cloud over 100 blocks tall with ash falling over the area. Particle detail and screen shake can be turned down or off in the K menu.
 
@@ -39,7 +39,7 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Right-click: decay what you touch; it crumbles and the decay spreads through everything connected to it
 - Hold V: wind up, release to slam the ground and send a wave of decay rolling out (up to 64 blocks)
 - Hold X: Catastrophe, a 3 second wind up, then everything all around decays out to 128 blocks, mountains included
-- C: Decay Cowling on/off, faster, stronger, higher jumps, and whatever you run into crumbles
+- M: Decay Cowling on/off, faster, stronger, higher jumps, and whatever you run into crumbles
 - Mobs it reaches rot away
 
 ## Half Cold Half Hot (slot 5)
@@ -55,14 +55,14 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 - Hold right-click: Blue, a blue sphere lands at the crosshair and drags everything nearby into it, rips up blocks; hold up to 3 seconds for a bigger sphere with a pull radius out to 48 blocks
 - Hold V: Red, charge up to 2 seconds and throw a red sphere that bursts and hurls everything away
 - Hold X: Hollow Purple, a blue and a red orb draw together over 3 seconds into a purple orb; let go and it erases everything in a line 150 blocks long, spraying lightning and leaving a trail of dark purple fire that burns and zaps everything beside the path, then collapses
-- Z: Infinity on/off, nothing that touches you can hurt you and anything close is pushed away
+- M: Infinity on/off, nothing that touches you can hurt you and anything close is pushed away
 - C: Domain Expansion (Infinite Void), a 40 block black ball of stars where everything but you is lifted into the air and frozen for 20 seconds
 
 ## Sukuna (slot 7)
 
 - Right-click: Dismantle, a flurry of huge black-and-white slashes ahead (70 blocks long, 36 tall) that erase every block and entity in their path
 - V: Cleave, one heavy cut on whatever the crosshair is on, a third of a mob's health on top of the hit
-- Z: Demon Arms on/off, four extra arms; cuts hit 50% harder and Dismantle throws more slashes
+- M: Demon Arms on/off, four extra arms; cuts hit 50% harder and Dismantle throws more slashes
 - Hold X: Fuga, draw a burning arrow for up to 2.5 seconds and loose it at the crosshair; it lands as a huge fire blast that leaves a column of molten light standing in the sky for half a minute, and sets everything near it alight
 - C: Domain Expansion (Malevolent Shrine), a 120 block dome. A real shrine of blocks (platform, red pillars, tiered black roof, gate) is built under you and removed when it ends; the camera flies out to the side for a short cutscene while endless slashes shred the terrain and everything inside it for 10 seconds
 
