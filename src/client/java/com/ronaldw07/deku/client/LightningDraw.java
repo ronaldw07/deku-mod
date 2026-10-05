@@ -2,6 +2,7 @@ package com.ronaldw07.deku.client;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.List;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4fc;
@@ -25,6 +26,9 @@ final class LightningDraw {
 		new Layer(0.022f, 0.3f, 1.0f, 0.4f, 0.5f),
 		new Layer(0.009f, 0.9f, 1.0f, 0.9f, 0.9f),
 	};
+
+	// Faces are written with everything a lit entity surface needs, so they draw under shader packs too; the lightning type ignores the extras.
+	private static final int FULL_BRIGHT = 0xF000F0;
 
 	private LightningDraw() {
 	}
@@ -134,7 +138,8 @@ final class LightningDraw {
 	}
 
 	private static void gradientVertex(Matrix4fc pose, VertexConsumer buffer, Vec3 point, float[] color, float alpha) {
-		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z).setColor(color[0], color[1], color[2], alpha);
+		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z).setColor(color[0], color[1], color[2], alpha).setUv(0f, 0f)
+			.setOverlay(OverlayTexture.NO_OVERLAY).setLight(FULL_BRIGHT).setNormal(0f, 1f, 0f);
 	}
 
 	static Vec3 randomDirection(RandomSource random) {
@@ -174,6 +179,7 @@ final class LightningDraw {
 
 	private static void vertex(Matrix4fc pose, VertexConsumer buffer, Vec3 point, Layer layer) {
 		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z)
-			.setColor(layer.red(), layer.green(), layer.blue(), layer.alpha());
+			.setColor(layer.red(), layer.green(), layer.blue(), layer.alpha()).setUv(0f, 0f).setOverlay(OverlayTexture.NO_OVERLAY)
+			.setLight(FULL_BRIGHT).setNormal(0f, 1f, 0f);
 	}
 }

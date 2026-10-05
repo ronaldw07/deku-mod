@@ -3,12 +3,16 @@ package com.ronaldw07.deku;
 import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.JujutsuPayload.Move;
 import com.ronaldw07.deku.network.SlashFxPayload;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -18,6 +22,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -52,6 +57,17 @@ public final class Sukuna {
 	private static final float CLEAVE_HEALTH_SHARE = 0.3f;
 	private static final double CLEAVE_SPLASH = 12.0;
 	private static final float SLASH_VOLUME = 5.0f;
+	private static final int BIG_DEBRIS = 90;
+	private static final int SLASH_DEBRIS = 40;
+	private static final int CROWD_DEBRIS = 3;
+	private static final int BIG_DUST = 120;
+	private static final int SLASH_DUST = 50;
+	private static final int DEBRIS_ODDS = 30;
+	private static final int DUST_ODDS = 12;
+	private static final double DEBRIS_SIDE_SPEED = 1.1;
+	private static final double DEBRIS_LIFT = 0.6;
+	private static final double WOUND_SPREAD = 0.4;
+	private static final DustParticleOptions BLOOD = new DustParticleOptions(0x8A0A0A, 2.0f);
 	private static final double SLASH_SOUND_RANGE_SHARE = 0.5; // the crack is heard from the middle of the cut
 	// Domain Expansion.
 	private static final float DOMAIN_RADIUS = 120.0f;
@@ -73,6 +89,7 @@ public final class Sukuna {
 	}
 
 	private static List<Dome> domes = List.of();
+	private static final LongOpenHashSet shrineBlocks = new LongOpenHashSet();
 
 	private Sukuna() {
 	}
@@ -146,10 +163,24 @@ public final class Sukuna {
 	private static void slash(ServerLevel level, ServerPlayer owner, Vec3 origin, Vec3 aim, Vec3 blade, double length,
 			double halfHeight, int thickness, float damage, boolean big, boolean sound) {
 		Vec3 normal = aim.cross(blade).normalize();
+		RandomSource random = level.getRandom();
+		int debris = big ? BIG_DEBRIS : sound ? SLASH_DEBRIS : CROWD_DEBRIS;
+		int dust = big ? BIG_DUST : SLASH_DUST;
 		for (double along = 0; along <= length; along += 1.0) {
 			for (double across = -halfHeight; across <= halfHeight; across += 1.0) {
 				for (int depth = -thickness; depth <= thickness; depth++) {
-					cut(level, BlockPos.containing(origin.add(aim.scale(along)).add(blade.scale(across)).add(normal.scale(depth))));
+					Vec3 point = origin.add(aim.scale(along)).add(blade.scale(across)).add(normal.scale(depth));
+					BlockState cut = cut(level, BlockPos.containing(point));
+					if (cut == null) {
+						continue;
+					}
+					if (debris > 0 && random.nextInt(DEBRIS_ODDS) == 0) {
+						debris--;
+						throwDebris(level, BlockPos.containing(point), cut, normal.scale(random.nextBoolean() ? 1 : -1), random);
+					} else if (dust > 0 && random.nextInt(DUST_ODDS) == 0) {
+						dust--;
+						level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, cut), point.x, point.y, point.z, 6, 0.5, 0.5, 0.5, 0.2);
+					}
 				}
 			}
 		}
@@ -163,6 +194,10 @@ public final class Sukuna {
 			if (along >= -1 && along <= length + 1 && Math.abs(across) <= halfHeight + 1 && Math.abs(depth) <= thickness + 1.2) {
 				entity.invulnerableTime = 0; // a flurry of cuts should each land
 				entity.hurtServer(level, owner.damageSources().playerAttack(owner), damage);
+				Vec3 where = entity.getBoundingBox().getCenter();
+				level.sendParticles(BLOOD, where.x, where.y, where.z, 30, WOUND_SPREAD, WOUND_SPREAD, WOUND_SPREAD, 0.3);
+				entity.push(normal.scale(depth >= 0 ? 0.6 : -0.6).add(0, 0.3, 0));
+				entity.hurtMarked = true;
 			}
 		}
 		// Everything that isn't alive in the way, from boats to dropped items, is simply gone.
@@ -187,15 +222,30 @@ public final class Sukuna {
 		}
 	}
 
-	private static void cut(ServerLevel level, BlockPos pos) {
+	/** Removes the block at the position and returns what it was, or null if nothing was cut. */
+	private static BlockState cut(ServerLevel level, BlockPos pos) {
 		if (!level.isLoaded(pos)) {
-			return;
+			return null;
 		}
 		BlockState state = level.getBlockState(pos);
-		if (state.isAir() || !state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0) {
-			return;
+		if (state.isAir() || !state.getFluidState().isEmpty() || state.getDestroySpeed(level, pos) < 0 || spared(pos)) {
+			return null;
 		}
 		level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+		return state;
+	}
+
+	/** A cut block flung off to the side of the blade, tumbling away. */
+	private static void throwDebris(ServerLevel level, BlockPos pos, BlockState state, Vec3 side, RandomSource random) {
+		FallingBlockEntity block = FallingBlockEntity.fall(level, pos, state);
+		block.disableDrop();
+		block.setDeltaMovement(side.scale(DEBRIS_SIDE_SPEED * (0.5 + random.nextDouble())).add(0, DEBRIS_LIFT * random.nextDouble(), 0));
+		block.hurtMarked = true;
+	}
+
+	/** Blocks of a Shrine standing in the world: the slashes go round them. */
+	private static boolean spared(BlockPos pos) {
+		return shrineBlocks.contains(pos.asLong());
 	}
 
 	/** Malevolent Shrine: a huge dome around the caster in which slashes rain down for ten seconds. */

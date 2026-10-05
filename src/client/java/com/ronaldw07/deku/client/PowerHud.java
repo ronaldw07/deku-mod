@@ -12,6 +12,10 @@ final class PowerHud {
 	private static final int GOJO_COLOR = 0xFFA0C0FF;
 	private static final int EXPLOSION_COWLING_COLOR = 0xFFFF7030;
 	private static final int DECAY_COLOR = 0xFFB8B0D0;
+	private static final int FUGA_COLOR = 0xFFFF6A1A;
+	private static final int BAR_WIDTH = 100;
+	private static final int BAR_HEIGHT = 5;
+	private static final int BAR_OFFSET = 10;
 	// Clear of the hotbar, health and armor rows, and the held item's name.
 	private static final int BOTTOM_LINE_ABOVE_SCREEN_BOTTOM = 72;
 	private static final int LINE_HEIGHT = 10;
@@ -48,6 +52,15 @@ final class PowerHud {
 		if (DelawareClient.charge() > 0) {
 			graphics.centeredText(Minecraft.getInstance().font, "Delaware " + DelawareClient.charge() + "%", x, y, COWLING_COLOR);
 			y -= LINE_HEIGHT;
+		}
+
+		if (SukunaClient.fugaCharge() > 0) {
+			int fuga = SukunaClient.fugaCharge();
+			graphics.centeredText(Minecraft.getInstance().font, "Fuga " + fuga + "%", x, y, FUGA_COLOR);
+			int left = x - BAR_WIDTH / 2;
+			graphics.fill(left - 1, y + BAR_OFFSET - 1, left + BAR_WIDTH + 1, y + BAR_OFFSET + BAR_HEIGHT + 1, 0xFF000000);
+			graphics.fill(left, y + BAR_OFFSET, left + BAR_WIDTH * fuga / 100, y + BAR_OFFSET + BAR_HEIGHT, fuga >= 100 ? 0xFFFFE070 : FUGA_COLOR);
+			y -= LINE_HEIGHT + BAR_HEIGHT + 2;
 		}
 
 		if (GojoClient.purpleCharge() > 0) {

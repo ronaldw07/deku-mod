@@ -65,7 +65,7 @@ final class FugaBeamFx {
 		for (int i = 0; i < SMALL_TONGUES; i++) {
 			tongues.add(tongue(random, radius, 8 + random.nextDouble() * 30, 0.35, 1.8, 1.4));
 		}
-		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(), (pose, buffer) -> {
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE), (pose, buffer) -> {
 			for (Tongue tongue : tongues) {
 				flame(pose.pose(), buffer, base, tongue, grown, time, 0.0, fade);
 				flame(pose.pose(), buffer, base, tongue, grown, time, Math.PI / 2, fade);

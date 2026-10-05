@@ -24,7 +24,7 @@ final class SlashFx {
 	private static final double CROWD_FILL = 14; // how many sheets can be filled solid black at once
 	private static final float EDGE = 0.04f;
 	private static final float BIG_EDGE = 0.06f;
-	private static final float RED_EDGE = 0.05f;
+	private static final float RED_EDGE = 0.025f;
 	private static final float EDGE_PER_HEIGHT = 0.003f; // a bigger cut gets a heavier outline
 	private static final float RUMBLE = 0.25f;
 	private static final double PARTICLE_SPACING = 5.0;
@@ -89,11 +89,11 @@ final class SlashFx {
 			float fade = (float) Math.max(0, 1 - age / LIFETIME_TICKS);
 			float core = Math.max(slash.big() ? BIG_EDGE : EDGE, slash.halfHeight() * EDGE_PER_HEIGHT);
 			float outer = core + RED_EDGE;
-			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(),
+			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE),
 				(pose, buffer) -> LightningDraw.drawFlatQuad(pose.pose(), buffer, a, b, c, d, 0.0f, 0.0f, 0.0f, 0.93f * fade * fillShare));
 			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
 				LightningDraw.drawEdges(pose.pose(), buffer, border, 0f, core, 1.0f, 0.97f, 0.95f, fade);
-				LightningDraw.drawEdges(pose.pose(), buffer, border, core, outer, 0.9f, 0.05f, 0.1f, 0.6f * fade);
+				LightningDraw.drawEdges(pose.pose(), buffer, border, core, outer, 0.6f, 0.0f, 0.04f, 0.3f * fade);
 			});
 		}
 	}

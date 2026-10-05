@@ -80,7 +80,7 @@ final class BlackwhipTendrils {
 		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(),
 			(pose, buffer) -> LightningDraw.drawEdges(pose.pose(), buffer, segments, CORE_HALF_WIDTH, GLOW_EDGE_HALF_WIDTH,
 				0.15f, 0.55f, 1.0f, 0.6f));
-		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(),
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE),
 			(pose, buffer) -> LightningDraw.drawFlat(pose.pose(), buffer, segments, CORE_HALF_WIDTH, 0.02f, 0.02f, 0.03f, 0.95f));
 	}
 

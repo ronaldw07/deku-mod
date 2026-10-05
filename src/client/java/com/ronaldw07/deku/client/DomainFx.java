@@ -188,7 +188,7 @@ final class DomainFx {
 		}
 		List<List<Segment>> starGroups = stars(center, radius * VOID_STAR_SHELL);
 		float darkness = VOID_SPHERE_ALPHA * fade;
-		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(),
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE),
 			(pose, buffer) -> blackSphere(pose.pose(), buffer, center, radius, darkness));
 		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
 			LightningDraw.draw(pose.pose(), buffer, lattice, VOID_EDGE_WIDTH, LightningDraw.ICE, 0.5f * fade);
