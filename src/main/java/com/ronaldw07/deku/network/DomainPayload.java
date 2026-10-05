@@ -1,6 +1,8 @@
 package com.ronaldw07.deku.network;
 
 import com.ronaldw07.deku.DekuMod;
+import java.util.UUID;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -8,7 +10,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.phys.Vec3;
 
 /** Server tells nearby clients a Domain Expansion opened around a point, lasting the given ticks (0 = it ended). */
-public record DomainPayload(Vec3 center, float radius, int ticks, Kind kind) implements CustomPacketPayload {
+public record DomainPayload(Vec3 center, float radius, int ticks, Kind kind, UUID owner) implements CustomPacketPayload {
 	public enum Kind {
 		SHRINE, VOID
 	}
@@ -19,6 +21,7 @@ public record DomainPayload(Vec3 center, float radius, int ticks, Kind kind) imp
 		ByteBufCodecs.FLOAT, DomainPayload::radius,
 		ByteBufCodecs.VAR_INT, DomainPayload::ticks,
 		ByteBufCodecs.idMapper(i -> Kind.values()[i], Kind::ordinal), DomainPayload::kind,
+		UUIDUtil.STREAM_CODEC, DomainPayload::owner,
 		DomainPayload::new);
 
 	@Override

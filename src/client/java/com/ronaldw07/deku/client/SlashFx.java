@@ -21,6 +21,7 @@ final class SlashFx {
 	private static final int GROW_TICKS = 2;
 	private static final float BIG_CUT_HEIGHT = 10f;
 	private static final int PARTICLE_ODDS = 3;
+	private static final double CROWD_FILL = 14; // how many sheets can be filled solid black at once
 	private static final float EDGE = 0.04f;
 	private static final float BIG_EDGE = 0.06f;
 	private static final float RED_EDGE = 0.05f;
@@ -71,6 +72,8 @@ final class SlashFx {
 		double partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		long now = minecraft.level.getGameTime();
 		Vec3 camera = context.levelState().cameraRenderState.pos;
+		// When the domain is throwing hundreds, the black fills thin out so the picture stays readable.
+		float fillShare = (float) Math.min(1, CROWD_FILL / Math.max(1, slashes.size()));
 		for (Slash slash : slashes) {
 			double age = now - slash.startTick() + partialTick;
 			double reach = slash.length() * Math.min(1, age / GROW_TICKS);
@@ -87,7 +90,7 @@ final class SlashFx {
 			float core = Math.max(slash.big() ? BIG_EDGE : EDGE, slash.halfHeight() * EDGE_PER_HEIGHT);
 			float outer = core + RED_EDGE;
 			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.debugQuads(),
-				(pose, buffer) -> LightningDraw.drawFlatQuad(pose.pose(), buffer, a, b, c, d, 0.0f, 0.0f, 0.0f, 0.93f * fade));
+				(pose, buffer) -> LightningDraw.drawFlatQuad(pose.pose(), buffer, a, b, c, d, 0.0f, 0.0f, 0.0f, 0.93f * fade * fillShare));
 			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
 				LightningDraw.drawEdges(pose.pose(), buffer, border, 0f, core, 1.0f, 0.97f, 0.95f, fade);
 				LightningDraw.drawEdges(pose.pose(), buffer, border, core, outer, 0.9f, 0.05f, 0.1f, 0.6f * fade);

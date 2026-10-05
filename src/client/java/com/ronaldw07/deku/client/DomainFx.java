@@ -6,6 +6,7 @@ import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.DomainPayload.Kind;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -26,21 +27,21 @@ import net.minecraft.world.phys.Vec3;
  * orbiting rings, a blinding star at the center, and static flickering over the screen.
  */
 final class DomainFx {
-	private static final int OPEN_TICKS = 20;
+	private static final int OPEN_TICKS = 30;
 	private static final int CLOSE_TICKS = 15;
 	private static final int LATITUDES = 12;
 	private static final int LONGITUDES = 20;
 	private static final int ARC_SEGMENTS = 36;
 	private static final float LATTICE_WIDTH = 8f;
-	private static final float SHRINE_WIDTH = 5f;
-	private static final double SHRINE_HEIGHT = 18.0;
-	private static final int SHRINE_TIERS = 3;
-	private static final double SHRINE_BASE_WIDTH = 14.0;
-	private static final double SHRINE_TIER_SHRINK = 3.0;
-	private static final double SHRINE_TIER_HEIGHT = 3.0;
-	private static final double SHRINE_TIER_SPACING = 4.0;
-	private static final double SHRINE_ROOF_RISE = 4.0;
-	private static final double FLOOR_RING_RADIUS = 18.0;
+	private static final float SHRINE_WIDTH = 9f;
+	private static final double SHRINE_HEIGHT = 55.0;
+	private static final int SHRINE_TIERS = 5;
+	private static final double SHRINE_BASE_WIDTH = 44.0;
+	private static final double SHRINE_TIER_SHRINK = 6.0;
+	private static final double SHRINE_TIER_HEIGHT = 8.0;
+	private static final double SHRINE_TIER_SPACING = 11.0;
+	private static final double SHRINE_ROOF_RISE = 14.0;
+	private static final double FLOOR_RING_RADIUS = 50.0;
 	private static final int FLOOR_RING_SEGMENTS = 40;
 	private static final float MAX_DARKNESS = 0.5f;
 	private static final int DARKNESS_COLOR = 0x100000;
@@ -72,7 +73,7 @@ final class DomainFx {
 	private static final int VOID_FLICKER_ODDS = 6; // one tick in this many flashes white
 	private static final DustParticleOptions STARDUST = new DustParticleOptions(0xC8E0FF, 1.2f);
 
-	private record Dome(Vec3 center, float radius, long startTick, int ticks, Kind kind) {
+	private record Dome(Vec3 center, float radius, long startTick, int ticks, Kind kind, UUID owner) {
 	}
 
 	private static Dome current;
@@ -82,7 +83,11 @@ final class DomainFx {
 
 	static void add(DomainPayload fx) {
 		ClientLevel level = Minecraft.getInstance().level;
-		current = fx.ticks() <= 0 || level == null ? null : new Dome(fx.center(), fx.radius(), level.getGameTime(), fx.ticks(), fx.kind());
+		current = fx.ticks() <= 0 || level == null ? null : new Dome(fx.center(), fx.radius(), level.getGameTime(), fx.ticks(), fx.kind(), fx.owner());
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (current != null && current.kind() == Kind.SHRINE && player != null && player.getUUID().equals(current.owner())) {
+			DomainCutscene.start(current.center(), player.getYRot());
+		}
 	}
 
 	static boolean inside() {
@@ -290,7 +295,7 @@ final class DomainFx {
 
 	/** A darkness over the screen while inside the dome. */
 	static void extractOverlay(GuiGraphicsExtractor graphics, DeltaTracker delta) {
-		if (!inside()) {
+		if (!inside() || DomainCutscene.active()) {
 			return;
 		}
 		if (current.kind() == Kind.VOID) {

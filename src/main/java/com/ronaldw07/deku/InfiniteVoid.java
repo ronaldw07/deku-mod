@@ -55,13 +55,13 @@ public final class InfiniteVoid {
 		ServerLevel level = player.level();
 		Void dome = new Void(player.getUUID(), level.dimension(), player.position(), level.getGameTime() + TICKS);
 		voids = Stream.concat(voids.stream(), Stream.of(dome)).toList();
-		announce(level, dome.center(), TICKS);
+		announce(level, dome.center(), TICKS, dome.owner());
 		level.playSound(null, dome.center().x, dome.center().y, dome.center().z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 10.0f, 0.3f);
 		level.playSound(null, dome.center().x, dome.center().y, dome.center().z, DekuSounds.EXPLOSION_BOOM, SoundSource.PLAYERS, 8.0f, 0.4f);
 	}
 
-	private static void announce(ServerLevel level, Vec3 center, int ticks) {
-		DomainPayload fx = new DomainPayload(center, RADIUS, ticks, DomainPayload.Kind.VOID);
+	private static void announce(ServerLevel level, Vec3 center, int ticks, UUID owner) {
+		DomainPayload fx = new DomainPayload(center, RADIUS, ticks, DomainPayload.Kind.VOID, owner);
 		for (ServerPlayer viewer : PlayerLookup.around(level, center, RADIUS + FX_VIEW_DISTANCE)) {
 			if (ServerPlayNetworking.canSend(viewer, DomainPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);
@@ -78,7 +78,7 @@ public final class InfiniteVoid {
 		for (Void dome : ended) {
 			ServerLevel level = server.getLevel(dome.dimension());
 			if (level != null) {
-				announce(level, dome.center(), 0);
+				announce(level, dome.center(), 0, dome.owner());
 			}
 		}
 

@@ -54,10 +54,10 @@ public final class Sukuna {
 	private static final float SLASH_VOLUME = 5.0f;
 	private static final double SLASH_SOUND_RANGE_SHARE = 0.5; // the crack is heard from the middle of the cut
 	// Domain Expansion.
-	private static final float DOMAIN_RADIUS = 60.0f;
+	private static final float DOMAIN_RADIUS = 120.0f;
 	private static final int DOMAIN_TICKS = 200;
 	private static final int DOMAIN_SLASH_INTERVAL = 1;
-	private static final int DOMAIN_SLASHES = 14;
+	private static final int DOMAIN_SLASHES = 24;
 	private static final int DOMAIN_SOUND_EVERY = 5; // so the sound is a roar, not a thousand overlapping cracks
 	private static final double DOMAIN_SLASH_MIN_LENGTH = 30.0;
 	private static final double DOMAIN_SLASH_EXTRA_LENGTH = 25.0;
@@ -67,7 +67,7 @@ public final class Sukuna {
 	private static final float DOMAIN_CLEAVE_BASE = 3.0f;
 	private static final float DOMAIN_CLEAVE_HEALTH_SHARE = 0.08f;
 	private static final double DOMAIN_SLASH_AREA_SHARE = 0.85; // how far out slashes land, of the dome's radius
-	private static final double DOMAIN_SLASH_DEPTH = 12.0; // slashes land this far above and below the caster's feet
+	private static final double DOMAIN_SLASH_DEPTH = 24.0; // slashes land this far above and below the caster's feet
 
 	private record Dome(UUID owner, ResourceKey<Level> dimension, Vec3 center, long endTick) {
 	}
@@ -206,13 +206,13 @@ public final class Sukuna {
 		ServerLevel level = player.level();
 		Dome dome = new Dome(player.getUUID(), level.dimension(), player.position(), level.getGameTime() + DOMAIN_TICKS);
 		domes = Stream.concat(domes.stream(), Stream.of(dome)).toList();
-		announce(level, dome.center(), DOMAIN_TICKS);
+		announce(level, dome.center(), DOMAIN_TICKS, dome.owner());
 		level.playSound(null, dome.center().x, dome.center().y, dome.center().z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 10.0f, 0.4f);
 		level.playSound(null, dome.center().x, dome.center().y, dome.center().z, DekuSounds.EXPLOSION_BOOM, SoundSource.PLAYERS, 8.0f, 0.5f);
 	}
 
-	private static void announce(ServerLevel level, Vec3 center, int ticks) {
-		DomainPayload fx = new DomainPayload(center, DOMAIN_RADIUS, ticks, DomainPayload.Kind.SHRINE);
+	private static void announce(ServerLevel level, Vec3 center, int ticks, UUID owner) {
+		DomainPayload fx = new DomainPayload(center, DOMAIN_RADIUS, ticks, DomainPayload.Kind.SHRINE, owner);
 		for (ServerPlayer viewer : PlayerLookup.around(level, center, DOMAIN_RADIUS + FX_VIEW_DISTANCE)) {
 			if (ServerPlayNetworking.canSend(viewer, DomainPayload.TYPE)) {
 				ServerPlayNetworking.send(viewer, fx);
@@ -229,7 +229,7 @@ public final class Sukuna {
 		for (Dome dome : ended) {
 			ServerLevel level = server.getLevel(dome.dimension());
 			if (level != null) {
-				announce(level, dome.center(), 0);
+				announce(level, dome.center(), 0, dome.owner());
 			}
 		}
 		for (Dome dome : domes) {

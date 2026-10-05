@@ -70,7 +70,7 @@ final class HeroNotebook {
 				Right-click: Dismantle, a flurry of slashes
 				V: Cleave, one heavy cut on your target
 				Hold X: Fuga, draw a burning arrow, let go to loose it. It lands as a huge firestorm that sets everything near it alight.
-				C: Domain Expansion, a dome where endless slashes shred everything for 10 seconds"""),
+				C: Domain Expansion, a 120-block dome with a giant shrine. The camera pulls back to watch while endless slashes shred everything for 10 seconds"""),
 			page("Decay", """
 				Right-click: decay what you touch. It crumbles and the decay spreads through everything connected to it.
 

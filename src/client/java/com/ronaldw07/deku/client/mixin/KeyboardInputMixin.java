@@ -1,5 +1,6 @@
 package com.ronaldw07.deku.client.mixin;
 
+import com.ronaldw07.deku.client.DomainCutscene;
 import com.ronaldw07.deku.client.LaunchClient;
 import net.minecraft.client.player.ClientInput;
 import net.minecraft.client.player.KeyboardInput;
@@ -14,6 +15,6 @@ abstract class KeyboardInputMixin {
 	@Inject(method = "tick()V", at = @At("TAIL"))
 	private void deku$launch(CallbackInfo info) {
 		ClientInput input = (ClientInput) (Object) this;
-		input.keyPresses = LaunchClient.filter(input.keyPresses);
+		input.keyPresses = DomainCutscene.filter(LaunchClient.filter(input.keyPresses));
 	}
 }
