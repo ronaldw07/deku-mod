@@ -39,7 +39,8 @@ public final class ScreenShake {
 				|| blast.style() == Style.GROUND || blast.style() == Style.ICE_DOME) {
 			return;
 		}
-		boolean core = blast.style() == Style.HOWITZER_CORE || blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE;
+		boolean core = blast.style() == Style.HOWITZER_CORE || blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE
+			|| ExplosionFx.isDecay(blast.style());
 		double distance = camera.distanceTo(blast.center());
 		double reach = core ? CORE_REACH : blast.radius() * REACH_PER_RADIUS;
 		double strength = Mth.clamp((reach - distance) / reach, 0, 1) * Math.min(1, blast.radius() / FULL_SHAKE_RADIUS);
@@ -49,7 +50,7 @@ public final class ScreenShake {
 		trauma = Math.min(MAX_TRAUMA, trauma + (float) strength);
 
 		double flashReach = blast.radius() * FLASH_REACH_PER_RADIUS;
-		if (distance < flashReach) {
+		if (distance < flashReach && !ExplosionFx.isDecay(blast.style())) {
 			flash = Math.max(flash, MAX_FLASH * (float) (1 - distance / flashReach));
 		}
 	}

@@ -96,6 +96,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("heatwave")) {
 				heatwave(context, singleplayer);
 			}
+			if (wanted("decayWave")) {
+				decayWave(context, singleplayer);
+			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
 			}
@@ -406,6 +409,25 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			return count;
 		});
 		check(dug > 600, "the Flashfreeze nova should leave a big crater, only " + dug + " blocks cleared");
+	}
+
+	private static void decayWave(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Decay's wave: holding V then letting go sends a dark crumbling cloud out with the wave and shakes the screen.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 5000 -59 5000 0 8");
+		context.waitTicks(40);
+		selectSlot(context, 3);
+		check(context.computeOnClient(client -> DekuItems.isHolding(client.player, DekuItems.DECAY)), "slot 4 should hold Decay");
+		context.getInput().holdKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(70);
+		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(6);
+		context.takeScreenshot("decay-wave-start");
+		check(context.computeOnClient(client -> ScreenShake.active()), "the Decay wave should shake the screen");
+		context.waitTicks(20);
+		context.takeScreenshot("decay-wave-rolling");
+		context.waitTicks(30);
+		context.takeScreenshot("decay-wave-late");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

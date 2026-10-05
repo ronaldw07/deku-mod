@@ -147,6 +147,26 @@ final class ExplosionSmoke {
 	private static final double ASH_DRIFT = 0.02;
 	private static final double ASH_VIEW_DISTANCE = 300.0;
 
+	// Decay: a dark crumbling cloud rolling out with the wave, and a column of dust where it started.
+	private static final int DECAY_TICKS = 60;
+	private static final int DECAY_COLUMN_TICKS = 40;
+	private static final double DECAY_RING_PUFFS_PER_BLOCK = 1.2;
+	private static final int DECAY_MAX_RING_PUFFS = 120;
+	private static final int DECAY_DEBRIS_PER_TICK = 14;
+	private static final double DECAY_COLUMN_HEIGHT_PER_RADIUS = 0.8;
+	private static final double DECAY_MAX_COLUMN_HEIGHT = 50.0;
+	private static final double DECAY_MAX_STEM = 4.0;
+	private static final int DECAY_STEM_PUFFS = 18;
+	private static final int DECAY_CAP_PUFFS = 14;
+	private static final double DECAY_CAP_SHARE = 0.3;
+	private static final double DECAY_MAX_CAP = 22.0;
+	private static final DustParticleOptions DECAY_BLOOD = new DustParticleOptions(0x5A1010, 2.0f);
+	private static final DustParticleOptions DECAY_ASH = new DustParticleOptions(0x6A6A6A, 2.5f);
+	// Flashfreeze: shards of the shattered dome raining back down.
+	private static final int ICE_RAIN_TICKS = 40;
+	private static final int ICE_RAIN_PER_TICK = 18;
+	private static final double ICE_RAIN_SPREAD = 0.8;
+
 	private record Pop(long at, Vec3 center, float radius) {
 	}
 
@@ -171,6 +191,9 @@ final class ExplosionSmoke {
 
 	/** How long a blast keeps emitting, in ticks. */
 	static int emitTicks(Blast blast) {
+		if (ExplosionFx.isDecay(blast.style())) {
+			return DECAY_TICKS;
+		}
 		if (isCore(blast.style())) {
 			return CORE_RISE_TICKS + 1;
 		}
@@ -206,6 +229,13 @@ final class ExplosionSmoke {
 			return;
 		}
 		RandomSource random = level.getRandom();
+		if (ExplosionFx.isDecay(blast.style())) {
+			decay(level, blast, age, random);
+			return;
+		}
+		if (blast.style() == Style.HEATWAVE && age >= 1 && age <= ICE_RAIN_TICKS) {
+			iceRain(level, blast, random);
+		}
 		double share = share(blast.style());
 		boolean core = isCore(blast.style());
 		if (age == 0) {
@@ -253,6 +283,7 @@ final class ExplosionSmoke {
 			case HEATWAVE -> 1.0;
 			case ICE_DOME -> 0.0;
 			case PURPLE -> 0.0;
+			case DECAY_WAVE, DECAY_CATASTROPHE -> 0.0;
 		};
 	}
 
@@ -303,6 +334,106 @@ final class ExplosionSmoke {
 				spawn(level, ParticleTypes.FIREWORK, c, new Vec3(v.x, Math.abs(v.y), v.z), 1f);
 			}
 			ash = new Ash(c, blast.startTick());
+		}
+	}
+
+	/**
+	 * Decay's wave: a dark cloud of dust and the ground's own crumbs racing out along the front, with a
+	 * column of rotting dust and falling ash where it began.
+	 */
+	private static void decay(ClientLevel level, Blast blast, int age, RandomSource random) {
+		Vec3 c = blast.center();
+		float radius = blast.radius();
+		if (age == 0) {
+			spawn(level, ParticleTypes.EXPLOSION_EMITTER, c, Vec3.ZERO, 1f);
+			ash = new Ash(c, blast.startTick());
+		}
+		double front = ExplosionFx.decayFront(blast, age);
+		if (front > 1 && front < radius + 2) {
+			int puffs = scaled(Mth.clamp(front * DECAY_RING_PUFFS_PER_BLOCK, 12, DECAY_MAX_RING_PUFFS));
+			for (int i = 0; i < puffs; i++) {
+				double angle = random.nextDouble() * Math.PI * 2;
+				Vec3 out = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+				double x = c.x + out.x * front;
+				double z = c.z + out.z * front;
+				double y = surface(level, x, z, c.y);
+				float size = 2f + radius * 0.03f;
+				Particle puff = spawn(level, random.nextInt(3) == 0 ? ParticleTypes.CAMPFIRE_COSY_SMOKE : DekuParticles.SOOT_SMOKE,
+					new Vec3(x, y + 0.6, z), out.scale(0.05 + random.nextDouble() * 0.08).add(0, 0.04 + random.nextDouble() * 0.06, 0), size);
+				if (puff instanceof SmokePuffParticle soot) {
+					soot.setLifetimeTicks(80 + random.nextInt(60));
+				}
+				if (i % 4 == 0) {
+					spawn(level, random.nextBoolean() ? DECAY_BLOOD : DECAY_ASH, new Vec3(x, y + 1.5, z), out.scale(0.1).add(0, 0.05, 0), 1f);
+				}
+			}
+			// The crumbling ground flung up at the front.
+			for (int i = 0; i < scaled(DECAY_DEBRIS_PER_TICK); i++) {
+				double angle = random.nextDouble() * Math.PI * 2;
+				double reach = front - random.nextDouble() * 3;
+				double x = c.x + Math.cos(angle) * reach;
+				double z = c.z + Math.sin(angle) * reach;
+				double y = surface(level, x, z, c.y);
+				var state = level.getBlockState(BlockPos.containing(x, y - 1, z));
+				if (!state.isAir()) {
+					spawn(level, new BlockParticleOption(ParticleTypes.BLOCK, state), new Vec3(x, y + 0.3, z),
+						new Vec3((random.nextDouble() - 0.5) * 0.3, 0.25 + random.nextDouble() * 0.45, (random.nextDouble() - 0.5) * 0.3), 1.5f);
+				}
+			}
+		}
+		if (age <= DECAY_COLUMN_TICKS) {
+			double progress = (double) age / DECAY_COLUMN_TICKS;
+			double height = Math.min(DECAY_MAX_COLUMN_HEIGHT, radius * DECAY_COLUMN_HEIGHT_PER_RADIUS);
+			double top = height * (1 - (1 - progress) * (1 - progress));
+			double stem = Math.min(DECAY_MAX_STEM, 1 + radius * 0.04);
+			for (int i = 0; i < scaled(DECAY_STEM_PUFFS); i++) {
+				double angle = random.nextDouble() * Math.PI * 2;
+				double out = random.nextDouble() * stem;
+				Vec3 at = c.add(Math.cos(angle) * out, top * random.nextDouble(), Math.sin(angle) * out);
+				Particle puff = spawn(level, DekuParticles.SOOT_SMOKE, at, new Vec3(0, 0.06 + random.nextDouble() * 0.1, 0), 2f + (float) stem * 0.5f);
+				if (puff instanceof SmokePuffParticle soot) {
+					soot.setLifetimeTicks(CORE_MIN_LIFETIME / 2 + random.nextInt(CORE_EXTRA_LIFETIME));
+				}
+			}
+			if (progress > CAP_STARTS_AT) {
+				double cap = Math.min(DECAY_MAX_CAP, radius * DECAY_CAP_SHARE);
+				for (int i = 0; i < scaled(DECAY_CAP_PUFFS); i++) {
+					double angle = random.nextDouble() * Math.PI * 2;
+					double out = cap * Math.sqrt(random.nextDouble());
+					Vec3 direction = new Vec3(Math.cos(angle), 0, Math.sin(angle));
+					Particle puff = spawn(level, DekuParticles.SOOT_SMOKE, c.add(direction.x * out, top + random.nextDouble() * cap * 0.3, direction.z * out),
+						direction.scale(0.1).add(0, 0.03, 0), 3f + (float) cap * 0.15f);
+					if (puff instanceof SmokePuffParticle soot) {
+						soot.setLifetimeTicks(CORE_MIN_LIFETIME / 2 + random.nextInt(CORE_EXTRA_LIFETIME));
+					}
+				}
+			}
+		}
+	}
+
+	/** The height of the top of the ground at this spot, or the fallback if it hasn't loaded. */
+	private static double surface(ClientLevel level, double x, double z, double fallback) {
+		BlockPos pos = BlockPos.containing(x, fallback, z);
+		if (!level.hasChunkAt(pos)) {
+			return fallback;
+		}
+		return level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, pos.getX(), pos.getZ());
+	}
+
+	/** Shards of the shattered ice dome thrown up and raining back down across it. */
+	private static void iceRain(ClientLevel level, Blast blast, RandomSource random) {
+		Vec3 c = blast.center();
+		for (int i = 0; i < scaled(ICE_RAIN_PER_TICK); i++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double out = blast.radius() * ICE_RAIN_SPREAD * Math.sqrt(random.nextDouble());
+			Vec3 at = c.add(Math.cos(angle) * out, random.nextDouble() * blast.radius() * 0.3, Math.sin(angle) * out);
+			spawn(level, new BlockParticleOption(ParticleTypes.BLOCK, random.nextBoolean() ? Blocks.PACKED_ICE.defaultBlockState() : Blocks.BLUE_ICE.defaultBlockState()),
+				at, new Vec3((random.nextDouble() - 0.5) * 0.4, 0.2 + random.nextDouble() * 0.6, (random.nextDouble() - 0.5) * 0.4), 2.5f);
+		}
+		for (int i = 0; i < scaled(4); i++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double out = blast.radius() * ICE_RAIN_SPREAD * Math.sqrt(random.nextDouble());
+			spawn(level, ParticleTypes.SNOWFLAKE, c.add(Math.cos(angle) * out, blast.radius() * 0.5, Math.sin(angle) * out), new Vec3(0, -0.05, 0), 1.5f);
 		}
 	}
 

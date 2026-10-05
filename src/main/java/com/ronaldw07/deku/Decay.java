@@ -1,6 +1,7 @@
 package com.ronaldw07.deku;
 
 import com.ronaldw07.deku.network.DecayPayload.Move;
+import com.ronaldw07.deku.network.ExplosionFxPayload.Style;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -82,6 +83,7 @@ public final class Decay {
 	private static final double COWLING_REACH = 0.6; // around the body; the floor underfoot is spared
 	private static final double COWLING_ROT_REACH = 1.5;
 	private static final int SOUND_INTERVAL = 4;
+	private static final double FX_VIEW_DISTANCE = 256.0;
 	// Rotting: a few hearts every other tick for three seconds.
 	private static final int ROT_TICKS = 60;
 	private static final int ROT_INTERVAL = 2;
@@ -187,6 +189,8 @@ public final class Decay {
 			spread.offer(level, pos.immutable());
 		}
 		spreads.add(spread);
+		BlastFx.send(level, player.position(), (float) radius, catastrophe ? Style.DECAY_CATASTROPHE : Style.DECAY_WAVE,
+			player.position(), FX_VIEW_DISTANCE);
 		level.sendParticles(ASH, player.getX(), player.getY(), player.getZ(), catastrophe ? 200 : 60, 1.5, 0.2, 1.5, 0.05);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), DekuSounds.DECAY_TOUCH, SoundSource.PLAYERS,
 			(float) (1.0 + power) * (catastrophe ? 3 : 1), catastrophe ? 0.4f : 0.6f);

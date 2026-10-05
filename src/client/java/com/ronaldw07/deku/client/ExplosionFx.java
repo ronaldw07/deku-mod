@@ -28,6 +28,11 @@ final class ExplosionFx {
 	private static final int RAYS = 22;
 	private static final int RING_SEGMENTS = 40;
 	private static final double RING_GROWTH = 1.8;
+	// The wave of Decay rolling outward, matching how fast the server eats the ground.
+	private static final double DECAY_WAVE_SPEED = 1.5;
+	private static final double DECAY_CATASTROPHE_SPEED = 2.5;
+	private static final int DECAY_LIFETIME_TICKS = 70;
+	private static final float DECAY_RING_WIDTH = 6f;
 	// Howitzer Impact is in a league of its own: it lasts longer, and its shockwave races
 	// out to the edge of its 400-block reach, with a second ring chasing the first.
 	private static final int HOWITZER_LIFETIME_TICKS = 40;
@@ -114,6 +119,12 @@ final class ExplosionFx {
 				drawDome(context, blast, center, age);
 				continue;
 			}
+			if (isDecay(blast.style())) {
+				List<Segment> front = ring(center, decayFront(blast, age));
+				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) ->
+					LightningDraw.draw(pose.pose(), buffer, front, DECAY_RING_WIDTH, LightningDraw.DECAY, fade * 0.7f));
+				continue;
+			}
 			boolean howitzer = isHowitzer(blast.style());
 			boolean nuke = blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE;
 			double rayReach = howitzer ? HOWITZER_RAY_REACH : nuke ? NUKE_RAY_REACH : 1;
@@ -180,7 +191,20 @@ final class ExplosionFx {
 		return center.add(radius * Math.sin(polar) * Math.cos(around), radius * Math.cos(polar), radius * Math.sin(polar) * Math.sin(around));
 	}
 
+	static boolean isDecay(Style style) {
+		return style == Style.DECAY_WAVE || style == Style.DECAY_CATASTROPHE;
+	}
+
+	/** How far out the wave of Decay has reached, the same pace as the ground being eaten. */
+	static double decayFront(Blast blast, double age) {
+		double speed = blast.style() == Style.DECAY_CATASTROPHE ? DECAY_CATASTROPHE_SPEED : DECAY_WAVE_SPEED;
+		return Math.min(blast.radius(), age * speed);
+	}
+
 	private static int lifetime(Blast blast) {
+		if (isDecay(blast.style())) {
+			return DECAY_LIFETIME_TICKS;
+		}
 		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE ? NUKE_LIFETIME_TICKS
 			: blast.style() == Style.ICE_DOME ? DOME_LIFETIME_TICKS : LIFETIME_TICKS;
 	}
