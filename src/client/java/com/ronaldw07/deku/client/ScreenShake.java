@@ -40,7 +40,7 @@ public final class ScreenShake {
 			return;
 		}
 		boolean core = blast.style() == Style.HOWITZER_CORE || blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE
-			|| ExplosionFx.isDecay(blast.style());
+			|| ExplosionFx.isDecay(blast.style()) || blast.style() == Style.FUGA;
 		double distance = camera.distanceTo(blast.center());
 		double reach = core ? CORE_REACH : blast.radius() * REACH_PER_RADIUS;
 		double strength = Mth.clamp((reach - distance) / reach, 0, 1) * Math.min(1, blast.radius() / FULL_SHAKE_RADIUS);

@@ -146,7 +146,6 @@ final class FireballFlightFx {
 			case ARROW -> {
 				puff(minecraft, ParticleTypes.FLAME, at, 1f, ARROW_TRAIL_FLAMES);
 				puff(minecraft, ParticleTypes.LAVA, at, 1f, 1);
-				puff(minecraft, DekuParticles.SOOT_SMOKE, at, (float) (radius * 0.6), main ? 1 : 0);
 			}
 			case PURPLE -> {
 				// A path of dark violet fire left burning behind the orb.

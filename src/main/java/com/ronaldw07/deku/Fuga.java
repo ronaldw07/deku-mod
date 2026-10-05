@@ -25,6 +25,7 @@ public final class Fuga {
 	private static final int SCORCH_FIRES = 10;
 	private static final double BURN_REACH_PER_RADIUS = 1.6;
 	private static final int BURN_TICKS = 160;
+	private static final int RUMBLE_DELAY_TICKS = 20;
 
 	private Fuga() {
 	}
@@ -53,7 +54,7 @@ public final class Fuga {
 	/** The arrow lands: a fire blast with a cloud, a shockwave, and everything near it set alight. */
 	private static void land(ServerPlayer player, Vec3 center, float radius) {
 		ServerLevel level = player.level();
-		Bakugo.blast(player, center, radius, (int) (radius * DEBRIS_PER_RADIUS), Style.HOWITZER_CORE, center, SCORCH_FIRES);
+		Bakugo.blast(player, center, radius, (int) (radius * DEBRIS_PER_RADIUS), Style.FUGA, center, SCORCH_FIRES);
 		Bakugo.shockwave(player, center, radius / FULL_RADIUS);
 		double reach = radius * BURN_REACH_PER_RADIUS;
 		for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(reach),
@@ -61,5 +62,8 @@ public final class Fuga {
 			entity.setRemainingFireTicks(BURN_TICKS);
 		}
 		level.playSound(null, center.x, center.y, center.z, DekuSounds.SMASH_THUNDER, SoundSource.PLAYERS, 6.0f, 0.7f);
+		level.playSound(null, center.x, center.y, center.z, DekuSounds.EXPLOSION_BOOM, SoundSource.PLAYERS, 8.0f, 0.6f);
+		Blasts.later(level.getServer(), RUMBLE_DELAY_TICKS, () -> level.playSound(null, center.x, center.y, center.z, DekuSounds.EXPLOSION_RUMBLE,
+			SoundSource.PLAYERS, 8.0f, 1.0f));
 	}
 }

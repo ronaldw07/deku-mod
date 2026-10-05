@@ -367,7 +367,7 @@ public final class Bakugo {
 			Blasts.scorch(level, center, radius, scorchFires);
 		}
 		boom(level, center, radius, style);
-		double viewDistance = style == Style.HOWITZER_CORE || style == Style.NUKE ? CORE_FX_VIEW_DISTANCE : FX_VIEW_DISTANCE;
+		double viewDistance = style == Style.HOWITZER_CORE || style == Style.NUKE || style == Style.FUGA ? CORE_FX_VIEW_DISTANCE : FX_VIEW_DISTANCE;
 		BlastFx.send(level, center, radius, style, from, viewDistance);
 	}
 

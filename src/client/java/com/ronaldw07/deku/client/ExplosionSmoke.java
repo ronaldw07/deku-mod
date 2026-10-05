@@ -147,6 +147,10 @@ final class ExplosionSmoke {
 	private static final double ASH_DRIFT = 0.02;
 	private static final double ASH_VIEW_DISTANCE = 300.0;
 
+	private static final int FUGA_FIRE_TICKS = 12;
+	private static final int FUGA_EMBERS_PER_TICK = 6;
+	private static final double FUGA_EMBER_HEIGHT = 70.0;
+	private static final int FUGA_FOOT_FLAMES = 6;
 	// Decay: a dark crumbling cloud rolling out with the wave, and a column of dust where it started.
 	private static final int DECAY_TICKS = 60;
 	private static final int DECAY_COLUMN_TICKS = 40;
@@ -194,6 +198,9 @@ final class ExplosionSmoke {
 		if (ExplosionFx.isDecay(blast.style())) {
 			return DECAY_TICKS;
 		}
+		if (blast.style() == Style.FUGA) {
+			return FugaBeamFx.LIFETIME_TICKS;
+		}
 		if (isCore(blast.style())) {
 			return CORE_RISE_TICKS + 1;
 		}
@@ -231,6 +238,10 @@ final class ExplosionSmoke {
 		RandomSource random = level.getRandom();
 		if (ExplosionFx.isDecay(blast.style())) {
 			decay(level, blast, age, random);
+			return;
+		}
+		if (blast.style() == Style.FUGA) {
+			fuga(level, blast, age, random);
 			return;
 		}
 		if (blast.style() == Style.HEATWAVE && age >= 1 && age <= ICE_RAIN_TICKS) {
@@ -284,6 +295,7 @@ final class ExplosionSmoke {
 			case ICE_DOME -> 0.0;
 			case PURPLE -> 0.0;
 			case DECAY_WAVE, DECAY_CATASTROPHE -> 0.0;
+			case FUGA -> 1.0;
 		};
 	}
 
@@ -407,6 +419,34 @@ final class ExplosionSmoke {
 						soot.setLifetimeTicks(CORE_MIN_LIFETIME / 2 + random.nextInt(CORE_EXTRA_LIFETIME));
 					}
 				}
+			}
+		}
+	}
+
+	/**
+	 * Fuga: a flash and a ball of fire at the crater, then embers and lava sparks climbing the
+	 * column of light for as long as it stands. No soot, only fire.
+	 */
+	private static void fuga(ClientLevel level, Blast blast, int age, RandomSource random) {
+		Vec3 c = blast.center();
+		if (age == 0) {
+			burst(level, blast, 1.0, random);
+		}
+		if (age <= FUGA_FIRE_TICKS) {
+			fireball(level, blast, 1.0, random);
+		}
+		double radius = Mth.clamp(blast.radius() * 0.25, 2.5, 7.0);
+		for (int i = 0; i < scaled(FUGA_EMBERS_PER_TICK); i++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double out = radius * (0.3 + random.nextDouble() * 1.4);
+			Vec3 at = c.add(Math.cos(angle) * out, random.nextDouble() * FUGA_EMBER_HEIGHT, Math.sin(angle) * out);
+			spawn(level, random.nextInt(3) == 0 ? ParticleTypes.LAVA : ParticleTypes.FLAME, at, new Vec3(0, 0.15 + random.nextDouble() * 0.25, 0), 1.2f);
+		}
+		if (age % 2 == 0) {
+			for (int i = 0; i < scaled(FUGA_FOOT_FLAMES); i++) {
+				double angle = random.nextDouble() * Math.PI * 2;
+				double out = radius * (1 + random.nextDouble() * 3);
+				spawn(level, ParticleTypes.FLAME, c.add(Math.cos(angle) * out, 0.2, Math.sin(angle) * out), new Vec3(0, 0.1, 0), 1.5f);
 			}
 		}
 	}

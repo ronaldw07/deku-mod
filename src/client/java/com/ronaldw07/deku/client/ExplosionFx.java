@@ -106,7 +106,13 @@ final class ExplosionFx {
 
 		for (Blast blast : blasts) {
 			double age = now - blast.startTick() + age0;
-			int lifetime = lifetime(blast);
+			if (blast.style() == Style.FUGA) {
+				FugaBeamFx.render(context, blast, camera, age);
+				if (age >= NUKE_LIFETIME_TICKS) {
+					continue; // the burst around the foot is brief; the column stays
+				}
+			}
+			int lifetime = blast.style() == Style.FUGA ? NUKE_LIFETIME_TICKS : lifetime(blast);
 			float fade = age < GROW_TICKS ? 1f : (float) Math.max(0, 1 - (age - GROW_TICKS) / (lifetime - GROW_TICKS));
 			Layer[] palette = switch (blast.style()) {
 				case GROUND -> LightningDraw.RED;
@@ -126,7 +132,7 @@ final class ExplosionFx {
 				continue;
 			}
 			boolean howitzer = isHowitzer(blast.style());
-			boolean nuke = blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE;
+			boolean nuke = blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE || blast.style() == Style.FUGA;
 			double rayReach = howitzer ? HOWITZER_RAY_REACH : nuke ? NUKE_RAY_REACH : 1;
 			List<Segment> rays = rays(center, blast, Math.min(1, age / GROW_TICKS) * rayReach);
 			double progress = Math.min(1, age / lifetime * 1.5);
@@ -204,6 +210,9 @@ final class ExplosionFx {
 	private static int lifetime(Blast blast) {
 		if (isDecay(blast.style())) {
 			return DECAY_LIFETIME_TICKS;
+		}
+		if (blast.style() == Style.FUGA) {
+			return FugaBeamFx.LIFETIME_TICKS;
 		}
 		return isHowitzer(blast.style()) ? HOWITZER_LIFETIME_TICKS : blast.style() == Style.NUKE || blast.style() == Style.HEATWAVE || blast.style() == Style.PURPLE ? NUKE_LIFETIME_TICKS
 			: blast.style() == Style.ICE_DOME ? DOME_LIFETIME_TICKS : LIFETIME_TICKS;

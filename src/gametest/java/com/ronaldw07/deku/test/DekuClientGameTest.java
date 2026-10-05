@@ -526,6 +526,10 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(context.computeOnClient(client -> ScreenShake.active()), "the Fuga blast should shake the screen");
 		context.waitTicks(40);
 		context.takeScreenshot("fuga-aftermath");
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(200);
+		context.takeScreenshot("fuga-beam-later");
+		camera(context, CameraType.FIRST_PERSON);
 		boolean gone = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> husk.isAlive()).isEmpty());
 		check(gone, "the Fuga firestorm should kill the husk at the target");
 		int dug = singleplayer.getServer().computeOnServer(server -> {
