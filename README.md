@@ -62,6 +62,7 @@ Explosions burn out as a white-hot flash, a fireball that goes orange, red and t
 
 - Right-click: Dismantle, a flurry of slashes ahead that cut through blocks and anything living
 - V: Cleave, one heavy cut on whatever the crosshair is on, a third of a mob's health on top of the hit
+- Hold X: Fuga, draw a burning arrow for up to 2.5 seconds and loose it at the crosshair; it lands as a huge fire blast with a cloud and sets everything near it alight
 - C: Domain Expansion (Malevolent Shrine), a 60 block dome with a floating shrine; for 10 seconds endless slashes shred the terrain and everything inside it
 
 ## Danger Sense

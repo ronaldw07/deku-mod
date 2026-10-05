@@ -72,7 +72,7 @@ public final class Sukuna {
 	private Sukuna() {
 	}
 
-	public static void handle(ServerPlayer player, Move move) {
+	public static void handle(ServerPlayer player, Move move, int charge) {
 		if (!DekuItems.isHolding(player, DekuItems.SUKUNA)) {
 			return;
 		}
@@ -80,6 +80,7 @@ public final class Sukuna {
 			case DISMANTLE -> dismantle(player);
 			case CLEAVE -> cleave(player);
 			case DOMAIN -> openDomain(player);
+			case FUGA -> Fuga.fire(player, charge);
 			default -> {
 			}
 		}

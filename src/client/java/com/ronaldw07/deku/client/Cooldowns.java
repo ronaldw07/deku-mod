@@ -41,6 +41,7 @@ public final class Cooldowns {
 		INFINITE_VOID("Infinite Void", 600),
 		DISMANTLE("Dismantle", 20),
 		CLEAVE("Cleave", 40),
+		FUGA("Fuga", 120),
 		DOMAIN("Domain Expansion", 600);
 
 		final String label;

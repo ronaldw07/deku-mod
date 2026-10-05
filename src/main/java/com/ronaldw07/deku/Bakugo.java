@@ -213,7 +213,7 @@ public final class Bakugo {
 	}
 
 	/** Throws everything within range away from the center, and badly hurts anything close; scale shrinks the reach. */
-	private static void shockwave(ServerPlayer player, Vec3 center, double scale) {
+	static void shockwave(ServerPlayer player, Vec3 center, double scale) {
 		ServerLevel level = player.level();
 		double range = SHOCKWAVE_RANGE * scale;
 		double damageRange = SHOCKWAVE_DAMAGE_RANGE * scale;
@@ -357,7 +357,7 @@ public final class Bakugo {
 	}
 
 	/** The same, and if scorchFires is above 0 the crater's rim is burnt black with that many extra fires. */
-	private static void blast(ServerPlayer owner, Vec3 center, float baseRadius, int debris, Style style, Vec3 from, int scorchFires) {
+	static void blast(ServerPlayer owner, Vec3 center, float baseRadius, int debris, Style style, Vec3 from, int scorchFires) {
 		ServerLevel level = owner.level();
 		float radius = ExplosionCowling.active(owner) ? baseRadius * ExplosionCowling.BLAST_BOOST : baseRadius;
 		Blasts.blast(owner, center, radius, Blasts.sparing(owner), debris);

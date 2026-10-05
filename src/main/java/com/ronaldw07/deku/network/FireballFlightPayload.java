@@ -14,7 +14,7 @@ import net.minecraft.world.phys.Vec3;
 public record FireballFlightPayload(Vec3 start, Vec3 end, float ballRadius, float speed, Kind kind, int holdTicks)
 		implements CustomPacketPayload {
 	public enum Kind {
-		FIRE, BLUE, RED, PURPLE
+		FIRE, BLUE, RED, PURPLE, ARROW
 	}
 
 	public static final Type<FireballFlightPayload> TYPE = new Type<>(DekuMod.id("fireball_flight"));

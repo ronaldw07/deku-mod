@@ -21,6 +21,7 @@ import com.ronaldw07.deku.client.LaunchClient;
 import com.ronaldw07.deku.client.ScreenShake;
 import com.ronaldw07.deku.client.SettingsScreen;
 import com.ronaldw07.deku.client.SmashClient;
+import com.ronaldw07.deku.client.SukunaClient;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -106,6 +107,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			}
 			if (wanted("infiniteVoid")) {
 				infiniteVoid(context, singleplayer);
+			}
+			if (wanted("fuga")) {
+				fuga(context, singleplayer);
 			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
@@ -479,6 +483,41 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		check(!singleplayer.getServer().computeOnServer(server -> InfiniteVoid.open(player(server).getUUID())), "the void should close after ten seconds");
 		boolean thawed = singleplayer.getServer().computeOnServer(server -> !server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().isNoAi());
 		check(thawed, "the husk should be released when the void closes");
+	}
+
+	private static void fuga(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Sukuna X: hold to draw the burning arrow, let go and it flies to the crosshair and lands as a firestorm that burns a husk.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 6200 -59 6200 0 6");
+		context.waitTicks(40);
+		selectSlot(context, 6);
+		Vec3 target = singleplayer.getServer().computeOnServer(server -> Aim.trace(player(server), 200).getLocation());
+		command(singleplayer, "summon minecraft:husk " + target.x + " " + target.y + " " + target.z + " {NoAI:1b}");
+		context.getInput().holdKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(30);
+		context.takeScreenshot("fuga-drawing");
+		context.waitTicks(30);
+		check(context.computeOnClient(client -> SukunaClient.fugaCharge()) >= 90, "holding X should fully draw Fuga");
+		context.takeScreenshot("fuga-drawn");
+		context.getInput().releaseKey(DekuModClient.CLUSTER_KEY);
+		context.waitTicks(3);
+		context.takeScreenshot("fuga-flight");
+		context.waitTicks(10);
+		context.takeScreenshot("fuga-impact");
+		check(context.computeOnClient(client -> ScreenShake.active()), "the Fuga blast should shake the screen");
+		context.waitTicks(40);
+		context.takeScreenshot("fuga-aftermath");
+		boolean gone = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> husk.isAlive()).isEmpty());
+		check(gone, "the Fuga firestorm should kill the husk at the target");
+		int dug = singleplayer.getServer().computeOnServer(server -> {
+			int count = 0;
+			BlockPos at = BlockPos.containing(target);
+			for (BlockPos pos : BlockPos.betweenClosed(at.offset(-10, -4, -10), at.offset(10, 0, 10))) {
+				count += server.overworld().getBlockState(pos).isAir() ? 1 : 0;
+			}
+			return count;
+		});
+		check(dug > 300, "Fuga should leave a big crater, only " + dug + " blocks cleared");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

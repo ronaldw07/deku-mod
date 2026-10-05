@@ -36,6 +36,11 @@ final class FireballFlightFx {
 	private static final int TRAIL_STEPS = 3;
 	private static final int ORB_TRAIL_DUST = 3;
 	private static final int PULL_DUST = 6;
+	private static final int ARROW_TRAIL_FLAMES = 3;
+	private static final double ARROW_LENGTH = 7.0;
+	private static final double ARROW_HEAD_SHARE = 0.22;
+	private static final double ARROW_HEAD_WIDTH = 0.14;
+	private static final int ARROW_FLETCHES = 4;
 	private static final double PULL_RING_RADIUS = 9.0;
 	private static final double PULL_SPEED = 0.5;
 	private static final DustParticleOptions BLUE_DUST = new DustParticleOptions(0x3080FF, 2.0f);
@@ -70,6 +75,7 @@ final class FireballFlightFx {
 				case BLUE -> LightningDraw.BLUE;
 				case RED -> LightningDraw.RED;
 				case PURPLE -> LightningDraw.PURPLE;
+				case ARROW -> LightningDraw.FIRE;
 			};
 		}
 	}
@@ -130,6 +136,11 @@ final class FireballFlightFx {
 				puff(minecraft, RED_DUST, at, 1f, ORB_TRAIL_DUST);
 				puff(minecraft, ParticleTypes.FLAME, at, 1f, 1);
 			}
+			case ARROW -> {
+				puff(minecraft, ParticleTypes.FLAME, at, 1f, ARROW_TRAIL_FLAMES);
+				puff(minecraft, ParticleTypes.LAVA, at, 1f, 1);
+				puff(minecraft, DekuParticles.SOOT_SMOKE, at, (float) (radius * 0.6), main ? 1 : 0);
+			}
 			case PURPLE -> {
 				puff(minecraft, PURPLE_DUST, at, 1f, ORB_TRAIL_DUST + 2);
 				puff(minecraft, ParticleTypes.REVERSE_PORTAL, at, 1f, 2);
@@ -156,6 +167,27 @@ final class FireballFlightFx {
 		}
 	}
 
+	/** A long burning arrow: a shaft, a barbed head at the tip and a fan of fletching at the tail, with a blazing ball on the point. */
+	private static void addArrow(List<Segment> sphere, List<Segment> rays, RandomSource random, Vec3 tip, Vec3 direction, double size) {
+		Vec3 helper = Math.abs(direction.y) > 0.95 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
+		Vec3 side = direction.cross(helper).normalize();
+		Vec3 up = direction.cross(side);
+		Vec3 tail = tip.subtract(direction.scale(ARROW_LENGTH));
+		rays.add(new Segment(tail, tip));
+		Vec3 headBase = tip.subtract(direction.scale(ARROW_LENGTH * ARROW_HEAD_SHARE));
+		for (int i = 0; i < 4; i++) {
+			double angle = Math.PI / 2 * i;
+			Vec3 out = side.scale(Math.cos(angle)).add(up.scale(Math.sin(angle))).scale(ARROW_LENGTH * ARROW_HEAD_WIDTH);
+			rays.add(new Segment(tip, headBase.add(out)));
+		}
+		for (int i = 0; i < ARROW_FLETCHES; i++) {
+			double angle = Math.PI * 2 * i / ARROW_FLETCHES + Math.PI / 4;
+			Vec3 out = side.scale(Math.cos(angle)).add(up.scale(Math.sin(angle))).scale(ARROW_LENGTH * ARROW_HEAD_WIDTH);
+			rays.add(new Segment(tail.add(direction.scale(ARROW_LENGTH * 0.12)), tail.subtract(direction.scale(ARROW_LENGTH * 0.06)).add(out)));
+		}
+		FireballChargeFx.addBall(sphere, rays, random, tip, size * 0.6, 8);
+	}
+
 	static void render(LevelRenderContext context) {
 		Minecraft minecraft = Minecraft.getInstance();
 		if (minecraft.level == null || flights.isEmpty()) {
@@ -175,7 +207,12 @@ final class FireballFlightFx {
 				}
 				palette = flight.palette();
 				RandomSource random = RandomSource.create(flight.startTick() * 31 + now / TICKS_PER_SHAPE);
-				FireballChargeFx.addBall(sphere, rays, random, flight.positionAt(ticks).subtract(camera), flight.radiusAt(now + partialTick), BALL_RAYS);
+				Vec3 at = flight.positionAt(ticks).subtract(camera);
+				if (kind == Kind.ARROW) {
+					addArrow(sphere, rays, random, at, flight.end().subtract(flight.start()).normalize(), flight.radiusAt(now + partialTick));
+				} else {
+					FireballChargeFx.addBall(sphere, rays, random, at, flight.radiusAt(now + partialTick), BALL_RAYS);
+				}
 			}
 			if (palette == null) {
 				continue;

@@ -71,6 +71,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(PunchFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionCowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballChargeFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(FugaFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballFlightFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(GojoFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(SlashFx::render);
@@ -178,7 +179,9 @@ public class DekuModClient implements ClientModInitializer {
 		GojoClient.tick(player, gojo, client.options.keyUse.isDown(), SMASH_KEY.isDown(), CLUSTER_KEY.isDown(),
 			gojo && smokescreenClicks % 2 == 1, gojo && cowlingClicks > 0);
 		GojoFx.tick(player);
-		SukunaClient.tick(player, sukuna, client.options.keyUse.isDown(), sukuna && smashClicks > 0, sukuna && cowlingClicks > 0);
+		SukunaClient.tick(player, sukuna, client.options.keyUse.isDown(), sukuna && smashClicks > 0, sukuna && CLUSTER_KEY.isDown(),
+			sukuna && cowlingClicks > 0);
+		FugaFx.tick(player);
 		SlashFx.tick(client.level);
 		DomainFx.tick(client.level);
 		TornadoFx.tick(client.level);

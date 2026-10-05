@@ -164,7 +164,7 @@ public class DekuMod implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(JujutsuPayload.TYPE,
 			(payload, context) -> {
 				Gojo.handle(context.player(), payload.move(), payload.active(), payload.charge());
-				Sukuna.handle(context.player(), payload.move());
+				Sukuna.handle(context.player(), payload.move(), payload.charge());
 			});
 		PayloadTypeRegistry.clientboundPlay().register(SlashFxPayload.TYPE, SlashFxPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DomainPayload.TYPE, DomainPayload.CODEC);
