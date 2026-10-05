@@ -38,11 +38,11 @@ final class FugaBeamFx {
 	private static final int SMALL_TONGUES = 60;
 	// The colour of a flame from its root to its tip.
 	private static final float[][] HEAT = {
-		{1.0f, 0.98f, 0.7f},
-		{1.0f, 0.78f, 0.25f},
-		{1.0f, 0.5f, 0.06f},
-		{0.9f, 0.25f, 0.04f},
-		{0.6f, 0.07f, 0.03f},
+		{1.0f, 0.72f, 0.28f},
+		{1.0f, 0.46f, 0.08f},
+		{0.95f, 0.28f, 0.04f},
+		{0.8f, 0.12f, 0.03f},
+		{0.5f, 0.05f, 0.02f},
 	};
 
 	private FugaBeamFx() {
@@ -56,7 +56,8 @@ final class FugaBeamFx {
 		float fade = (float) Mth.clamp((LIFETIME_TICKS - age) / FADE_TICKS, 0, 1);
 		double grown = 1 - Math.pow(1 - rise, 2); // the fire climbs from the ground up
 		double radius = Mth.clamp(blast.radius() * RADIUS_PER_BLAST, MIN_RADIUS, MAX_RADIUS);
-		Vec3 base = blast.center().subtract(camera);
+		// The fire starts at the bottom of the crater, not at the surface the arrow hit.
+		Vec3 base = new Vec3(blast.center().x, craterFloor(blast.center()), blast.center().z).subtract(camera);
 		// The same seed every frame, so each tongue keeps its own character while it sways.
 		RandomSource random = RandomSource.create(blast.startTick() * 131);
 		double time = age * SWAY_SPEED;
@@ -76,15 +77,36 @@ final class FugaBeamFx {
 		for (int i = 0; i < SWIRLS; i++) {
 			(i % 3 == 0 ? pale : swirls).addAll(swirl(base, radius, grown, time, i));
 		}
-		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.type(), (pose, buffer) -> {
+		List<Segment> embers = new ArrayList<>();
+		for (int i = SWIRLS; i < SWIRLS + 10; i++) {
+			embers.addAll(swirl(base, radius * 1.25, grown, time, i));
+		}
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.darkType(), (pose, buffer) -> {
 			column(pose.pose(), buffer, base, radius, grown, time, fade);
 			for (Tongue tongue : tongues) {
 				flame(pose.pose(), buffer, base, tongue, grown, time, 0.0, fade);
 				flame(pose.pose(), buffer, base, tongue, grown, time, Math.PI / 2, fade);
 			}
 			LightningDraw.drawFlat(pose.pose(), buffer, swirls, SWIRL_WIDTH, 1.0f, 0.92f, 0.45f, 0.95f * fade);
+			LightningDraw.drawFlat(pose.pose(), buffer, embers, SWIRL_WIDTH * 1.3f, 1.0f, 0.35f, 0.05f, 0.95f * fade);
 			LightningDraw.drawFlat(pose.pose(), buffer, pale, SWIRL_WIDTH, 0.82f, 0.82f, 1.0f, 0.95f * fade);
 		});
+	}
+
+	/** The height of the floor of the crater under the point the arrow hit. */
+	private static double craterFloor(Vec3 center) {
+		var level = net.minecraft.client.Minecraft.getInstance().level;
+		if (level == null) {
+			return center.y;
+		}
+		int x = net.minecraft.util.Mth.floor(center.x);
+		int z = net.minecraft.util.Mth.floor(center.z);
+		for (int y = net.minecraft.util.Mth.floor(center.y) + 2; y > level.getMinY(); y--) {
+			if (!level.getBlockState(new net.minecraft.core.BlockPos(x, y, z)).isAir()) {
+				return y + 1;
+			}
+		}
+		return center.y;
 	}
 
 	/**
@@ -96,10 +118,13 @@ final class FugaBeamFx {
 		int rings = (int) Math.ceil(height / RING_SPACING);
 		Vec3[] previous = null;
 		float[] previousColor = null;
+		float previousWisp = 1f;
 		for (int ring = 0; ring <= rings; ring++) {
 			double h = Math.min(height, ring * RING_SPACING);
 			double t = h / HEIGHT;
-			double width = radius * (1.15 - 0.55 * Math.pow(t, 0.7)) * (1 + 0.12 * Math.sin(h * 0.05 + time * 4));
+			// Wide at the foot, thinning fast as it climbs until it is only a wisp.
+			double width = radius * Math.max(0.06, 1.15 - 1.1 * Math.pow(t, 0.5)) * (1 + 0.12 * Math.sin(h * 0.05 + time * 4));
+			float wisp = (float) Math.max(0.1, 1 - 0.9 * Math.pow(t, 1.3));
 			Vec3[] points = new Vec3[COLUMN_SIDES];
 			for (int i = 0; i < COLUMN_SIDES; i++) {
 				double angle = Math.PI * 2 * i / COLUMN_SIDES;
@@ -112,11 +137,12 @@ final class FugaBeamFx {
 				for (int i = 0; i < COLUMN_SIDES; i++) {
 					int next = (i + 1) % COLUMN_SIDES;
 					LightningDraw.drawGradientQuad(pose, buffer, new Vec3[] {previous[i], previous[next], points[next], points[i]},
-						new float[][] {previousColor, previousColor, color, color}, 0.97f * fade);
+						new float[][] {previousColor, previousColor, color, color}, 0.97f * fade * (wisp + previousWisp) / 2);
 				}
 			}
 			previous = points;
 			previousColor = color;
+			previousWisp = wisp;
 		}
 	}
 
@@ -130,7 +156,7 @@ final class FugaBeamFx {
 		for (int step = 0; step <= SWIRL_STEPS; step++) {
 			double t = (double) step / SWIRL_STEPS;
 			double angle = phase + t * turns * Math.PI * 2 + time * (index % 2 == 0 ? 1.4 : -1.1);
-			double reach = radius * (1.2 + 1.1 * Math.sin(t * 5 + phase)) * (1.3 - 0.5 * t);
+			double reach = radius * (1.5 + 1.7 * Math.sin(t * 5 + phase)) * (1.5 - 0.7 * t); // lines of fire reaching a little further out
 			Vec3 at = base.add(Math.cos(angle) * reach, height * t, Math.sin(angle) * reach);
 			if (previous != null) {
 				line.add(new Segment(previous, at));

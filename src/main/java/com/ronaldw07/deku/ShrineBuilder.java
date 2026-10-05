@@ -26,6 +26,9 @@ public final class ShrineBuilder {
 	private static final int[] ROOF_HALVES = {15, 13, 10, 7, 4, 2, 0};
 	private static final int CORNER_TIP = 4;
 	private static final int GATE_DISTANCE = 30;
+	private static final int GATE_SPACING = 30;
+	private static final int GATES = 4;
+	private static final int PATH_LANTERN_EVERY = 8;
 	private static final int GATE_HALF_WIDTH = 7;
 	private static final int GATE_HEIGHT = 11;
 	private static final int LANTERN_EVERY = 5;
@@ -110,32 +113,37 @@ public final class ShrineBuilder {
 			put(at(center, facing, half, roofY - 1, step), LANTERN);
 			put(at(center, facing, -half, roofY - 1, step), LANTERN);
 		}
-		gate(center, facing, floor);
+		for (int gate = 0; gate < GATES; gate++) {
+			gate(center, facing, floor, GATE_DISTANCE + gate * GATE_SPACING);
+		}
 	}
 
 	/** A great gate out in front of the platform, over the path that leads up to the shrine. */
-	private void gate(BlockPos center, Direction facing, int floor) {
+	private void gate(BlockPos center, Direction facing, int floor, int distance) {
 		for (int side = -1; side <= 1; side += 2) {
 			for (int up = 0; up <= GATE_HEIGHT; up++) {
-				put(at(center, facing, side * GATE_HALF_WIDTH, floor + up, GATE_DISTANCE), PILLAR);
-				put(at(center, facing, side * (GATE_HALF_WIDTH + 1), floor + up, GATE_DISTANCE), PILLAR);
+				put(at(center, facing, side * GATE_HALF_WIDTH, floor + up, distance), PILLAR);
+				put(at(center, facing, side * (GATE_HALF_WIDTH + 1), floor + up, distance), PILLAR);
 			}
 		}
 		for (int x = -GATE_HALF_WIDTH - 3; x <= GATE_HALF_WIDTH + 3; x++) {
 			for (int z = -1; z <= 1; z++) {
-				put(at(center, facing, x, floor + GATE_HEIGHT + 1, GATE_DISTANCE + z), ROOF);
+				put(at(center, facing, x, floor + GATE_HEIGHT + 1, distance + z), ROOF);
 			}
-			put(at(center, facing, x, floor + GATE_HEIGHT - 2, GATE_DISTANCE), BEAM);
+			put(at(center, facing, x, floor + GATE_HEIGHT - 2, distance), BEAM);
 		}
 		for (int x = -GATE_HALF_WIDTH - 4; x <= GATE_HALF_WIDTH + 4; x++) {
 			if (Math.abs(x) > GATE_HALF_WIDTH + 2) {
-				put(at(center, facing, x, floor + GATE_HEIGHT + 2, GATE_DISTANCE), ROOF);
+				put(at(center, facing, x, floor + GATE_HEIGHT + 2, distance), ROOF);
 			}
 		}
 		// A path of the same red brick down from the gate to the platform.
-		for (int z = PLATFORM_HALF; z <= GATE_DISTANCE; z++) {
+		for (int z = distance - GATE_SPACING; z <= distance; z++) {
 			for (int x = -1; x <= 1; x++) {
 				put(at(center, facing, x, floor, z), PATH);
+				if (z % PATH_LANTERN_EVERY == 0 && Math.abs(x) == 1) {
+					put(at(center, facing, x * 3, floor + 1, z), LANTERN);
+				}
 				for (int depth = 1; depth <= FOUNDATION_DEPTH; depth++) {
 					if (level.getBlockState(at(center, facing, x, floor - depth, z)).isAir()) {
 						put(at(center, facing, x, floor - depth, z), STONE);

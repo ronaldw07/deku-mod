@@ -76,6 +76,7 @@ public class DekuModClient implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(ExplosionCowlingFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballChargeFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FugaFx::render);
+		LevelRenderEvents.COLLECT_SUBMITS.register(FlameConeFx::render);
 		LevelRenderEvents.COLLECT_SUBMITS.register(DemonArmsFx::render);
 		EntityRendererRegistry.register(DekuEntities.VILLAIN, VillainRenderer::new);
 		LevelRenderEvents.COLLECT_SUBMITS.register(FireballFlightFx::render);

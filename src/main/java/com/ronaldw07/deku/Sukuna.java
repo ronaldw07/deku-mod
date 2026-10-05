@@ -79,8 +79,8 @@ public final class Sukuna {
 	private static final double DOMAIN_SLASH_HALF_HEIGHT = 12.0;
 	private static final float DOMAIN_SLASH_DAMAGE = 40.0f;
 	private static final int DOMAIN_CLEAVE_INTERVAL = 10;
-	private static final float DOMAIN_CLEAVE_BASE = 3.0f;
-	private static final float DOMAIN_CLEAVE_HEALTH_SHARE = 0.08f;
+	private static final float DOMAIN_CLEAVE_BASE = 12.0f;
+	private static final float DOMAIN_CLEAVE_HEALTH_SHARE = 0.2f;
 	private static final double DOMAIN_SLASH_AREA_SHARE = 0.85; // how far out slashes land, of the dome's radius
 	private static final double DOMAIN_SLASH_DEPTH = 24.0; // slashes land this far above and below the caster's feet
 
@@ -327,6 +327,8 @@ public final class Sukuna {
 			entity.invulnerableTime = 0;
 			entity.hurtServer(level, owner.damageSources().playerAttack(owner),
 				DOMAIN_CLEAVE_BASE + entity.getMaxHealth() * DOMAIN_CLEAVE_HEALTH_SHARE);
+			Vec3 where = entity.getBoundingBox().getCenter();
+			level.sendParticles(BLOOD, where.x, where.y, where.z, 20, WOUND_SPREAD, WOUND_SPREAD, WOUND_SPREAD, 0.3);
 		}
 	}
 

@@ -129,6 +129,7 @@ public class DekuMod implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(DecayPayload.TYPE,
 			(payload, context) -> Decay.handle(context.player(), payload.move(), payload.charge()));
 		ServerTickEvents.END_SERVER_TICK.register(Decay::tick);
+		ServerTickEvents.END_SERVER_TICK.register(CowlingGuard::tick);
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Decay.forget(handler.player));
 
 		PayloadTypeRegistry.serverboundPlay().register(UnitedStatesSmashPayload.TYPE, UnitedStatesSmashPayload.CODEC);

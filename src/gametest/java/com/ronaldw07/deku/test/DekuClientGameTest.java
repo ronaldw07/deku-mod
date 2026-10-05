@@ -137,6 +137,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("demonArms")) {
 				demonArms(context, singleplayer);
 			}
+			if (wanted("flamethrower")) {
+				flamethrower(context, singleplayer);
+			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
 			}
@@ -756,6 +759,26 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		camera(context, CameraType.FIRST_PERSON);
 	}
 
+	private static void flamethrower(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Half Cold Half Hot, hold V: a solid cone of fire that burns a husk in front.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 9400 -59 9400 0 5");
+		context.waitTicks(40);
+		selectSlot(context, 4);
+		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~8 {NoAI:1b}");
+		context.getInput().holdKey(DekuModClient.SMASH_KEY);
+		context.waitTicks(20);
+		context.takeScreenshot("flamethrower");
+		camera(context, CameraType.THIRD_PERSON_BACK);
+		context.waitTicks(3);
+		context.takeScreenshot("flamethrower-side");
+		context.getInput().releaseKey(DekuModClient.SMASH_KEY);
+		camera(context, CameraType.FIRST_PERSON);
+		boolean burned = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true)
+			.stream().allMatch(husk -> !husk.isAlive() || husk.getHealth() < husk.getMaxHealth()));
+		check(burned, "the flamethrower should burn the husk in front");
+	}
+
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
 		// Gojo: Blue drags a pig in, Infinity stops a husk, Red blasts a pig away, Hollow Purple erases a wall and everything past it.
 		command(singleplayer, "kill @e[type=!minecraft:player]");
@@ -998,10 +1021,10 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		command(singleplayer, "execute as @p at @p run tp @s ~20 ~ ~ 0 -20");
 		camera(context, CameraType.THIRD_PERSON_FRONT);
 		context.waitTicks(3);
-		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(3);
 		context.takeScreenshot("pose-power-up");
-		context.getInput().pressKey(DekuModClient.COWLING_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.getInput().holdKey(DekuModClient.SMASH_KEY);
 		context.waitTicks(10);
 		context.takeScreenshot("pose-smash-charge");
@@ -1363,7 +1386,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 	private static void explosionCowling(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
 		// Z lights the Explosion Cowling, and a big AP Shot then digs a bigger crater than the same shot without it.
 		int plain = dugBySmallShot(context, singleplayer, 600);
-		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(5);
 		check(context.computeOnClient(client -> ExplosionCowlingClient.active()), "pressing Z with Explosion should light the Cowling");
 		camera(context, CameraType.THIRD_PERSON_FRONT);
@@ -1372,7 +1395,7 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		camera(context, CameraType.FIRST_PERSON);
 		int boosted = dugBySmallShot(context, singleplayer, 800);
 		check(boosted > plain, "the Cowling should make blasts bigger, dug " + plain + " blocks without it and " + boosted + " with it");
-		context.getInput().pressKey(DekuModClient.SMOKESCREEN_KEY);
+		context.getInput().pressKey(DekuModClient.FORM_KEY);
 		context.waitTicks(5);
 		check(!context.computeOnClient(client -> ExplosionCowlingClient.active()), "pressing Z again should put the Cowling out");
 	}

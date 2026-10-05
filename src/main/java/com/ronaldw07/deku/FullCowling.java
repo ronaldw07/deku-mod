@@ -26,6 +26,11 @@ public final class FullCowling {
 	private FullCowling() {
 	}
 
+	public static boolean active(ServerPlayer player) {
+		AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+		return speed != null && speed.getModifier(SPEED_ID) != null;
+	}
+
 	public static void apply(ServerPlayer player, int percent) {
 		double power = Mth.clamp(percent, 0, 100) / 100.0;
 		AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);

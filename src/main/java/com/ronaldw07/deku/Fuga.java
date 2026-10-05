@@ -18,8 +18,8 @@ public final class Fuga {
 	private static final double HAND_FORWARD = 1.5;
 	private static final double HAND_HEIGHT = 1.3;
 	private static final float ARROW_SIZE = 1.0f;
-	private static final float MIN_RADIUS = 12.0f;
-	private static final float MAX_RADIUS = 28.0f;
+	private static final float MIN_RADIUS = 22.0f;
+	private static final float MAX_RADIUS = 48.0f;
 	private static final double FULL_RADIUS = 36.0; // the size the blast effects scale from
 	private static final int DEBRIS_PER_RADIUS = 6;
 	private static final int SCORCH_FIRES = 10;

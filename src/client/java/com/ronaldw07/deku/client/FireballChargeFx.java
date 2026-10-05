@@ -171,7 +171,12 @@ public final class FireballChargeFx {
 
 		List<Segment> sphere = new ArrayList<>();
 		List<Segment> rays = new ArrayList<>();
-		addBall(sphere, rays, random, ballCenter(player, partialTick, radius).subtract(camera), radius, MIN_RAYS + EXTRA_RAYS * power);
+		Vec3 ball = ballCenter(player, partialTick, radius).subtract(camera);
+		double time = player.tickCount + partialTick;
+		// The ball itself is a solid burning sun; only a few red bolts still crackle off it.
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.type(),
+			(pose, buffer) -> SolidFireFx.sun(pose.pose(), buffer, ball, radius, time));
+		addBall(new ArrayList<>(), rays, random, ball, radius * 1.1, (MIN_RAYS + EXTRA_RAYS * power) / 2);
 		if (power >= HALO_STARTS_AT) {
 			double halo = Mth.lerp(power * power, MIN_HALO_RADIUS, MIN_HALO_RADIUS + EXTRA_HALO_RADIUS);
 			Vec3 chest = player.getPosition(partialTick).add(0, player.getBbHeight() * 0.55, 0).subtract(camera);

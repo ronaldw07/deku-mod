@@ -218,6 +218,8 @@ final class FireballFlightFx {
 			List<Segment> sphere = new ArrayList<>();
 			List<Segment> rays = new ArrayList<>();
 			List<Vec3> solidCenters = new ArrayList<>();
+			List<Vec3> sunCenters = new ArrayList<>();
+			List<Double> sunRadii = new ArrayList<>();
 			List<Double> solidRadii = new ArrayList<>();
 			Layer[] palette = null;
 			for (Flight flight : flights) {
@@ -236,9 +238,20 @@ final class FireballFlightFx {
 					addSpray(rays, random, at, flight.radiusAt(now + partialTick));
 				} else if (kind == Kind.ARROW) {
 					addArrow(sphere, rays, random, at, flight.end().subtract(flight.start()).normalize(), flight.radiusAt(now + partialTick));
+				} else if (kind == Kind.FIRE) {
+					sunCenters.add(at);
+					sunRadii.add(flight.radiusAt(now + partialTick));
 				} else {
 					FireballChargeFx.addBall(sphere, rays, random, at, flight.radiusAt(now + partialTick), BALL_RAYS);
 				}
+			}
+			if (!sunCenters.isEmpty()) {
+				double time = now + partialTick;
+				context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.type(), (pose, buffer) -> {
+					for (int i = 0; i < sunCenters.size(); i++) {
+						SolidFireFx.sun(pose.pose(), buffer, sunCenters.get(i), sunRadii.get(i), time);
+					}
+				});
 			}
 			if (palette == null) {
 				continue;

@@ -61,11 +61,11 @@ public final class HalfColdHalfHot {
 	// Flamethrower.
 	private static final double FLAME_RANGE = 30.0;
 	private static final double FLAME_CONE_COS = 0.8; // about 37 degrees either side of the aim
-	private static final int FLAME_STREAM = 40;
+	private static final int FLAME_STREAM = 10; // the fire itself is drawn solid on the client; these are just sparks
 	private static final double FLAME_SPREAD = 0.35;
 	private static final double FLAME_SPEED = 1.4;
 	private static final double FLAME_BILLOW_SPACING = 2.5;
-	private static final int FLAME_PER_BILLOW = 8;
+	private static final int FLAME_PER_BILLOW = 2;
 	private static final double FLAME_PUSH = 0.12;
 	private static final int FIRE_TICKS = 200;
 	private static final int FLAME_DAMAGE_INTERVAL = 2;

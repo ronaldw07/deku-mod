@@ -143,6 +143,10 @@ public final class Decay {
 	private Decay() {
 	}
 
+	public static boolean cowlingActive(ServerPlayer player) {
+		return cowling.contains(player.getUUID());
+	}
+
 	public static void handle(ServerPlayer player, Move move, int charge) {
 		if (!DekuItems.isHolding(player, DekuItems.DECAY)) {
 			return;
