@@ -89,7 +89,7 @@ final class SlashFx {
 			float fade = (float) Math.max(0, 1 - age / LIFETIME_TICKS);
 			float core = Math.max(slash.big() ? BIG_EDGE : EDGE, slash.halfHeight() * EDGE_PER_HEIGHT);
 			float outer = core + RED_EDGE;
-			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE),
+			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.type(),
 				(pose, buffer) -> LightningDraw.drawFlatQuad(pose.pose(), buffer, a, b, c, d, 0.0f, 0.0f, 0.0f, 0.93f * fade * fillShare));
 			context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(), (pose, buffer) -> {
 				LightningDraw.drawEdges(pose.pose(), buffer, border, 0f, core, 1.0f, 0.97f, 0.95f, fade);

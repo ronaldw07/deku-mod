@@ -74,7 +74,7 @@ final class DemonArmsFx {
 		if (flesh.isEmpty()) {
 			return;
 		}
-		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE), (pose, buffer) -> {
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.type(), (pose, buffer) -> {
 			LightningDraw.drawFlat(pose.pose(), buffer, flesh, FLESH_WIDTH, 0.06f, 0.03f, 0.05f, 1f);
 			LightningDraw.drawFlat(pose.pose(), buffer, bands, FLESH_WIDTH * 1.25f, 0.75f, 0.04f, 0.06f, 1f);
 			LightningDraw.drawFlat(pose.pose(), buffer, claws, FLESH_WIDTH * 0.45f, 0.95f, 0.92f, 0.88f, 1f);

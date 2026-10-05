@@ -75,7 +75,7 @@ final class CowlingAura {
 		double time = player.tickCount + partialTick;
 		float[] hair = lerpColor(GREEN_HAIR, BLUE_HAIR, (float) (power * power));
 
-		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE),
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.type(),
 			(pose, buffer) -> drawHair(pose.pose(), buffer, head, power, time, hair, 1.0, 1.0f));
 		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.lightning(),
 			(pose, buffer) -> {

@@ -1,6 +1,7 @@
 package com.ronaldw07.deku.client;
 
 import com.ronaldw07.deku.client.ExplosionFx.Blast;
+import com.ronaldw07.deku.client.LightningDraw.Segment;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
@@ -20,23 +21,28 @@ final class FugaBeamFx {
 	private static final int RISE_TICKS = 70;
 	private static final int FADE_TICKS = 120;
 	private static final double HEIGHT = 300.0;
-	private static final double MIN_RADIUS = 5.0;
-	private static final double MAX_RADIUS = 16.0;
-	private static final double RADIUS_PER_BLAST = 0.5;
+	private static final double MIN_RADIUS = 9.0;
+	private static final double MAX_RADIUS = 26.0;
+	private static final double RADIUS_PER_BLAST = 0.8;
 	private static final int STEPS = 14;
+	private static final int COLUMN_SIDES = 32;
+	private static final double RING_SPACING = 6.0;
+	private static final int SWIRLS = 18;
+	private static final int SWIRL_STEPS = 48;
+	private static final float SWIRL_WIDTH = 0.25f;
 	private static final double HEAT_RANGE = 120.0; // blocks of climb from white-gold to the deepest red
 	private static final double SWAY_SPEED = 0.09;
 	// How many tongues of each size: great ones that reach the sky, middling ones, and small ones roiling at the foot.
-	private static final int GREAT_TONGUES = 46;
-	private static final int MIDDLE_TONGUES = 70;
-	private static final int SMALL_TONGUES = 80;
+	private static final int GREAT_TONGUES = 34;
+	private static final int MIDDLE_TONGUES = 50;
+	private static final int SMALL_TONGUES = 60;
 	// The colour of a flame from its root to its tip.
 	private static final float[][] HEAT = {
-		{1.0f, 0.95f, 0.55f},
-		{1.0f, 0.62f, 0.1f},
-		{1.0f, 0.38f, 0.04f},
-		{0.85f, 0.12f, 0.03f},
-		{0.5f, 0.03f, 0.02f},
+		{1.0f, 0.98f, 0.7f},
+		{1.0f, 0.78f, 0.25f},
+		{1.0f, 0.5f, 0.06f},
+		{0.9f, 0.25f, 0.04f},
+		{0.6f, 0.07f, 0.03f},
 	};
 
 	private FugaBeamFx() {
@@ -65,12 +71,73 @@ final class FugaBeamFx {
 		for (int i = 0; i < SMALL_TONGUES; i++) {
 			tongues.add(tongue(random, radius, 8 + random.nextDouble() * 30, 0.35, 1.8, 1.4));
 		}
-		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), RenderTypes.entityTranslucentEmissive(FireballChargeFx.WHITE), (pose, buffer) -> {
+		List<Segment> swirls = new ArrayList<>();
+		List<Segment> pale = new ArrayList<>();
+		for (int i = 0; i < SWIRLS; i++) {
+			(i % 3 == 0 ? pale : swirls).addAll(swirl(base, radius, grown, time, i));
+		}
+		context.submitNodeCollector().submitCustomGeometry(context.poseStack(), SolidRender.type(), (pose, buffer) -> {
+			column(pose.pose(), buffer, base, radius, grown, time, fade);
 			for (Tongue tongue : tongues) {
 				flame(pose.pose(), buffer, base, tongue, grown, time, 0.0, fade);
 				flame(pose.pose(), buffer, base, tongue, grown, time, Math.PI / 2, fade);
 			}
+			LightningDraw.drawFlat(pose.pose(), buffer, swirls, SWIRL_WIDTH, 1.0f, 0.92f, 0.45f, 0.95f * fade);
+			LightningDraw.drawFlat(pose.pose(), buffer, pale, SWIRL_WIDTH, 0.82f, 0.82f, 1.0f, 0.95f * fade);
 		});
+	}
+
+	/**
+	 * The body of the fire: a wide, solid column, bright as the sun at its foot, narrowing as it
+	 * climbs and burning from yellow through orange to a dark red at the top, rippling as it goes.
+	 */
+	private static void column(org.joml.Matrix4fc pose, com.mojang.blaze3d.vertex.VertexConsumer buffer, Vec3 base, double radius, double grown, double time, float fade) {
+		double height = HEIGHT * grown;
+		int rings = (int) Math.ceil(height / RING_SPACING);
+		Vec3[] previous = null;
+		float[] previousColor = null;
+		for (int ring = 0; ring <= rings; ring++) {
+			double h = Math.min(height, ring * RING_SPACING);
+			double t = h / HEIGHT;
+			double width = radius * (1.15 - 0.55 * Math.pow(t, 0.7)) * (1 + 0.12 * Math.sin(h * 0.05 + time * 4));
+			Vec3[] points = new Vec3[COLUMN_SIDES];
+			for (int i = 0; i < COLUMN_SIDES; i++) {
+				double angle = Math.PI * 2 * i / COLUMN_SIDES;
+				double ripple = 1 + 0.18 * Math.sin(angle * 3 + h * 0.07 - time * 5) + 0.1 * Math.sin(angle * 7 - h * 0.12 + time * 3);
+				double sway = Math.sin(h * 0.02 + time) * radius * 0.5 * t;
+				points[i] = base.add(Math.cos(angle) * width * ripple + sway, h, Math.sin(angle) * width * ripple);
+			}
+			float[] color = heat(h / HEAT_RANGE * 0.8);
+			if (previous != null) {
+				for (int i = 0; i < COLUMN_SIDES; i++) {
+					int next = (i + 1) % COLUMN_SIDES;
+					LightningDraw.drawGradientQuad(pose, buffer, new Vec3[] {previous[i], previous[next], points[next], points[i]},
+						new float[][] {previousColor, previousColor, color, color}, 0.97f * fade);
+				}
+			}
+			previous = points;
+			previousColor = color;
+		}
+	}
+
+	/** A thin line of light spiralling up around the fire, like the streaks of light whirling about it. */
+	private static List<Segment> swirl(Vec3 base, double radius, double grown, double time, int index) {
+		List<Segment> line = new ArrayList<>();
+		Vec3 previous = null;
+		double phase = index * 2.4;
+		double turns = 2.0 + (index % 4);
+		double height = HEIGHT * grown * (0.5 + 0.5 * ((index * 7) % 10) / 10.0);
+		for (int step = 0; step <= SWIRL_STEPS; step++) {
+			double t = (double) step / SWIRL_STEPS;
+			double angle = phase + t * turns * Math.PI * 2 + time * (index % 2 == 0 ? 1.4 : -1.1);
+			double reach = radius * (1.2 + 1.1 * Math.sin(t * 5 + phase)) * (1.3 - 0.5 * t);
+			Vec3 at = base.add(Math.cos(angle) * reach, height * t, Math.sin(angle) * reach);
+			if (previous != null) {
+				line.add(new Segment(previous, at));
+			}
+			previous = at;
+		}
+		return line;
 	}
 
 	private static Tongue tongue(RandomSource random, double radius, double height, double widthShare, double reachShare, double swayScale) {
