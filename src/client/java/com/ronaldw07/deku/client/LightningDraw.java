@@ -123,6 +123,20 @@ final class LightningDraw {
 		quad(pose, buffer, a, b, c, d, new Layer(0, red, green, blue, alpha));
 	}
 
+	/** A face blending smoothly between a colour at each corner, visible from both sides. */
+	static void drawGradientQuad(Matrix4fc pose, VertexConsumer buffer, Vec3[] corners, float[][] colors, float alpha) {
+		for (int i = 0; i < 4; i++) {
+			gradientVertex(pose, buffer, corners[i], colors[i], alpha);
+		}
+		for (int i = 3; i >= 0; i--) {
+			gradientVertex(pose, buffer, corners[i], colors[i], alpha);
+		}
+	}
+
+	private static void gradientVertex(Matrix4fc pose, VertexConsumer buffer, Vec3 point, float[] color, float alpha) {
+		buffer.addVertex(pose, (float) point.x, (float) point.y, (float) point.z).setColor(color[0], color[1], color[2], alpha);
+	}
+
 	static Vec3 randomDirection(RandomSource random) {
 		return new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1).normalize();
 	}
