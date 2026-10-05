@@ -140,6 +140,9 @@ public class DekuClientGameTest implements FabricClientGameTest {
 			if (wanted("flamethrower")) {
 				flamethrower(context, singleplayer);
 			}
+			if (wanted("melee")) {
+				melee(context, singleplayer);
+			}
 			if (wanted("gojo")) {
 				gojo(context, singleplayer);
 			}
@@ -777,6 +780,49 @@ public class DekuClientGameTest implements FabricClientGameTest {
 		boolean burned = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true)
 			.stream().allMatch(husk -> !husk.isAlive() || husk.getHealth() < husk.getMaxHealth()));
 		check(burned, "the flamethrower should burn the husk in front");
+	}
+
+	private static void melee(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		// Left click per quirk: Gojo blinks to a husk 12 blocks away and hits it; Sukuna's combo cuts a husk in front;
+		// Todoroki's strikes hurt; Deku's two clicks about ten ticks apart land a Black Flash.
+		command(singleplayer, "kill @e[type=!minecraft:player]");
+		command(singleplayer, "execute as @p run tp @s 9800 -59 9800 0 4");
+		context.waitTicks(40);
+		selectSlot(context, 5);
+		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~12 {NoAI:1b}");
+		context.waitTicks(5);
+		context.getInput().holdKeyFor(options -> options.keyAttack, 2);
+		context.waitTicks(10);
+		double dz = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> true).getFirst().position().distanceTo(player(server).position()));
+		check(dz < 4, "Gojo's left click should blink next to the husk, distance " + dz);
+		command(singleplayer, "kill @e[type=minecraft:husk]");
+
+		selectSlot(context, 6);
+		command(singleplayer, "execute at @p run summon minecraft:pig ~ ~ ~4 {NoAI:1b}");
+		context.waitTicks(3);
+		context.getInput().holdKeyFor(options -> options.keyAttack, 2);
+		context.waitTicks(12);
+		var pigs = singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.PIG, pig -> pig.isAlive()).stream().map(pig -> pig.getHealth() + "@" + pig.position()).toList());
+		check(pigs.isEmpty(), "Sukuna's left click combo should cut the pig down, left: " + pigs);
+
+		selectSlot(context, 4);
+		command(singleplayer, "execute at @p run summon minecraft:husk ~ ~ ~3 {NoAI:1b}");
+		context.waitTicks(3);
+		context.getInput().holdKeyFor(options -> options.keyAttack, 2);
+		context.waitTicks(8);
+		check(singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.HUSK, husk -> husk.getHealth() < husk.getMaxHealth()).size() == 1),
+			"Todoroki's left click should hurt the husk");
+		command(singleplayer, "kill @e[type=minecraft:husk]");
+
+		selectSlot(context, 0);
+		command(singleplayer, "execute at @p run summon minecraft:iron_golem ~ ~ ~3 {NoAI:1b}");
+		context.waitTicks(3);
+		context.getInput().holdKeyFor(options -> options.keyAttack, 2);
+		context.waitTicks(9);
+		context.getInput().holdKeyFor(options -> options.keyAttack, 2);
+		context.waitTicks(8);
+		check(singleplayer.getServer().computeOnServer(server -> server.overworld().getEntities(EntityTypes.IRON_GOLEM, golem -> golem.getHealth() < 60).size() == 1),
+			"two clicks about ten ticks apart should land a Black Flash on the golem");
 	}
 
 	private static void gojo(ClientGameTestContext context, TestSingleplayerContext singleplayer) {

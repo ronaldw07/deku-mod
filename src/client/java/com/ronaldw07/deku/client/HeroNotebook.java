@@ -94,6 +94,14 @@ final class HeroNotebook {
 				Deku, Bakugo and Todoroki, each a full set of four pieces. They look the part and give no protection.
 
 				Craft a leather piece with a dye: green for Deku, orange for Bakugo, red and white for Todoroki. Also in the Combat tab of the creative menu."""),
+			page("Left click", """
+				Every quirk item has a left-click punch.
+
+				One For All: click again 8 to 13 ticks after your last click while hitting something for a Black Flash.
+				Gojo: blink to your target and hit it.
+				Sukuna: a three-cut combo.
+				Explosion: a point-blank blast.
+				Half Cold Half Hot: ice strike, then fire strike, taking turns."""),
 			page("Settings (K)", """
 				Full Cowling power and ramp-up time.
 

@@ -74,6 +74,10 @@ A boss to fight: spawn it with the Villain Spawn Egg (Spawn Eggs creative tab, o
 
 Deku, Bakugo and Todoroki armor sets, four pieces each. Cosmetic only: no protection, never wears out. Craft a leather piece with a dye (green for Deku, orange for Bakugo, red and white for Todoroki) or find them in the Combat creative tab.
 
+## Left click
+
+With a quirk item in hand, left click has its own punch: One For All lands a Black Flash if you click again 8 to 13 ticks after your last click while hitting something; Gojo blinks to what you aim at and hits it; Sukuna throws a quick three-cut combo; Explosion blasts point blank; Half Cold Half Hot alternates an ice strike (slows and freezes) and a fire strike (burns).
+
 ## Danger Sense
 
 Always on with any item; H toggles it. Yellow lightning on screen shows where danger is coming from.

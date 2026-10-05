@@ -42,6 +42,7 @@ public final class Cooldowns {
 		DISMANTLE("Dismantle", 20),
 		CLEAVE("Cleave", 40),
 		DEMON_ARMS("Demon Arms", 0),
+		MELEE("Left click", 6),
 		FUGA("Fuga", 120),
 		DOMAIN("Domain Expansion", 600);
 

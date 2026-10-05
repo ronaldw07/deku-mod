@@ -10,6 +10,7 @@ import com.ronaldw07.deku.network.BlackwhipFxPayload;
 import com.ronaldw07.deku.network.BlackwhipPayload;
 import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DemonArmsFxPayload;
+import com.ronaldw07.deku.network.MeleePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DomainPayload;
 import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
@@ -146,6 +147,13 @@ public class DekuModClient implements ClientModInitializer {
 		boolean gojo = player != null && DekuItems.isHolding(player, DekuItems.GOJO);
 		boolean sukuna = player != null && DekuItems.isHolding(player, DekuItems.SUKUNA);
 		boolean halfColdHalfHot = player != null && DekuItems.isHolding(player, DekuItems.HALF_COLD_HALF_HOT);
+		boolean attackDown = client.options.keyAttack.isDown();
+		if (attackDown && !wasAttacking && player != null && !player.isDeadOrDying() && (oneForAll || explosion || gojo || sukuna || halfColdHalfHot)
+				&& Cooldowns.ready(Cooldowns.Ability.MELEE)) {
+			send(MeleePayload.INSTANCE);
+			Cooldowns.start(Cooldowns.Ability.MELEE);
+		}
+		wasAttacking = attackDown;
 		int formClicks = countClicks(FORM_KEY);
 		int cowlingClicks = countClicks(COWLING_KEY);
 		int smashClicks = countClicks(SMASH_KEY);
@@ -203,6 +211,8 @@ public class DekuModClient implements ClientModInitializer {
 
 		DangerSenseClient.tick(player, countClicks(DANGER_SENSE_KEY) % 2 == 1);
 	}
+
+	private static boolean wasAttacking;
 
 	private static int countClicks(KeyMapping key) {
 		int clicks = 0;

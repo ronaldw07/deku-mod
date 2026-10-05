@@ -56,6 +56,8 @@ public final class Sukuna {
 	private static final float CLEAVE_HEALTH_SHARE = 0.3f;
 	private static final double CLEAVE_SPLASH = 12.0;
 	private static final float SLASH_VOLUME = 5.0f;
+	private static final double COMBO_HALF_HEIGHT = 2.5;
+	private static final float COMBO_DAMAGE = 12.0f;
 	private static final int BIG_DEBRIS = 90;
 	private static final int SLASH_DEBRIS = 40;
 	private static final int CROWD_DEBRIS = 3;
@@ -144,6 +146,19 @@ public final class Sukuna {
 
 	private static Vec3 randomOffset(RandomSource random, double size) {
 		return new Vec3((random.nextDouble() - 0.5) * 2 * size, (random.nextDouble() - 0.5) * 2 * size, (random.nextDouble() - 0.5) * 2 * size);
+	}
+
+	/** The left-click combo: a fast run of short, sharp cuts straight ahead, each at a different angle. */
+	public static void combo(ServerPlayer player, int cuts, double length) {
+		ServerLevel level = player.level();
+		RandomSource random = level.getRandom();
+		for (int i = 0; i < cuts; i++) {
+			Blasts.later(level.getServer(), i * 2, () -> {
+				Vec3 aim = player.getLookAngle();
+				slash(level, player, player.getEyePosition().add(aim.scale(1.0)), aim, randomBlade(random, aim), length,
+					COMBO_HALF_HEIGHT, 0, COMBO_DAMAGE * (DemonArms.active(player) ? DemonArms.DAMAGE_BOOST : 1f), false, true);
+			});
+		}
 	}
 
 	/** A direction across the slash's path, turned to a random angle so cuts come at every slant. */

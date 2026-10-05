@@ -7,6 +7,7 @@ import com.ronaldw07.deku.network.DecayPayload;
 import com.ronaldw07.deku.network.DelawarePayload;
 import com.ronaldw07.deku.network.DemonArmsFxPayload;
 import com.ronaldw07.deku.network.DemonArmsPayload;
+import com.ronaldw07.deku.network.MeleePayload;
 import com.ronaldw07.deku.network.DangerPayload;
 import com.ronaldw07.deku.network.DangerSenseTogglePayload;
 import com.ronaldw07.deku.network.ExplosionCowlingFxPayload;
@@ -158,6 +159,9 @@ public class DekuMod implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(FireballChargePayload.TYPE,
 			(payload, context) -> BlastFx.showFireballCharge(context.player(), payload.charge()));
 
+		PayloadTypeRegistry.serverboundPlay().register(MeleePayload.TYPE, MeleePayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(MeleePayload.TYPE, (payload, context) -> Melee.handle(context.player()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Melee.forget(handler.player));
 		PayloadTypeRegistry.serverboundPlay().register(DemonArmsPayload.TYPE, DemonArmsPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DemonArmsFxPayload.TYPE, DemonArmsFxPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(DemonArmsPayload.TYPE, (payload, context) -> DemonArms.set(context.player(), payload.on()));
