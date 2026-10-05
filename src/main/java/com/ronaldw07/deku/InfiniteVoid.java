@@ -44,7 +44,7 @@ public final class InfiniteVoid {
 	private static final int FREEZE_FATIGUE = 4;
 	private static final double SKY_LIFT = 160.0;
 	private static final double SKY_HEADROOM = 50.0;
-	private static final int PLATFORM_RADIUS = 3;
+	private static final int PLATFORM_RADIUS = 40; // the whole floor of the dome
 	private static final int SOFT_LANDING_TICKS = 100;
 
 	/** One open void: where it sits in the sky, how far it was lifted, who was brought up, and the platform under the caster. */
@@ -146,11 +146,11 @@ public final class InfiniteVoid {
 		}
 	}
 
-	/** An invisible floor under the caster, so they stand in the sky level with everything they caught. */
+	/** An invisible flat floor across the whole dome, so the caster can walk all the way around it, level with everything held in the air. */
 	private static List<BlockPos> platform(ServerLevel level, BlockPos center) {
 		List<BlockPos> placed = new ArrayList<>();
 		for (BlockPos pos : BlockPos.betweenClosed(center.offset(-PLATFORM_RADIUS, 0, -PLATFORM_RADIUS), center.offset(PLATFORM_RADIUS, 0, PLATFORM_RADIUS))) {
-			if (level.getBlockState(pos).isAir()) {
+			if (level.getBlockState(pos).isAir() && pos.distSqr(center) <= PLATFORM_RADIUS * PLATFORM_RADIUS) {
 				level.setBlock(pos, Blocks.BARRIER.defaultBlockState(), Block.UPDATE_CLIENTS);
 				placed.add(pos.immutable());
 			}
